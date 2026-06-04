@@ -8,9 +8,9 @@
 /* ─── 全局 & Tab 导航 ─── */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;overflow:hidden}
-#app-root{max-width:430px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative}
-.tab-bar{display:flex;background:#fff;border-top:.5px solid #e8e8e8;flex-shrink:0;z-index:20}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0 calc(8px + env(safe-area-inset-bottom));cursor:pointer;-webkit-tap-highlight-color:transparent;border:none;background:none}
+#app-root{max-width:430px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative}
+.tab-bar{display:flex;background:#fff;border-top:.5px solid #e8e8e8;flex-shrink:0;z-index:20;padding-bottom:env(safe-area-inset-bottom,0px);}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;border:none;background:none}
 .tab-btn:active{opacity:.7}
 .tab-icon{font-size:20px;margin-bottom:2px;line-height:1}
 .tab-label{font-size:10px;font-weight:500;color:#aaa}
@@ -501,6 +501,32 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-empty{text-align:center;color:#ccc;font-size:12px;padding:20px 0;}
 /* add-stock btn in group header */
 .f-add-btn{font-size:11px;color:#1a5fd4;background:#e8f0fe;border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:600;}
+/* 投资网格 */
+.f-inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
+.f-inv-card{background:#fff;border-radius:14px;padding:12px;cursor:pointer;border:0.5px solid #e8e8e8;-webkit-tap-highlight-color:transparent;transition:border-color .15s;}
+.f-inv-card:active{border-color:#1a5fd4;}
+.f-inv-card.done{border:1px solid #c8e6c9;background:#fafffe;}
+.f-inv-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.f-inv-card-name{font-size:13px;font-weight:600;color:#1a1a1a;}
+.f-inv-card-meta{font-size:10px;color:#aaa;margin-top:2px;}
+.f-inv-card-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;flex-shrink:0;}
+.f-inv-card-badge.fund{background:#e3f2fd;color:#1565c0;}
+.f-inv-card-badge.gold{background:#fff8e1;color:#f57f17;}
+.f-inv-card-badge.saving{background:#fff3e0;color:#e65100;}
+.f-inv-card-badge.done{background:#e8f5e9;color:#2e7d32;}
+.f-inv-card-bar-bg{height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;margin-bottom:6px;}
+.f-inv-card-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
+.f-inv-card-footer{display:flex;justify-content:space-between;align-items:center;}
+.f-inv-card-pct{font-size:11px;color:#aaa;}
+.f-inv-card-pct.done{color:#2e7d32;}
+.f-inv-card-remain{font-size:11px;color:#aaa;}
+.f-inv-card-remain.done{color:#2e7d32;}
+/* 添加按钮卡片 */
+.f-inv-add-card{background:#f8f9fc;border-radius:14px;padding:12px;cursor:pointer;border:1.5px dashed #c8dff5;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:88px;-webkit-tap-highlight-color:transparent;}
+.f-inv-add-card:active{background:#e8f0fe;}
+.f-inv-add-icon{font-size:22px;color:#1a5fd4;margin-bottom:4px;}
+.f-inv-add-label{font-size:11px;color:#1a5fd4;font-weight:600;}
+
 /* ─── 覆盖：各panel的shell占满空间 ─── */
 #panel-diary .shell{max-width:none!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;position:relative!important;overflow:hidden!important;}
 #panel-monthly .shell{max-width:none;width:100%;min-height:0;height:100%;overflow-y:auto;margin:0;position:relative;}
@@ -802,6 +828,13 @@ function applyImportedState(raw){
   }else{
     throw new Error('bad backup');
   }
+}
+function clearCacheAndReload(){
+  if(!confirm('⚠️ 确认清除所有缓存？\n\n请确保已导出备份，清除后数据不可恢复！'))return;
+  localStorage.clear();
+  if('caches' in window){caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));}
+  showToast('缓存已清除，正在重载...');
+  setTimeout(()=>window.location.reload(true),1200);
 }
 function exportData(){
   const state=fullState();
@@ -1660,7 +1693,12 @@ function renderDataModal(){
   const c=dataCounts();const ov=mkOverlay();
   ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">数据备份与恢复</div>
     <div class="data-note">一次导出包含全部数据：<b>记账日记</b>（${c.records}条）+ <b>报销</b>（${c.reimbs}条）+ <b>本月账单</b> + <b>财务总览</b>（${c.financeCount}个项目）<br>导入时一次恢复全部，换设备也能用。</div>
-    <div class="data-actions"><button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button><button class="data-btn" onclick="triggerImport()">📥 导入恢复</button></div>
+    <div class="data-actions">
+      <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
+      <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
+      <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除缓存并重载</button>
+    </div>
+    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px;line-height:1.6">清除缓存会清空所有本地数据，请先导出备份</div>
     <input id="backup-file" type="file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
     <div class="sumcard">
       <div class="sumrow"><span class="sumk">最后备份</span><span class="sumv">${c.lastBackup?c.lastBackup.slice(0,10):'未备份'}</span></div>
@@ -1787,15 +1825,13 @@ if(s.setupDone){
 
 // ─── 本月账单 JS ───
 
-const M_SK='monthly_v1';
-const M_DIARY_SK='bav7';
+const M_SK="monthly_v1";
+const M_DIARY_SK="bav7";
 
-function M_ld(key){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch(e){return{}}}
+function M_ld(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
 function M_sv(d){localStorage.setItem(M_SK,JSON.stringify(d))}
-// M_pad2 uses shared pad2
-function _M_pad2_unused(n){return String(n).padStart(2,'0')}
-// M uses shared todayStr
-function _M_todayStr_unused(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+function _unused_pad2(n){return String(n).padStart(2,'0')}
+function _unused_todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
 function M_monthKey(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)}
 function M_fmt(n,dec=0){return'¥'+Number(Math.abs(n)).toFixed(dec)}
 function M_daysInMonth(){const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()}
@@ -1835,7 +1871,7 @@ function M_saveData(){
   s.bills=M_CFG.bills;s.utility=M_CFG.utility;
   s.budgets=M_CFG.budgets;s.dailyLife=M_CFG.dailyLife;
   s.settleDay=M_CFG.settleDay;s.alertDays=M_CFG.alertDays;
-  s.billsStatus=M_BILLS_STATUS;localStorage.setItem(M_SK,JSON.stringify(s));
+  s.billsStatus=M_BILLS_STATUS;M_sv(s);
 }
 
 // 生活费按本月实际天数动态计算
@@ -1889,24 +1925,15 @@ function M_getAlerts(){
 }
 
 function M_getSummary(){
-  const spending=M_getDiarySpending();
   const totalFixed=M_CFG.bills.reduce((s,b)=>{const st=M_getBillStatus(b.id);return s+(st.actualAmount!=null?st.actualAmount:b.amount)},0);
   const paidFixed=M_CFG.bills.reduce((s,b)=>{const st=M_getBillStatus(b.id);if(!st.paid)return s;return s+(st.actualAmount!=null?st.actualAmount:b.amount)},0);
   const unpaidFixed=totalFixed-paidFixed;
-  const totalBudget=M_CFG.budgets.reduce((s,b)=>s+M_getBudgetAmount(b),0);
-  const totalSpent=M_CFG.budgets.reduce((s,b)=>s+(spending[b.diaryCategory]||0),0);
-  const util=M_CFG.utility;
-  const monthTotal=totalFixed+totalBudget+util.monthlyAvg;
-  const monthSpent=paidFixed+totalSpent;
-  const monthRemain=monthTotal-monthSpent-unpaidFixed;
-  return{totalFixed,paidFixed,unpaidFixed,totalBudget,totalSpent,monthTotal,monthSpent,monthRemain};
+  return{totalFixed,paidFixed,unpaidFixed};
 }
 
 function M_renderMain(){
   const today=M_todayDay();const dim=M_daysInMonth();
-  const pctDay=Math.round(today/dim*100);
-  const spending=M_getDiarySpending();
-  const summary=M_getSummary();
+  const pctDay=Math.round(today/dim*100);  const summary=M_getSummary();
   const alerts=M_getAlerts();
   const util=M_CFG.utility;
 
@@ -1922,18 +1949,17 @@ function M_renderMain(){
 
   let alertHtml=alerts.map(a=>`<div class="alert-banner">⚠️ ${a}</div>`).join('');
 
-  const remainColor=summary.monthRemain>0?'good':summary.monthRemain>-200?'warn':'bad';
   const heroHtml=`
     <div class="hero-card">
       <div class="hero-row">
         <div>
-          <div class="hero-lbl">本月预估结余</div>
-          <div class="hero-val ${remainColor}">${summary.monthRemain>=0?'':'-'}${M_fmt(Math.abs(summary.monthRemain))}</div>
-          <div class="hero-sub">总预算 ${M_fmt(summary.monthTotal)} · 已花 ${M_fmt(summary.monthSpent)}</div>
+          <div class="hero-lbl">本月固定支出</div>
+          <div class="hero-val" style="color:#1a1a1a">${M_fmt(summary.totalFixed)}</div>
+          <div class="hero-sub">已付 ${M_fmt(summary.paidFixed)} · 待付 ${M_fmt(summary.unpaidFixed)}</div>
         </div>
         <div class="hero-right">
           <div class="hero-lbl">待付账单</div>
-          <div class="hero-val ${summary.unpaidFixed>0?'warn':'good'}">${summary.unpaidFixed>0?M_fmt(summary.unpaidFixed):'已全付'}</div>
+          <div class="hero-val ${summary.unpaidFixed>0?'warn':'good'}">${summary.unpaidFixed>0?M_fmt(summary.unpaidFixed):'✓ 已全付'}</div>
           <div class="hero-sub">${dim}天月份，今天第${today}天</div>
         </div>
       </div>
@@ -1998,41 +2024,10 @@ function M_renderMain(){
     </div>`;
 
   // 浮动预算
-  let budgetsHtml=M_CFG.budgets.map(b=>{
-    const amount=M_getBudgetAmount(b);
-    const spent=spending[b.diaryCategory]||0;
-    const remain=amount-spent;
-    const pct=amount>0?Math.min(100,Math.round(spent/amount*100)):0;
-    const remainClass=remain>amount*0.3?'good':remain>0?'warn':'over';
-    const barColor2=pct>100?'#c62828':pct>80?'#e65100':'#378ADD';
-    const dayAvg=today>0?(spent/today).toFixed(1):0;
-    const predictEnd=today>0?Math.round(spent/today*dim):0;
-    const amtNote=b.dynDays?`${M_CFG.dailyLife}元/天×${dim}天`:`月额度`;
-    return`<div class="budget-item">
-      <div class="bi-top">
-        <div class="bi-left"><span class="bi-icon">${b.icon}</span><span class="bi-name">${b.name}</span></div>
-        <div class="bi-right">
-          <div class="bi-remain ${remainClass}">${remain>=0?'剩 ':'-'}${M_fmt(Math.abs(remain))}</div>
-          <div class="bi-total">${amtNote} ${M_fmt(amount)} · 已花 ${M_fmt(spent)}</div>
-        </div>
-      </div>
-      <div class="bi-bar-bg"><div class="bi-bar-fill" style="width:${pct}%;background:${barColor2}"></div></div>
-      <div class="bi-detail">
-        <span>日均 ¥${dayAvg}</span>
-        <span>月末预计花 ${M_fmt(predictEnd)}${predictEnd>amount?' ⚠️超支':''}</span>
-      </div>
-    </div>`;
-  }).join('');
 
   document.getElementById('M_main').innerHTML=`
     ${alertHtml}
-    ${heroHtml}
-    <div class="section-hdr"><span class="section-title">固定账单</span><button class="section-btn" onclick="M_openAddBill()">+ 新增</button></div>
-    <div class="bill-card">${billsHtml}</div>
-    <div class="section-hdr"><span class="section-title">水电追踪</span></div>
-    ${utilHtml}
-    <div class="section-hdr"><span class="section-title">浮动预算</span><span style="font-size:10px;color:#bbb">联动记账日记</span></div>
-    <div class="budget-card">${budgetsHtml}</div>`;
+    ${heroHtml}`;
   M_checkModal();
 }
 
@@ -2072,15 +2067,15 @@ function M_renderBillEditModal(){
       <button class="mpaid-btn ${st.paid?'sel-paid':''}" onclick="M_setBillPaid('${bill.id}',true)">✓ 已付</button>
     </div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">本月金额</span><input id="M_b_amt" type="number" inputmode="decimal" min="0" step="0.01" value="${st.actualAmount!=null?st.actualAmount:bill.amount}"></div>
-      <div class="mfield"><span class="mflbl">付款日期</span><input id="M_b_date" type="date" value="${st.paidDate||todayStr()}"></div>
+      <div class="mfield"><span class="mflbl">本月金额</span><input id="b-amt" type="number" inputmode="decimal" min="0" step="0.01" value="${st.actualAmount!=null?st.actualAmount:bill.amount}"></div>
+      <div class="mfield"><span class="mflbl">付款日期</span><input id="b-date" type="date" value="${st.paidDate||todayStr()}"></div>
     </div>
     <button class="msub" onclick="M_saveBillEdit('${bill.id}')">保存</button>
     <div class="msec-title">账单设置</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">账单名称</span><input id="M_b_name" value="${bill.name}"></div>
-      <div class="mfield"><span class="mflbl">默认金额</span><input id="M_b_default" type="number" inputmode="decimal" min="0" step="0.01" value="${bill.amount}"></div>
-      <div class="mfield"><span class="mflbl">付款日</span><input id="M_b_due" type="number" inputmode="numeric" min="1" max="31" value="${bill.dueDay}"><span style="font-size:12px;color:#aaa;margin-left:4px">号</span></div>
+      <div class="mfield"><span class="mflbl">账单名称</span><input id="b-name" value="${bill.name}"></div>
+      <div class="mfield"><span class="mflbl">默认金额</span><input id="b-default" type="number" inputmode="decimal" min="0" step="0.01" value="${bill.amount}"></div>
+      <div class="mfield"><span class="mflbl">付款日</span><input id="b-due" type="number" inputmode="numeric" min="1" max="31" value="${bill.dueDay}"><span style="font-size:12px;color:#aaa;margin-left:4px">号</span></div>
     </div>
     <button class="msub" style="background:#888" onclick="M_saveBillConfig('${bill.id}')">保存账单设置</button>
     <button class="mdel" onclick="M_deleteBill('${bill.id}')">删除此账单</button>
@@ -2093,17 +2088,17 @@ function M_setBillPaid(billId,paid){
   document.querySelectorAll('.mpaid-btn').forEach((b,i)=>{b.className='mpaid-btn '+(i===0&&!paid?'sel-unpaid':i===1&&paid?'sel-paid':'')});
 }
 function M_saveBillEdit(billId){
-  const amt=parseFloat(document.getElementById('M_b_amt')?.value);
-  const date=document.getElementById('M_b_date')?.value||'';
+  const amt=parseFloat(document.getElementById('b-amt')?.value);
+  const date=document.getElementById('b-date')?.value||'';
   const st=M_getBillStatus(billId);
   M_setBillStatus(billId,{...st,actualAmount:amt||null,paidDate:date});
   M_modal=null;M_editTarget=null;M_renderMain();
 }
 function M_saveBillConfig(billId){
   const idx=M_CFG.bills.findIndex(b=>b.id===billId);if(idx<0)return;
-  M_CFG.bills[idx].name=document.getElementById('M_b_name')?.value.trim()||M_CFG.bills[idx].name;
-  M_CFG.bills[idx].amount=parseFloat(document.getElementById('M_b_default')?.value)||M_CFG.bills[idx].amount;
-  M_CFG.bills[idx].dueDay=parseInt(document.getElementById('M_b_due')?.value)||M_CFG.bills[idx].dueDay;
+  M_CFG.bills[idx].name=document.getElementById('b-name')?.value.trim()||M_CFG.bills[idx].name;
+  M_CFG.bills[idx].amount=parseFloat(document.getElementById('b-default')?.value)||M_CFG.bills[idx].amount;
+  M_CFG.bills[idx].dueDay=parseInt(document.getElementById('b-due')?.value)||M_CFG.bills[idx].dueDay;
   M_saveData();M_modal=null;M_editTarget=null;M_renderMain();
 }
 function M_deleteBill(billId){
@@ -2118,20 +2113,20 @@ function M_renderBillAddModal(){
     <div class="mhandle"></div>
     <div class="mtitle">新增固定账单</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">账单名称</span><input id="M_nb_name" placeholder="如：宽带费"></div>
-      <div class="mfield"><span class="mflbl">每月金额</span><input id="M_nb_amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0"></div>
-      <div class="mfield"><span class="mflbl">每月几号付</span><input id="M_nb_due" type="number" inputmode="numeric" min="1" max="31" placeholder="15"><span style="font-size:12px;color:#aaa;margin-left:4px">号</span></div>
-      <div class="mfield"><span class="mflbl">图标</span><input id="M_nb_icon" placeholder="emoji，如 📺" maxlength="2"></div>
+      <div class="mfield"><span class="mflbl">账单名称</span><input id="nb-name" placeholder="如：宽带费"></div>
+      <div class="mfield"><span class="mflbl">每月金额</span><input id="nb-amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0"></div>
+      <div class="mfield"><span class="mflbl">每月几号付</span><input id="nb-due" type="number" inputmode="numeric" min="1" max="31" placeholder="15"><span style="font-size:12px;color:#aaa;margin-left:4px">号</span></div>
+      <div class="mfield"><span class="mflbl">图标</span><input id="nb-icon" placeholder="emoji，如 📺" maxlength="2"></div>
     </div>
     <button class="msub" onclick="M_submitAddBill()">添加</button>
   </div>`;
   document.getElementById('panel-monthly').appendChild(ov);
 }
 function M_submitAddBill(){
-  const name=document.getElementById('M_nb_name')?.value.trim();
-  const amt=parseFloat(document.getElementById('M_nb_amt')?.value);
-  const due=parseInt(document.getElementById('M_nb_due')?.value)||15;
-  const icon=document.getElementById('M_nb_icon')?.value||'💰';
+  const name=document.getElementById('nb-name')?.value.trim();
+  const amt=parseFloat(document.getElementById('nb-amt')?.value);
+  const due=parseInt(document.getElementById('nb-due')?.value)||15;
+  const icon=document.getElementById('nb-icon')?.value||'💰';
   if(!name||!amt||amt<=0){alert('请填写名称和金额');return;}
   M_CFG.bills.push({id:'bill_'+Date.now(),name,amount:amt,dueDay:due,icon,iconBg:'#F5F5F5'});
   M_saveData();M_modal=null;M_renderMain();
@@ -2144,16 +2139,16 @@ function M_renderUtilityModal(){
     <div class="mtitle">更新水电余额</div>
     <div class="minfo-box">充值后在这里更新余额，系统自动重新计算可用天数和月底预计剩余</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">当前余额</span><input id="M_u_bal" type="number" inputmode="decimal" min="0" step="0.01" value="${util.balance}" placeholder="账户余额"></div>
-      <div class="mfield"><span class="mflbl">月均消耗</span><input id="M_u_avg" type="number" inputmode="decimal" min="0" step="1" value="${util.monthlyAvg}" placeholder="300"></div>
+      <div class="mfield"><span class="mflbl">当前余额</span><input id="u-bal" type="number" inputmode="decimal" min="0" step="0.01" value="${util.balance}" placeholder="账户余额"></div>
+      <div class="mfield"><span class="mflbl">月均消耗</span><input id="u-avg" type="number" inputmode="decimal" min="0" step="1" value="${util.monthlyAvg}" placeholder="300"></div>
     </div>
     <button class="msub green" onclick="M_submitUtility()">更新</button>
   </div>`;
   document.getElementById('panel-monthly').appendChild(ov);
 }
 function M_submitUtility(){
-  const bal=parseFloat(document.getElementById('M_u_bal')?.value);
-  const avg=parseFloat(document.getElementById('M_u_avg')?.value);
+  const bal=parseFloat(document.getElementById('u-bal')?.value);
+  const avg=parseFloat(document.getElementById('u-avg')?.value);
   if(isNaN(bal)){alert('请填写当前余额');return;}
   M_CFG.utility.balance=bal;
   if(avg>0)M_CFG.utility.monthlyAvg=avg;
@@ -2168,31 +2163,32 @@ function M_renderSettingsModal(){
     <div class="mtitle">设置</div>
     <div class="msec-title">生活费</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">日单价</span><input id="M_s_daily" type="number" inputmode="decimal" min="0" step="1" value="${M_CFG.dailyLife||50}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/天（自动×当月天数）</span></div>
+      <div class="mfield"><span class="mflbl">日单价</span><input id="s-daily" type="number" inputmode="decimal" min="0" step="1" value="${M_CFG.dailyLife||50}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/天（自动×当月天数）</span></div>
     </div>
     <div class="msec-title">零花钱</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">月额度</span><input id="M_s_pocket" type="number" inputmode="decimal" min="0" step="1" value="${M_CFG.budgets.find(b=>b.id==='pocket')?.amount||170}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/月</span></div>
+      <div class="mfield"><span class="mflbl">月额度</span><input id="s-pocket" type="number" inputmode="decimal" min="0" step="1" value="${M_CFG.budgets.find(b=>b.id==='pocket')?.amount||170}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/月</span></div>
     </div>
     <div class="msec-title">提醒设置</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">提前提醒</span><input id="M_s_alert" type="number" inputmode="numeric" min="1" max="14" value="${M_CFG.alertDays}"><span style="font-size:12px;color:#aaa;margin-left:4px">天</span></div>
+      <div class="mfield"><span class="mflbl">提前提醒</span><input id="s-alert" type="number" inputmode="numeric" min="1" max="14" value="${M_CFG.alertDays}"><span style="font-size:12px;color:#aaa;margin-left:4px">天</span></div>
     </div>
     <button class="msub" onclick="M_saveSettings()">保存</button>
   </div>`;
   document.getElementById('panel-monthly').appendChild(ov);
 }
 function M_saveSettings(){
-  const daily=parseFloat(document.getElementById('M_s_daily')?.value);
+  const daily=parseFloat(document.getElementById('s-daily')?.value);
   if(daily>0)M_CFG.dailyLife=daily;
-  const pocket=parseFloat(document.getElementById('M_s_pocket')?.value);
+  const pocket=parseFloat(document.getElementById('s-pocket')?.value);
   const pIdx=M_CFG.budgets.findIndex(b=>b.id==='pocket');
   if(pIdx>=0&&pocket>=0)M_CFG.budgets[pIdx].amount=pocket;
-  M_CFG.alertDays=parseInt(document.getElementById('M_s_alert')?.value)||3;
+  M_CFG.alertDays=parseInt(document.getElementById('s-alert')?.value)||3;
   M_saveData();M_modal=null;M_renderMain();
 }
-function M_init(){M_loadData();M_renderMain();}
 
+
+function M_init(){M_loadData();M_renderMain();}
 
 // ─── 财务总览 JS ───
 
@@ -2271,7 +2267,10 @@ function F_calcAccount(){
 function F_getTotalInvested(item){
   const base=item.invested||0;
   const recs=item.records||[];
-  const net=recs.reduce((s,r)=>s+(r.type==='withdraw'?-r.amount:r.amount),0);
+  const net=recs.reduce((s,r)=>{
+    if(r.type==='note'||r.amount===0)return s;
+    return s+(r.type==='withdraw'?-r.amount:r.amount);
+  },0);
   return base+net;
 }
 function F_getTotalWithdrawn(item){
@@ -2366,48 +2365,48 @@ function F_renderMain(){
   const GROUP_LABELS={fund:{label:'基金定投',icon:'📈',badge:'fund'},gold:{label:'黄金积存金',icon:'🥇',badge:'gold'},saving:{label:'储蓄目标',icon:'🎯',badge:'saving'}};
   let groupsHtml='';
   ['fund','gold','saving'].forEach(g=>{
-    const items=F_ITEMS.filter(i=>i.group===g);if(!items.length)return;
+    const items=F_ITEMS.filter(i=>i.group===g);
     const gl=GROUP_LABELS[g];
-    const gInv=items.reduce((s,i)=>s+F_getTotalInvested(i),0);
-    const gTgt=items.reduce((s,i)=>s+i.target,0);
     const isSaving=g==='saving';
+    // 分组标题
     groupsHtml+=`<div class="f-group-hdr">
       <span class="f-group-title">${gl.icon} ${gl.label}</span>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="f-group-sub">${F_fmtY(gInv)} / ${F_fmtY(gTgt)}</span>
-        ${isSaving?`<button class="f-add-btn" onclick="event.stopPropagation();F_openAddInvGroup('saving')">+ 添加</button>`:''}
-      </div>
     </div>`;
+    // 2列网格
+    groupsHtml+='<div class="f-inv-grid">';
     items.forEach(item=>{
       const inv=F_getTotalInvested(item);
-      const remain=F_getRemain(item);
       const pct=F_getPct(item);
       const done=F_isCompleted(item);
-      const barColor=done?'#4caf50':pct>80?'#ff9800':'#1a5fd4';
-      groupsHtml+=`<div class="f-inv ${done?'done':''}" onclick="F_openItemDetail('${item.id}')">
-        <div class="f-inv-top">
-          <div class="f-inv-left">
-            <div class="f-inv-name">${gl.icon} ${item.name}
-              <span class="f-inv-badge ${done?'done':gl.badge}">${done?'✓ 达标':gl.label}</span>
-            </div>
-            <div class="f-inv-meta">${item.platform}${item.note?' · '+item.note:''}</div>
+      const remain=F_getRemain(item);
+      const barColor=done?'#4caf50':g==='gold'?'#EF9F27':g==='saving'?'#ff9800':'#1a5fd4';
+      const badgeClass=done?'done':gl.badge;
+      const badgeText=done?'✓ 达标':gl.label;
+      groupsHtml+=`<div class="f-inv-card ${done?'done':''}" onclick="F_openItemDetail('${item.id}')">
+        <div class="f-inv-card-top">
+          <div>
+            <div class="f-inv-card-name">${item.name}</div>
+            <div class="f-inv-card-meta">${item.platform}</div>
           </div>
-          <div class="f-inv-right">
-            <div class="f-inv-remain ${done?'done':''}">${done?'已达标':F_fmtY(remain)}</div>
-            <div class="f-inv-pct">${pct}% 完成</div>
-          </div>
+          <span class="f-inv-card-badge ${badgeClass}">${badgeText}</span>
         </div>
-        <div class="f-inv-bar-bg"><div class="f-inv-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-        <div class="f-inv-stats">
-          <div class="f-inv-stat"><div class="f-inv-stat-l">已投入</div><div class="f-inv-stat-v">${F_fmtY(inv)}</div></div>
-          <div class="f-inv-stat"><div class="f-inv-stat-l">目标</div><div class="f-inv-stat-v">${F_fmtY(item.target)}</div></div>
-          ${item.monthly>0?`<div class="f-inv-stat"><div class="f-inv-stat-l">月投</div><div class="f-inv-stat-v">${F_fmtY(item.monthly)}</div></div>`:`<div class="f-inv-stat"><div class="f-inv-stat-l">平台</div><div class="f-inv-stat-v" style="font-size:10px">${item.platform}</div></div>`}
+        <div class="f-inv-card-bar-bg"><div class="f-inv-card-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        <div class="f-inv-card-footer">
+          <span class="f-inv-card-pct ${done?'done':''}">${pct}%</span>
+          <span class="f-inv-card-remain ${done?'done':''}">${done?F_fmtY(inv)+' 达标':'还差 '+F_fmtY(remain)}</span>
         </div>
       </div>`;
     });
+    // 各分组末尾加添加按钮
+    const addLabel=g==='fund'?'添加基金':g==='gold'?'添加黄金项目':'添加储蓄目标';
+    groupsHtml+=`<div class="f-inv-add-card" onclick="F_openAddInvGroup('${g}')">
+      <div class="f-inv-add-icon">＋</div>
+      <div class="f-inv-add-label">${addLabel}</div>
+    </div>`;
+    groupsHtml+='</div>';
   });
 
-  document.getElementById('F_main').innerHTML=`
+    document.getElementById('F_main').innerHTML=`
     ${heroHtml}
     <div class="f-group-hdr">
       <span class="f-group-title">📊 股票账户</span>
@@ -2627,7 +2626,13 @@ function F_renderSellAddModal(){
   const recs=(item.records||[]).slice().reverse();
   const recsHtml=recs.length?recs.map((r,ri)=>{
     const isW=r.type==='withdraw';
+    const isN=r.type==='note'||r.amount===0;
     const isR=r.returned;
+    if(isN)return`<div class="f-record-row" style="opacity:.7">
+      <span class="f-record-date">${r.date}</span>
+      <span style="flex:1;color:#888;font-size:11px;margin-left:4px">${r.note||'变更记录'}</span>
+      <button onclick="F_deleteInvRecord('${item.id}',${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
+    </div>`;
     return`<div class="f-record-row">
       <span class="f-record-date">${r.date}</span>
       <span class="f-record-amt ${isW&&!isR?'neg':isW&&isR?'':'pos'}" style="${isW&&isR?'color:#aaa;text-decoration:line-through':''}">
@@ -2710,16 +2715,25 @@ function F_renderItemEditModal(){
 }
 function F_submitItemEdit(id){
   const idx=F_ITEMS.findIndex(i=>i.id===id);if(idx<0)return;
-  F_ITEMS[idx]={...F_ITEMS[idx],
-    name:document.getElementById('e-name')?.value.trim()||F_ITEMS[idx].name,
-    group:document.getElementById('e-group')?.value||F_ITEMS[idx].group,
-    target:parseFloat(document.getElementById('e-target')?.value)||F_ITEMS[idx].target,
-    invested:parseFloat(document.getElementById('e-invested')?.value)||0,
-    monthly:parseFloat(document.getElementById('e-monthly')?.value)||0,
-    platform:document.getElementById('e-platform')?.value.trim()||'',
-    note:document.getElementById('e-note')?.value.trim()||'',
-  };
-  F_saveData();F_modal=null;F_editId=null;F_renderMain();
+  const old=F_ITEMS[idx];
+  const newName=document.getElementById('e-name')?.value.trim()||old.name;
+  const newTarget=parseFloat(document.getElementById('e-target')?.value)||old.target;
+  const newInvested=parseFloat(document.getElementById('e-invested')?.value)||0;
+  const newMonthly=parseFloat(document.getElementById('e-monthly')?.value)||0;
+  const newPlatform=document.getElementById('e-platform')?.value.trim()||'';
+  const newNote=document.getElementById('e-note')?.value.trim()||'';
+  const newGroup=document.getElementById('e-group')?.value||old.group;
+  // 记录变更
+  if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
+  const changes=[];
+  if(newTarget!==old.target)changes.push(`目标 ${F_fmtY(old.target)}→${F_fmtY(newTarget)}`);
+  if(newMonthly!==old.monthly)changes.push(`月投 ${F_fmtY(old.monthly)}→${F_fmtY(newMonthly)}`);
+  if(Math.abs(newInvested-old.invested)>0.01)changes.push(`初始投入 ${F_fmtY(old.invested)}→${F_fmtY(newInvested)}`);
+  if(changes.length){
+    F_ITEMS[idx].records.push({date:todayStr(),amount:0,note:'📝 '+changes.join('；'),type:'note',returned:false});
+  }
+  F_ITEMS[idx]={...F_ITEMS[idx],name:newName,group:newGroup,target:newTarget,invested:newInvested,monthly:newMonthly,platform:newPlatform,note:newNote};
+  F_saveData();showToast_f('✓ 已保存');F_modal=null;F_editId=null;F_renderMain();
 }
 function F_renderItemAddModal(){
   const ov=mkOv_f();
@@ -3030,6 +3044,15 @@ function F_renderInvActionModal(){
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
+function F_openData(){F_modal='data-f';F_renderMain();}
+function showToast_f(msg){
+  const el=document.createElement('div');
+  el.style.cssText='position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;z-index:999;pointer-events:none;white-space:nowrap;';
+  el.textContent=msg;
+  document.getElementById('panel-finance').appendChild(el);
+  setTimeout(()=>el.remove(),1800);
+}
+function F_init(){F_loadData();F_renderMain();}
 function F_submitInvAction(itemId,type){
   const amt=parseFloat(document.getElementById('F_ia_amt')?.value);
   const date=document.getElementById('F_ia_date')?.value||todayStr();
