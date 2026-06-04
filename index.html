@@ -605,7 +605,7 @@ function switchTab(tab){
   }else if(tab==='monthly'){
     try{if(typeof M_renderMain==='function')M_renderMain();}catch(e){console.warn('monthly:',e)}
   }else if(tab==='finance'){
-    try{if(typeof F_renderMain==='function')F_renderMain();}catch(e){console.warn('finance:',e)}
+    try{if(typeof F_autoInvest==='function')F_autoInvest();if(typeof F_renderMain==='function')F_renderMain();}catch(e){console.warn('finance:',e)}
   }
 }
 
@@ -840,7 +840,7 @@ function exportData(){
   const state=fullState();
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='财务管家备份_'+todayStr()+'.json';
+  a.download=`财务管家_${new Date().getMonth()+1}月${new Date().getDate()}日${new Date().getFullYear()}.json`;
   document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
   const s=ld();s.lastBackupAt=new Date().toISOString();sv(s);
   showToast('全部数据备份已下载');
@@ -853,6 +853,11 @@ function importDataFile(input){
     try{
       applyImportedState(JSON.parse(reader.result));
       modal=null;showApp();showToast('数据已恢复');
+      // 通知账单和财务模块重新加载
+      setTimeout(()=>{
+        try{M_loadData();M_renderMain();}catch(e){}
+        try{F_loadData();F_renderMain();}catch(e){}
+      },300);
     }catch(e){showToast('备份文件无法识别');}
   };
   reader.readAsText(file);input.value='';
@@ -2027,7 +2032,11 @@ function M_renderMain(){
 
   document.getElementById('M_main').innerHTML=`
     ${alertHtml}
-    ${heroHtml}`;
+    ${heroHtml}
+    <div class="section-hdr"><span class="section-title">固定账单</span><button class="section-btn" onclick="M_openAddBill()">+ 新增</button></div>
+    <div class="bill-card">${billsHtml}</div>
+    <div class="section-hdr"><span class="section-title">水电追踪</span></div>
+    ${utilHtml}`;
   M_checkModal();
 }
 
@@ -2626,6 +2635,7 @@ function F_renderSellAddModal(){
   const recs=(item.records||[]).slice().reverse();
   const recsHtml=recs.length?recs.map((r,ri)=>{
     const isW=r.type==='withdraw';
+    const isA=r.type==='auto';
     const isN=r.type==='note'||r.amount===0;
     const isR=r.returned;
     if(isN)return`<div class="f-record-row" style="opacity:.7">
@@ -2638,8 +2648,8 @@ function F_renderSellAddModal(){
       <span class="f-record-amt ${isW&&!isR?'neg':isW&&isR?'':'pos'}" style="${isW&&isR?'color:#aaa;text-decoration:line-through':''}">
         ${isW?'-':'+'}${F_fmtY(r.amount)}
       </span>
-      <span style="flex:1;color:${isW?'#e65100':'#aaa'};font-size:11px;margin-left:8px">
-        ${isW?'🔴 取用':'🟢 存入'}${r.note?' · '+r.note:''}${isW&&isR?' (已归还)':''}
+      <span style="flex:1;color:${isW?'#e65100':isA?'#7c3aed':'#aaa'};font-size:11px;margin-left:8px">
+        ${isW?'🔴 取用':isA?'🤖 自动定投':'🟢 存入'}${!isA&&r.note?' · '+r.note:''}${isW&&isR?' (已归还)':''}
       </span>
       ${isW&&!isR?`<button onclick="F_markReturned('${item.id}',${(item.records||[]).length-1-ri})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
       <button onclick="F_deleteInvRecord('${item.id}',${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
@@ -2705,10 +2715,20 @@ function F_renderItemEditModal(){
       <div class="f-field-row"><span class="f-field-label">分组</span><select id="e-group">${groupOpts}</select></div>
       <div class="f-field-row"><span class="f-field-label">目标金额</span><input id="e-target" type="number" value="${item.target}"></div>
       <div class="f-field-row"><span class="f-field-label">初始已投</span><input id="e-invested" type="number" value="${item.invested}"></div>
-      <div class="f-field-row"><span class="f-field-label">基准月投</span><input id="e-monthly" type="number" value="${item.monthly}"></div>
+      <div class="f-field-row"><span class="f-field-label">月投金额</span><input id="e-monthly" type="number" value="${item.monthly}"></div>
       <div class="f-field-row"><span class="f-field-label">平台</span><input id="e-platform" value="${item.platform}"></div>
       <div class="f-field-row"><span class="f-field-label">备注</span><input id="e-note" value="${item.note||''}"></div>
     </div>
+    <div class="f-section">自动定投</div>
+    <div class="f-field-row">
+      <span class="f-field-label">自动定投</span>
+      <select id="F_e_auto">
+        <option value="1" ${item.autoInvest?'selected':''}>开启</option>
+        <option value="0" ${!item.autoInvest?'selected':''}>关闭</option>
+      </select>
+    </div>
+    <div class="f-field-row"><span class="f-field-label">定投日</span><input id="F_e_invest_day" type="number" inputmode="numeric" min="1" max="31" value="${item.investDay||16}"><span class="f-field-note">号</span></div>
+    <div style="font-size:11px;color:#aaa;margin:4px 0 12px;padding:0 2px">开启后每月定投日自动记录，已达标或月投为0时跳过</div>
     <button class="f-btn-primary" onclick="F_submitItemEdit('${item.id}')">保存</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
@@ -2732,7 +2752,9 @@ function F_submitItemEdit(id){
   if(changes.length){
     F_ITEMS[idx].records.push({date:todayStr(),amount:0,note:'📝 '+changes.join('；'),type:'note',returned:false});
   }
-  F_ITEMS[idx]={...F_ITEMS[idx],name:newName,group:newGroup,target:newTarget,invested:newInvested,monthly:newMonthly,platform:newPlatform,note:newNote};
+  const newAutoInvest=document.getElementById('F_e_auto')?.value==='1';
+  const newInvestDay=parseInt(document.getElementById('F_e_invest_day')?.value)||16;
+  F_ITEMS[idx]={...F_ITEMS[idx],name:newName,group:newGroup,target:newTarget,invested:newInvested,monthly:newMonthly,platform:newPlatform,note:newNote,autoInvest:newAutoInvest,investDay:newInvestDay};
   F_saveData();showToast_f('✓ 已保存');F_modal=null;F_editId=null;F_renderMain();
 }
 function F_renderItemAddModal(){
@@ -2787,7 +2809,7 @@ function F_exportData(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   const d=new Date();
-  a.download=`财务总览备份_${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}.json`;
+  a.download=`财务管家_${d.getMonth()+1}月${d.getDate()}日${d.getFullYear()}.json`;
   a.click();URL.revokeObjectURL(a.href);
 }
 function F_importData(e){
@@ -3044,6 +3066,41 @@ function F_renderInvActionModal(){
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
+
+// ─── 自动定投 ───
+function F_autoInvest(){
+  const today=new Date();
+  const todayD=today.getDate();
+  const mk=today.getFullYear()+'-'+pad2(today.getMonth()+1);
+
+  F_ITEMS.forEach((item,idx)=>{
+    // 检查开关
+    if(!item.autoInvest)return;
+    // 月投金额必须>0
+    if(!item.monthly||item.monthly<=0)return;
+    // 已达标跳过
+    if(F_isCompleted(item))return;
+    // 检查今天是否>=定投日
+    const investDay=item.investDay||16;
+    if(todayD<investDay)return;
+    // 检查本月是否已有自动定投记录
+    const recs=item.records||[];
+    const alreadyDone=recs.some(r=>r.type==='auto'&&r.date&&r.date.startsWith(mk));
+    if(alreadyDone)return;
+    // 写入自动定投记录
+    if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
+    const investDate=mk+'-'+pad2(investDay);
+    F_ITEMS[idx].records.push({
+      date:investDate,
+      amount:item.monthly,
+      note:'🤖 自动定投',
+      type:'auto',
+      returned:false
+    });
+    console.log('自动定投:',item.name,'¥'+item.monthly);
+  });
+  F_saveData();
+}
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
   const el=document.createElement('div');
@@ -3052,7 +3109,7 @@ function showToast_f(msg){
   document.getElementById('panel-finance').appendChild(el);
   setTimeout(()=>el.remove(),1800);
 }
-function F_init(){F_loadData();F_renderMain();}
+function F_init(){F_loadData();F_autoInvest();F_renderMain();}
 function F_submitInvAction(itemId,type){
   const amt=parseFloat(document.getElementById('F_ia_amt')?.value);
   const date=document.getElementById('F_ia_date')?.value||todayStr();
@@ -3065,6 +3122,41 @@ function F_submitInvAction(itemId,type){
   showToast_f(type==='withdraw'?'✓ 取用已记录':'✓ 存入已记录');
   F_modal='item-detail';F_renderMain();
 }
+
+// ─── 自动定投 ───
+function F_autoInvest(){
+  const today=new Date();
+  const todayD=today.getDate();
+  const mk=today.getFullYear()+'-'+pad2(today.getMonth()+1);
+
+  F_ITEMS.forEach((item,idx)=>{
+    // 检查开关
+    if(!item.autoInvest)return;
+    // 月投金额必须>0
+    if(!item.monthly||item.monthly<=0)return;
+    // 已达标跳过
+    if(F_isCompleted(item))return;
+    // 检查今天是否>=定投日
+    const investDay=item.investDay||16;
+    if(todayD<investDay)return;
+    // 检查本月是否已有自动定投记录
+    const recs=item.records||[];
+    const alreadyDone=recs.some(r=>r.type==='auto'&&r.date&&r.date.startsWith(mk));
+    if(alreadyDone)return;
+    // 写入自动定投记录
+    if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
+    const investDate=mk+'-'+pad2(investDay);
+    F_ITEMS[idx].records.push({
+      date:investDate,
+      amount:item.monthly,
+      note:'🤖 自动定投',
+      type:'auto',
+      returned:false
+    });
+    console.log('自动定投:',item.name,'¥'+item.monthly);
+  });
+  F_saveData();
+}
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
   const el=document.createElement('div');
@@ -3073,7 +3165,7 @@ function showToast_f(msg){
   document.getElementById('panel-finance').appendChild(el);
   setTimeout(()=>el.remove(),1800);
 }
-function F_init(){F_loadData();F_renderMain();}
+function F_init(){F_loadData();F_autoInvest();F_renderMain();}
 // ─── 启动 ───
 (function(){
   try{
