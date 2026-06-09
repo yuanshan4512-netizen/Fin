@@ -392,7 +392,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-hero-stat{flex:1;background:rgba(255,255,255,.12);border-radius:12px;padding:10px;text-align:center;}
 .f-hero-stat-l{font-size:10px;color:rgba(255,255,255,.6);margin-bottom:4px;}
 .f-hero-stat-v{font-size:13px;font-weight:700;color:#fff;}
-.f-hero-stat-v.pos{color:#69f0ae;}
+.f-hero-stat-v.pos{color:#ff6b6b;}
 .f-hero-stat-v.warn{color:#ffd54f;}
 .f-hero-bar-bg{height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden;}
 .f-hero-bar-fill{height:100%;border-radius:2px;background:rgba(255,255,255,.8);transition:width .6s;}
@@ -408,7 +408,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-account-avail-l{font-size:10px;color:#aaa;margin-bottom:4px;}
 .f-account-avail{font-size:22px;font-weight:800;color:#1a1a1a;}
 .f-account-profit-l{font-size:10px;color:#aaa;margin-bottom:4px;text-align:right;}
-.f-account-profit{font-size:18px;font-weight:700;color:#00897b;text-align:right;}
+.f-account-profit{font-size:18px;font-weight:700;color:#e53935;text-align:right;}
 .f-account-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .f-account-stat{background:#f8f9fc;border-radius:10px;padding:8px;text-align:center;}
 .f-account-stat-l{font-size:10px;color:#aaa;margin-bottom:3px;}
@@ -419,19 +419,19 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-stock-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
 .f-stock-name{font-size:15px;font-weight:700;color:#1a1a1a;}
 .f-stock-meta{font-size:11px;color:#aaa;margin-top:3px;}
-.f-stock-pnl{font-size:14px;font-weight:700;color:#00897b;text-align:right;}
+.f-stock-pnl{font-size:14px;font-weight:700;color:#e53935;text-align:right;}
 .f-stock-pnl-l{font-size:10px;color:#aaa;text-align:right;margin-bottom:2px;}
 /* 止盈止损 */
 .f-sl-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
 .f-sl-item{border-radius:12px;padding:10px 12px;}
-.f-sl-tp{background:#e8f5e9;}
-.f-sl-sl{background:#ffebee;}
+.f-sl-tp{background:#fff0f0;}
+.f-sl-sl{background:#f0fff0;}
 .f-sl-label{font-size:10px;font-weight:600;margin-bottom:4px;}
-.f-sl-tp .f-sl-label{color:#2e7d32;}
-.f-sl-sl .f-sl-label{color:#c62828;}
+.f-sl-tp .f-sl-label{color:#c62828;}
+.f-sl-sl .f-sl-label{color:#2e7d32;}
 .f-sl-price{font-size:16px;font-weight:800;}
-.f-sl-tp .f-sl-price{color:#2e7d32;}
-.f-sl-sl .f-sl-price{color:#c62828;}
+.f-sl-tp .f-sl-price{color:#c62828;}
+.f-sl-sl .f-sl-price{color:#2e7d32;}
 .f-sl-hint{font-size:10px;color:#888;margin-top:2px;}
 /* 止盈计划 */
 .f-tp-list{border-top:1px solid #f0f0f0;padding-top:10px;}
@@ -445,7 +445,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-tp-note.done{color:#bbb;text-decoration:line-through;}
 .f-tp-detail{font-size:11px;color:#aaa;margin-top:1px;}
 .f-tp-profit{font-size:12px;font-weight:700;}
-.f-tp-profit.active{color:#00897b;}
+.f-tp-profit.active{color:#e53935;}
 .f-tp-profit.done{color:#bbb;}
 /* 投资卡 */
 .f-inv{background:#fff;border-radius:16px;padding:16px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.06);-webkit-tap-highlight-color:transparent;}
@@ -462,7 +462,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-inv-meta{font-size:11px;color:#aaa;margin-top:3px;}
 .f-inv-right{text-align:right;}
 .f-inv-remain{font-size:15px;font-weight:700;color:#1a1a1a;}
-.f-inv-remain.done{color:#2e7d32;}
+.f-inv-remain.done{color:#c62828;}
 .f-inv-pct{font-size:11px;color:#aaa;margin-top:2px;}
 .f-inv-bar-bg{height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;margin-bottom:8px;}
 .f-inv-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
@@ -484,8 +484,8 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-calc-box{background:#f0faf5;border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid #c8e6c9;}
 .f-calc-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
 .f-calc-label{color:#555;}
-.f-calc-val{font-weight:700;color:#00897b;}
-.f-calc-val.neg{color:#e53935;}
+.f-calc-val{font-weight:700;color:#e53935;}
+.f-calc-val.neg{color:#00897b;}
 .f-btn-primary{width:100%;height:46px;border-radius:13px;border:none;background:#1a5fd4;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;-webkit-tap-highlight-color:transparent;}
 .f-btn-primary:active{opacity:.9;}
 .f-btn-secondary{width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;}
@@ -496,7 +496,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-record-qty{font-weight:600;color:#1a1a1a;width:58px;}
 .f-record-price{color:#555;flex:1;}
 .f-record-amt{font-weight:600;}
-.f-record-amt.pos{color:#00897b;}
+.f-record-amt.pos{color:#e53935;}
 .f-record-del{background:none;border:none;color:#ccc;cursor:pointer;font-size:16px;padding:0 4px;}
 .f-empty{text-align:center;color:#ccc;font-size:12px;padding:20px 0;}
 /* add-stock btn in group header */
@@ -505,22 +505,22 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
 .f-inv-card{background:#fff;border-radius:14px;padding:12px;cursor:pointer;border:0.5px solid #e8e8e8;-webkit-tap-highlight-color:transparent;transition:border-color .15s;}
 .f-inv-card:active{border-color:#1a5fd4;}
-.f-inv-card.done{border:1px solid #c8e6c9;background:#fafffe;}
+.f-inv-card.done{border:1px solid #ffcdd2;background:#fff8f8;}
 .f-inv-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
 .f-inv-card-name{font-size:13px;font-weight:600;color:#1a1a1a;}
 .f-inv-card-meta{font-size:10px;color:#aaa;margin-top:2px;}
 .f-inv-card-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;flex-shrink:0;}
-.f-inv-card-badge.fund{background:#e3f2fd;color:#1565c0;}
-.f-inv-card-badge.gold{background:#fff8e1;color:#f57f17;}
-.f-inv-card-badge.saving{background:#fff3e0;color:#e65100;}
-.f-inv-card-badge.done{background:#e8f5e9;color:#2e7d32;}
+.f-inv-card-badge.fund{background:#fff3e0;color:#e65100;}
+.f-inv-card-badge.gold{background:#fffde7;color:#f9a825;}
+.f-inv-card-badge.saving{background:#e3f2fd;color:#1565c0;}
+.f-inv-card-badge.done{background:#ffebee;color:#c62828;}
 .f-inv-card-bar-bg{height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;margin-bottom:6px;}
 .f-inv-card-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
 .f-inv-card-footer{display:flex;justify-content:space-between;align-items:center;}
 .f-inv-card-pct{font-size:11px;color:#aaa;}
-.f-inv-card-pct.done{color:#2e7d32;}
+.f-inv-card-pct.done{color:#c62828;}
 .f-inv-card-remain{font-size:11px;color:#aaa;}
-.f-inv-card-remain.done{color:#2e7d32;}
+.f-inv-card-remain.done{color:#c62828;}
 /* 添加按钮卡片 */
 .f-inv-add-card{background:#f8f9fc;border-radius:14px;padding:12px;cursor:pointer;border:1.5px dashed #c8dff5;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:88px;-webkit-tap-highlight-color:transparent;}
 .f-inv-add-card:active{background:#e8f0fe;}
@@ -542,8 +542,8 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-portfolio-cost{font-size:11px;color:#888;flex:1;}
 .f-portfolio-mkt{font-size:11px;font-weight:600;flex:1;text-align:right;}
 .f-portfolio-pnl{font-size:11px;font-weight:600;width:72px;text-align:right;}
-.f-portfolio-pnl.pos{color:#00897b;}
-.f-portfolio-pnl.neg{color:#e53935;}
+.f-portfolio-pnl.pos{color:#e53935;}
+.f-portfolio-pnl.neg{color:#00897b;}
 .f-update-btn{width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#f8f9fc;color:#1a1a1a;font-size:13px;font-weight:600;cursor:pointer;}
 
 /* ─── 覆盖：各panel的shell占满空间 ─── */
@@ -2407,7 +2407,7 @@ function F_renderMain(){
       const pct=F_getPct(item);
       const done=F_isCompleted(item);
       const remain=F_getRemain(item);
-      const barColor=done?'#4caf50':g==='gold'?'#EF9F27':g==='saving'?'#ff9800':'#1a5fd4';
+      const barColor=done?'#e53935':g==='gold'?'#FFD700':g==='saving'?'#1a5fd4':'#ff9800';
       const badgeClass=done?'done':gl.badge;
       const badgeText=done?'✓ 达标':gl.label;
       groupsHtml+=`<div class="f-inv-card ${done?'done':''}" onclick="F_openItemDetail('${item.id}')">
@@ -2577,7 +2577,7 @@ function F_renderSellAddModal(){
       <div class="f-calc-row"><span class="f-calc-label">本次利润</span><span class="f-calc-val" id="F_sc_profit">—</span></div>
       <div class="f-calc-row"><span class="f-calc-label">卖出后剩余</span><span class="f-calc-val" id="F_sc_remain">—</span></div>
     </div>
-    <button class="f-btn-primary" style="background:#00897b;" onclick="F_submitSell('${st.id}')">确认卖出</button>
+    <button class="f-btn-primary" style="background:#e53935;" onclick="F_submitSell('${st.id}')">确认卖出</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }function F_renderStockEditModal(){
@@ -2690,7 +2690,7 @@ function F_renderSellAddModal(){
       <div class="f-account-stat"><div class="f-account-stat-l">${withdrawn>0?'待归还':'状态'}</div><div class="f-account-stat-v" style="color:${withdrawn>0?'#e65100':done?'#2e7d32':'#1a1a1a'}">${withdrawn>0?F_fmtY(withdrawn):done?'✓ 达标':'进行中'}</div></div>
     </div>
     <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;margin-bottom:4px;">
-      <div style="height:100%;border-radius:3px;background:${done?'#4caf50':'#1a5fd4'};width:${pct}%;transition:width .5s;"></div>
+      <div style="height:100%;border-radius:3px;background:${done?'#e53935':item.group==='gold'?'#FFD700':item.group==='saving'?'#1a5fd4':'#ff9800'};width:${pct}%;transition:width .5s;"></div>
     </div>
     <div style="text-align:right;font-size:11px;color:#aaa;margin-bottom:16px;">${pct}% 完成</div>
     ${withdrawn>0?`<div style="background:#fff3e0;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#e65100;">⚠️ 有 ${F_fmtY(withdrawn)} 待归还，记得补回来</div>`:''}
@@ -3060,73 +3060,15 @@ function F_markReturned(itemId,recIdx){
   if(F_ITEMS[idx].records[recIdx])F_ITEMS[idx].records[recIdx].returned=true;
   F_saveData();showToast_f('✓ 已标记归还');F_renderMain();
 }
-function F_openItemDetail(id){F_modal='item-detail';F_editId=id;F_renderMain()}
 
 function F_openItemDetail(id){F_modal='item-detail';F_editId=id;F_renderMain();}
 function F_openAddInv(){F_modal='item-add';F_editId=null;window._F_addGroup='fund';F_renderMain();}
 function F_openAddInvGroup(g){F_modal='item-add';F_editId=null;window._F_addGroup=g||'saving';F_renderMain();}
 
-function mkOv_f(){
-  const ov=document.createElement('div');
-  ov.className='modal-overlay';
-  ov.style.cssText='position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;flex-direction:column;justify-content:flex-end;z-index:100;';
-  ov.addEventListener('click',e=>{if(e.target===ov){F_modal=null;F_editId=null;F_editSub=null;F_renderMain();}});
-  return ov;
-}
-function F_renderInvActionModal(){
-  const item=F_ITEMS.find(i=>i.id===F_editId);if(!item)return;
-  const type=window._F_invActionType||'deposit';
-  const isW=type==='withdraw';
-  const ov=mkOv_f();
-  ov.innerHTML=`<div class="f-sheet">
-    <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title" style="color:${isW?'#e65100':'#1a5fd4'}">${isW?'－ 取用':'＋ 存入'}</div>
-    <div class="f-sheet-sub">${item.name}</div>
-    <div class="f-field-row"><span class="f-field-label">金额</span><input id="F_ia_amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
-    <div class="f-field-row"><span class="f-field-label">日期</span><input id="F_ia_date" type="date" value="${todayStr()}"></div>
-    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_ia_note" placeholder="${isW?'如：应急取用':'如：5月定投'}"></div>
-    <button class="f-btn-primary" style="background:${isW?'#e65100':'#1a5fd4'};" onclick="F_submitInvAction('${item.id}','${type}')">确认${isW?'取用':'存入'}</button>
-  </div>`;
-  document.getElementById('panel-finance').appendChild(ov);
-}
 
-// ─── 自动定投 ───
-function F_autoInvest(){
-  const today=new Date();
-  const todayD=today.getDate();
-  const mk=today.getFullYear()+'-'+pad2(today.getMonth()+1);
 
-  F_ITEMS.forEach((item,idx)=>{
-    // 检查开关
-    if(!item.autoInvest)return;
-    // 月投金额必须>0
-    if(!item.monthly||item.monthly<=0)return;
-    // 已达标跳过
-    if(F_isCompleted(item))return;
-    // 检查今天是否>=定投日
-    const investDay=item.investDay||16;
-    if(todayD<investDay)return;
-    // 检查本月是否已有自动定投记录
-    const recs=item.records||[];
-    const alreadyDone=recs.some(r=>r.type==='auto'&&r.date&&r.date.startsWith(mk));
-    if(alreadyDone)return;
-    // 写入自动定投记录
-    if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
-    const investDate=mk+'-'+pad2(investDay);
-    F_ITEMS[idx].records.push({
-      date:investDate,
-      amount:item.monthly,
-      note:'🤖 自动定投',
-      type:'auto',
-      returned:false
-    });
-    console.log('自动定投:',item.name,'¥'+item.monthly);
-  });
-  F_saveData();
-}
-
-// ─── 资产配置 ───
-const F_PORT_COLORS=['#1a5fd4','#00897b','#EF9F27','#e65100'];
+// ─── 资产配置 & 自动定投 ───
+const F_PORT_COLORS=['#ff9800','#FFD700','#e53935','#1a5fd4'];// 基金橙 黄金黄 股票红 现金蓝
 const F_PORT_NAMES=['基金','黄金','股票','现金'];
 
 function F_getPortfolioMarket(){
@@ -3138,39 +3080,32 @@ function F_savePortfolioMarket(d){
 }
 
 function F_calcPortfolio(){
-  // 投入成本
   const fundItems=F_ITEMS.filter(i=>i.group==='fund');
   const goldItems=F_ITEMS.filter(i=>i.group==='gold');
   const fundCost=fundItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
   const goldCost=goldItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
-  // 股票成本 = 初始资金 + 所有追加资金（固定资金池）
+  // 股票成本=初始资金+追加资金（固定资金池）
   const stockCost=F_STOCK_ACCOUNT.initialCapital+(F_STOCK_ACCOUNT.deposits||[]).reduce((s,d)=>s+d.amount,0);
   // 现金安全垫余额
   const cashItem=F_ITEMS.find(i=>i.name==='现金安全垫')||F_ITEMS.find(i=>i.group==='saving');
   const cashCost=cashItem?F_getTotalInvested(cashItem):0;
-
-  // 市值
   const mkt=F_getPortfolioMarket();
   const stockMkt=mkt.stock!=null?mkt.stock:stockCost;
   const fundMkt=mkt.fund!=null?mkt.fund:fundCost;
   const goldMkt=mkt.gold!=null?mkt.gold:goldCost;
-  const cashMkt=cashCost;// 现金不浮动
-
+  const cashMkt=cashCost;
   const costs=[fundCost,goldCost,stockCost,cashCost];
   const mkts=[fundMkt,goldMkt,stockMkt,cashMkt];
   const totalCost=costs.reduce((a,b)=>a+b,0);
   const totalMkt=mkts.reduce((a,b)=>a+b,0);
-
   return{costs,mkts,totalCost,totalMkt,updatedAt:mkt.updatedAt};
 }
 
 function F_renderPortfolioSection(){
   const p=F_calcPortfolio();
-  const {costs,mkts,totalCost,totalMkt,updatedAt}=p;
-  // 饼图数据
+  const{costs,mkts,totalCost,totalMkt,updatedAt}=p;
   const costPcts=costs.map(v=>totalCost>0?Math.round(v/totalCost*100):25);
   const mktPcts=mkts.map(v=>totalMkt>0?Math.round(v/totalMkt*100):25);
-
   const rows=F_PORT_NAMES.map((name,i)=>{
     const pnl=mkts[i]-costs[i];
     const pnlPct=costs[i]>0?pnl/costs[i]*100:0;
@@ -3179,10 +3114,9 @@ function F_renderPortfolioSection(){
       <span class="f-portfolio-name">${name}</span>
       <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
       <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
-      <span class="f-portfolio-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>=0?'+':''}${pnlPct.toFixed(1)}%</span></span>
+      <span class="f-portfolio-pnl ${pnl>=0?'neg':'pos'}">${pnl>=0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>=0?'+':''}${pnlPct.toFixed(1)}%</span></span>
     </div>`;
   }).join('');
-
   return`<div class="f-portfolio" id="F_portfolio_card">
     <div class="f-portfolio-title">
       <span class="f-portfolio-h">🥧 资产配置</span>
@@ -3191,21 +3125,17 @@ function F_renderPortfolioSection(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div style="text-align:center;">
         <div class="f-pie-label">投入成本</div>
-        <div style="position:relative;display:inline-block;">
-          <canvas id="F_pie_cost" width="130" height="130"></canvas>
-        </div>
+        <canvas id="F_pie_cost" width="130" height="130"></canvas>
       </div>
       <div style="text-align:center;">
         <div class="f-pie-label">当前市值</div>
-        <div style="position:relative;display:inline-block;">
-          <canvas id="F_pie_mkt" width="130" height="130"></canvas>
-        </div>
+        <canvas id="F_pie_mkt" width="130" height="130"></canvas>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
       <span>总成本 ${F_fmtY(totalCost)}</span>
       <span>总市值 ${F_fmtY(totalMkt)}</span>
-      <span style="color:${totalMkt>=totalCost?'#00897b':'#e53935'};font-weight:600">${totalMkt>=totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
+      <span style="color:${totalMkt>=totalCost?'#e53935':'#00897b'};font-weight:600">${totalMkt>=totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
     </div>
     <div class="f-portfolio-rows">${rows}</div>
     <button class="f-update-btn" onclick="F_openMarketUpdate()">📊 更新市值</button>
@@ -3213,14 +3143,12 @@ function F_renderPortfolioSection(){
 }
 
 function F_drawPortfolioPies(){
-  // 清掉旧图
   ['F_pie_cost','F_pie_mkt'].forEach(id=>{
     const el=document.getElementById(id);
     if(el&&el._chartInstance){el._chartInstance.destroy();el._chartInstance=null;}
   });
   setTimeout(()=>{
     const p=F_calcPortfolio();
-    // 文字标注插件
     const labelPlugin={
       id:'pieLabels',
       afterDraw(chart){
@@ -3230,14 +3158,13 @@ function F_drawPortfolioPies(){
         chart.getDatasetMeta(0).data.forEach((arc,i)=>{
           const val=data.datasets[0].data[i];
           const pct=Math.round(val/total*100);
-          if(pct<8)return;// 太小就不写
+          if(pct<8)return;
           const angle=(arc.startAngle+arc.endAngle)/2;
           const r=arc.outerRadius*0.62;
           const x=arc.x+Math.cos(angle)*r;
           const y=arc.y+Math.sin(angle)*r;
           ctx.save();
-          ctx.textAlign='center';
-          ctx.textBaseline='middle';
+          ctx.textAlign='center';ctx.textBaseline='middle';
           ctx.fillStyle='#fff';
           ctx.font='bold 10px -apple-system,sans-serif';
           ctx.fillText(data.labels[i],x,y-6);
@@ -3258,7 +3185,7 @@ function F_drawPortfolioPies(){
           plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
             const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
             const pct=total>0?(ctx.parsed/total*100).toFixed(1):0;
-            return ctx.label+': ¥'+ctx.parsed.toFixed(0)+' ('+pct+'%)';
+            return ctx.label+': \u00a5'+ctx.parsed.toFixed(0)+' ('+pct+'%)';
           }}}},
           animation:{duration:400}
         },
@@ -3281,7 +3208,7 @@ function F_renderMarketUpdateModal(){
     <div class="f-sheet-sub">填入各账户当前总市值，不填则保持上次数据</div>
     <div class="f-section">股票</div>
     <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_stock" type="number" inputmode="decimal" step="0.01" placeholder="持仓总市值" value="${mkt.stock!=null?mkt.stock:''}"></div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">持仓成本 ${F_fmtY(p.costs[2])}</div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">资金池成本 ${F_fmtY(p.costs[2])}</div>
     <div class="f-section">基金</div>
     <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_fund" type="number" inputmode="decimal" step="0.01" placeholder="所有基金合计市值" value="${mkt.fund!=null?mkt.fund:''}"></div>
     <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[0])}</div>
@@ -3312,248 +3239,27 @@ function F_submitMarketUpdate(){
   F_modal=null;F_renderMain();
   setTimeout(F_drawPortfolioPies,200);
 }
-function F_openData(){F_modal='data-f';F_renderMain();}
-function showToast_f(msg){
-  const el=document.createElement('div');
-  el.style.cssText='position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;z-index:999;pointer-events:none;white-space:nowrap;';
-  el.textContent=msg;
-  document.getElementById('panel-finance').appendChild(el);
-  setTimeout(()=>el.remove(),1800);
-}
-function F_init(){F_loadData();F_autoInvest();F_renderMain();}
-function F_submitInvAction(itemId,type){
-  const amt=parseFloat(document.getElementById('F_ia_amt')?.value);
-  const date=document.getElementById('F_ia_date')?.value||todayStr();
-  const note=document.getElementById('F_ia_note')?.value.trim()||'';
-  if(!amt||amt<=0){alert('请填写金额');return;}
-  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
-  if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
-  F_ITEMS[idx].records.push({date,amount:amt,note,type:type,returned:false});
-  F_saveData();
-  showToast_f(type==='withdraw'?'✓ 取用已记录':'✓ 存入已记录');
-  F_modal='item-detail';F_renderMain();
-}
 
-// ─── 自动定投 ───
 function F_autoInvest(){
   const today=new Date();
   const todayD=today.getDate();
   const mk=today.getFullYear()+'-'+pad2(today.getMonth()+1);
-
   F_ITEMS.forEach((item,idx)=>{
-    // 检查开关
     if(!item.autoInvest)return;
-    // 月投金额必须>0
     if(!item.monthly||item.monthly<=0)return;
-    // 已达标跳过
     if(F_isCompleted(item))return;
-    // 检查今天是否>=定投日
     const investDay=item.investDay||16;
     if(todayD<investDay)return;
-    // 检查本月是否已有自动定投记录
     const recs=item.records||[];
     const alreadyDone=recs.some(r=>r.type==='auto'&&r.date&&r.date.startsWith(mk));
     if(alreadyDone)return;
-    // 写入自动定投记录
     if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
     const investDate=mk+'-'+pad2(investDay);
-    F_ITEMS[idx].records.push({
-      date:investDate,
-      amount:item.monthly,
-      note:'🤖 自动定投',
-      type:'auto',
-      returned:false
-    });
-    console.log('自动定投:',item.name,'¥'+item.monthly);
+    F_ITEMS[idx].records.push({date:investDate,amount:item.monthly,note:'🤖 自动定投',type:'auto',returned:false});
   });
   F_saveData();
 }
 
-// ─── 资产配置 ───
-
-function F_getPortfolioMarket(){
-  const s=F_ld();
-  return s.portfolioMarket||{stock:null,fund:null,gold:null,updatedAt:''};
-}
-function F_savePortfolioMarket(d){
-  const s=F_ld();s.portfolioMarket=d;F_sv(s);
-}
-
-function F_calcPortfolio(){
-  // 投入成本
-  const fundItems=F_ITEMS.filter(i=>i.group==='fund');
-  const goldItems=F_ITEMS.filter(i=>i.group==='gold');
-  const fundCost=fundItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
-  const goldCost=goldItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
-  // 股票成本 = 初始资金 + 所有追加资金（固定资金池）
-  const stockCost=F_STOCK_ACCOUNT.initialCapital+(F_STOCK_ACCOUNT.deposits||[]).reduce((s,d)=>s+d.amount,0);
-  // 现金安全垫余额
-  const cashItem=F_ITEMS.find(i=>i.name==='现金安全垫')||F_ITEMS.find(i=>i.group==='saving');
-  const cashCost=cashItem?F_getTotalInvested(cashItem):0;
-
-  // 市值
-  const mkt=F_getPortfolioMarket();
-  const stockMkt=mkt.stock!=null?mkt.stock:stockCost;
-  const fundMkt=mkt.fund!=null?mkt.fund:fundCost;
-  const goldMkt=mkt.gold!=null?mkt.gold:goldCost;
-  const cashMkt=cashCost;// 现金不浮动
-
-  const costs=[fundCost,goldCost,stockCost,cashCost];
-  const mkts=[fundMkt,goldMkt,stockMkt,cashMkt];
-  const totalCost=costs.reduce((a,b)=>a+b,0);
-  const totalMkt=mkts.reduce((a,b)=>a+b,0);
-
-  return{costs,mkts,totalCost,totalMkt,updatedAt:mkt.updatedAt};
-}
-
-function F_renderPortfolioSection(){
-  const p=F_calcPortfolio();
-  const {costs,mkts,totalCost,totalMkt,updatedAt}=p;
-  // 饼图数据
-  const costPcts=costs.map(v=>totalCost>0?Math.round(v/totalCost*100):25);
-  const mktPcts=mkts.map(v=>totalMkt>0?Math.round(v/totalMkt*100):25);
-
-  const rows=F_PORT_NAMES.map((name,i)=>{
-    const pnl=mkts[i]-costs[i];
-    const pnlPct=costs[i]>0?pnl/costs[i]*100:0;
-    return`<div class="f-portfolio-row">
-      <div class="f-portfolio-dot" style="background:${F_PORT_COLORS[i]}"></div>
-      <span class="f-portfolio-name">${name}</span>
-      <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
-      <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
-      <span class="f-portfolio-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>=0?'+':''}${pnlPct.toFixed(1)}%</span></span>
-    </div>`;
-  }).join('');
-
-  return`<div class="f-portfolio" id="F_portfolio_card">
-    <div class="f-portfolio-title">
-      <span class="f-portfolio-h">🥧 资产配置</span>
-      <span class="f-portfolio-update">${updatedAt?'市值更新于 '+updatedAt:'市值待更新'}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div style="text-align:center;">
-        <div class="f-pie-label">投入成本</div>
-        <div style="position:relative;display:inline-block;">
-          <canvas id="F_pie_cost" width="130" height="130"></canvas>
-        </div>
-      </div>
-      <div style="text-align:center;">
-        <div class="f-pie-label">当前市值</div>
-        <div style="position:relative;display:inline-block;">
-          <canvas id="F_pie_mkt" width="130" height="130"></canvas>
-        </div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
-      <span>总成本 ${F_fmtY(totalCost)}</span>
-      <span>总市值 ${F_fmtY(totalMkt)}</span>
-      <span style="color:${totalMkt>=totalCost?'#00897b':'#e53935'};font-weight:600">${totalMkt>=totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
-    </div>
-    <div class="f-portfolio-rows">${rows}</div>
-    <button class="f-update-btn" onclick="F_openMarketUpdate()">📊 更新市值</button>
-  </div>`;
-}
-
-function F_drawPortfolioPies(){
-  // 清掉旧图
-  ['F_pie_cost','F_pie_mkt'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el&&el._chartInstance){el._chartInstance.destroy();el._chartInstance=null;}
-  });
-  setTimeout(()=>{
-    const p=F_calcPortfolio();
-    // 文字标注插件
-    const labelPlugin={
-      id:'pieLabels',
-      afterDraw(chart){
-        const{ctx,data}=chart;
-        const total=data.datasets[0].data.reduce((a,b)=>a+b,0);
-        if(total===0)return;
-        chart.getDatasetMeta(0).data.forEach((arc,i)=>{
-          const val=data.datasets[0].data[i];
-          const pct=Math.round(val/total*100);
-          if(pct<8)return;// 太小就不写
-          const angle=(arc.startAngle+arc.endAngle)/2;
-          const r=arc.outerRadius*0.62;
-          const x=arc.x+Math.cos(angle)*r;
-          const y=arc.y+Math.sin(angle)*r;
-          ctx.save();
-          ctx.textAlign='center';
-          ctx.textBaseline='middle';
-          ctx.fillStyle='#fff';
-          ctx.font='bold 10px -apple-system,sans-serif';
-          ctx.fillText(data.labels[i],x,y-6);
-          ctx.font='10px -apple-system,sans-serif';
-          ctx.fillText(pct+'%',x,y+6);
-          ctx.restore();
-        });
-      }
-    };
-    ['cost','mkt'].forEach(type=>{
-      const canvas=document.getElementById('F_pie_'+type);
-      if(!canvas||!window.Chart)return;
-      const data=type==='cost'?p.costs:p.mkts;
-      const chart=new Chart(canvas,{
-        type:'pie',
-        data:{labels:F_PORT_NAMES,datasets:[{data,backgroundColor:F_PORT_COLORS,borderWidth:2,borderColor:'#fff'}]},
-        options:{
-          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
-            const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
-            const pct=total>0?(ctx.parsed/total*100).toFixed(1):0;
-            return ctx.label+': ¥'+ctx.parsed.toFixed(0)+' ('+pct+'%)';
-          }}}},
-          animation:{duration:400}
-        },
-        plugins:[labelPlugin]
-      });
-      canvas._chartInstance=chart;
-    });
-  },150);
-}
-
-function F_openMarketUpdate(){F_modal='market-update';F_renderMain();}
-
-function F_renderMarketUpdateModal(){
-  const mkt=F_getPortfolioMarket();
-  const p=F_calcPortfolio();
-  const ov=mkOv_f();
-  ov.innerHTML=`<div class="f-sheet">
-    <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">更新市值</div>
-    <div class="f-sheet-sub">填入各账户当前总市值，不填则保持上次数据</div>
-    <div class="f-section">股票</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_stock" type="number" inputmode="decimal" step="0.01" placeholder="持仓总市值" value="${mkt.stock!=null?mkt.stock:''}"></div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">持仓成本 ${F_fmtY(p.costs[2])}</div>
-    <div class="f-section">基金</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_fund" type="number" inputmode="decimal" step="0.01" placeholder="所有基金合计市值" value="${mkt.fund!=null?mkt.fund:''}"></div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[0])}</div>
-    <div class="f-section">黄金</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_gold" type="number" inputmode="decimal" step="0.01" placeholder="黄金积存金当前价值" value="${mkt.gold!=null?mkt.gold:''}"></div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[1])}</div>
-    <div class="f-section">现金</div>
-    <div style="font-size:12px;color:#555;background:#f8f9fc;border-radius:12px;padding:10px 14px;margin-bottom:14px;">自动取现金安全垫余额 ${F_fmtY(p.costs[3])}，无需手动填写</div>
-    <button class="f-btn-primary" onclick="F_submitMarketUpdate()">保存市值</button>
-  </div>`;
-  document.getElementById('panel-finance').appendChild(ov);
-}
-
-function F_submitMarketUpdate(){
-  const stock=parseFloat(document.getElementById('F_mkt_stock')?.value);
-  const fund=parseFloat(document.getElementById('F_mkt_fund')?.value);
-  const gold=parseFloat(document.getElementById('F_mkt_gold')?.value);
-  const mkt=F_getPortfolioMarket();
-  const now=new Date();
-  const d={
-    stock:isNaN(stock)?mkt.stock:stock,
-    fund:isNaN(fund)?mkt.fund:fund,
-    gold:isNaN(gold)?mkt.gold:gold,
-    updatedAt:`${now.getMonth()+1}月${now.getDate()}日`
-  };
-  F_savePortfolioMarket(d);
-  showToast_f('✓ 市值已更新');
-  F_modal=null;F_renderMain();
-  setTimeout(F_drawPortfolioPies,200);
-}
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
   const el=document.createElement('div');
@@ -3563,6 +3269,7 @@ function showToast_f(msg){
   setTimeout(()=>el.remove(),1800);
 }
 function F_init(){F_loadData();F_autoInvest();F_renderMain();}
+
 // ─── 启动 ───
 (function(){
   try{
