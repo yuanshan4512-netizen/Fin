@@ -526,6 +526,25 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-inv-add-card:active{background:#e8f0fe;}
 .f-inv-add-icon{font-size:22px;color:#1a5fd4;margin-bottom:4px;}
 .f-inv-add-label{font-size:11px;color:#1a5fd4;font-weight:600;}
+/* 资产配置 */
+.f-portfolio{background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+.f-portfolio-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.f-portfolio-h{font-size:13px;font-weight:700;color:#1a1a1a;}
+.f-portfolio-update{font-size:10px;color:#aaa;}
+.f-portfolio-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.f-pie-wrap{text-align:center;}
+.f-pie-label{font-size:11px;font-weight:600;color:#555;margin-bottom:6px;}
+.f-pie-canvas{width:100%;max-width:130px;margin:0 auto;display:block;}
+.f-portfolio-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.f-portfolio-row{display:flex;align-items:center;gap:8px;}
+.f-portfolio-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.f-portfolio-name{font-size:12px;color:#1a1a1a;width:52px;flex-shrink:0;}
+.f-portfolio-cost{font-size:11px;color:#888;flex:1;}
+.f-portfolio-mkt{font-size:11px;font-weight:600;flex:1;text-align:right;}
+.f-portfolio-pnl{font-size:11px;font-weight:600;width:72px;text-align:right;}
+.f-portfolio-pnl.pos{color:#00897b;}
+.f-portfolio-pnl.neg{color:#e53935;}
+.f-update-btn{width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#f8f9fc;color:#1a1a1a;font-size:13px;font-weight:600;cursor:pointer;}
 
 /* ─── 覆盖：各panel的shell占满空间 ─── */
 #panel-diary .shell{max-width:none!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;position:relative!important;overflow:hidden!important;}
@@ -2417,6 +2436,7 @@ function F_renderMain(){
 
     document.getElementById('F_main').innerHTML=`
     ${heroHtml}
+    ${F_renderPortfolioSection()}
     <div class="f-group-hdr">
       <span class="f-group-title">📊 股票账户</span>
       <button class="f-add-btn" onclick="F_openAddStock()">+ 添加股票</button>
@@ -2427,6 +2447,8 @@ function F_renderMain(){
 }
 function F_checkModal(){
   document.getElementById('panel-finance').querySelectorAll('.modal-overlay').forEach(e=>e.remove());
+  // 如果没有模态框，绘制饼图
+  if(!F_modal){setTimeout(F_drawPortfolioPies,150);}
   if(F_modal==='stock-detail')F_renderStockDetailModal();
   else if(F_modal==='stock-add')F_renderStockAddModal();
   else if(F_modal==='stock-edit')F_renderStockEditModal();
@@ -2437,6 +2459,7 @@ function F_checkModal(){
   else if(F_modal==='item-edit')F_renderItemEditModal();
   else if(F_modal==='item-add')F_renderItemAddModal();
   else if(F_modal==='data'||F_modal==='data-f')F_renderDataModal();
+  else if(F_modal==='market-update')F_renderMarketUpdateModal();
   else if(F_modal==='inv-action')F_renderInvActionModal();
 }
 function mkOv_f(){
@@ -3101,6 +3124,194 @@ function F_autoInvest(){
   });
   F_saveData();
 }
+
+// ─── 资产配置 ───
+const F_PORT_COLORS=['#1a5fd4','#00897b','#EF9F27','#e65100'];
+const F_PORT_NAMES=['基金','黄金','股票','现金'];
+
+function F_getPortfolioMarket(){
+  const s=F_ld();
+  return s.portfolioMarket||{stock:null,fund:null,gold:null,updatedAt:''};
+}
+function F_savePortfolioMarket(d){
+  const s=F_ld();s.portfolioMarket=d;F_sv(s);
+}
+
+function F_calcPortfolio(){
+  // 投入成本
+  const fundItems=F_ITEMS.filter(i=>i.group==='fund');
+  const goldItems=F_ITEMS.filter(i=>i.group==='gold');
+  const fundCost=fundItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
+  const goldCost=goldItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
+  // 股票成本 = 初始资金 + 所有追加资金（固定资金池）
+  const stockCost=F_STOCK_ACCOUNT.initialCapital+(F_STOCK_ACCOUNT.deposits||[]).reduce((s,d)=>s+d.amount,0);
+  // 现金安全垫余额
+  const cashItem=F_ITEMS.find(i=>i.name==='现金安全垫')||F_ITEMS.find(i=>i.group==='saving');
+  const cashCost=cashItem?F_getTotalInvested(cashItem):0;
+
+  // 市值
+  const mkt=F_getPortfolioMarket();
+  const stockMkt=mkt.stock!=null?mkt.stock:stockCost;
+  const fundMkt=mkt.fund!=null?mkt.fund:fundCost;
+  const goldMkt=mkt.gold!=null?mkt.gold:goldCost;
+  const cashMkt=cashCost;// 现金不浮动
+
+  const costs=[fundCost,goldCost,stockCost,cashCost];
+  const mkts=[fundMkt,goldMkt,stockMkt,cashMkt];
+  const totalCost=costs.reduce((a,b)=>a+b,0);
+  const totalMkt=mkts.reduce((a,b)=>a+b,0);
+
+  return{costs,mkts,totalCost,totalMkt,updatedAt:mkt.updatedAt};
+}
+
+function F_renderPortfolioSection(){
+  const p=F_calcPortfolio();
+  const {costs,mkts,totalCost,totalMkt,updatedAt}=p;
+  // 饼图数据
+  const costPcts=costs.map(v=>totalCost>0?Math.round(v/totalCost*100):25);
+  const mktPcts=mkts.map(v=>totalMkt>0?Math.round(v/totalMkt*100):25);
+
+  const rows=F_PORT_NAMES.map((name,i)=>{
+    const pnl=mkts[i]-costs[i];
+    const pnlPct=costs[i]>0?pnl/costs[i]*100:0;
+    return`<div class="f-portfolio-row">
+      <div class="f-portfolio-dot" style="background:${F_PORT_COLORS[i]}"></div>
+      <span class="f-portfolio-name">${name}</span>
+      <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
+      <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
+      <span class="f-portfolio-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>=0?'+':''}${pnlPct.toFixed(1)}%</span></span>
+    </div>`;
+  }).join('');
+
+  return`<div class="f-portfolio" id="F_portfolio_card">
+    <div class="f-portfolio-title">
+      <span class="f-portfolio-h">🥧 资产配置</span>
+      <span class="f-portfolio-update">${updatedAt?'市值更新于 '+updatedAt:'市值待更新'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div style="text-align:center;">
+        <div class="f-pie-label">投入成本</div>
+        <div style="position:relative;display:inline-block;">
+          <canvas id="F_pie_cost" width="130" height="130"></canvas>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div class="f-pie-label">当前市值</div>
+        <div style="position:relative;display:inline-block;">
+          <canvas id="F_pie_mkt" width="130" height="130"></canvas>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
+      <span>总成本 ${F_fmtY(totalCost)}</span>
+      <span>总市值 ${F_fmtY(totalMkt)}</span>
+      <span style="color:${totalMkt>=totalCost?'#00897b':'#e53935'};font-weight:600">${totalMkt>=totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
+    </div>
+    <div class="f-portfolio-rows">${rows}</div>
+    <button class="f-update-btn" onclick="F_openMarketUpdate()">📊 更新市值</button>
+  </div>`;
+}
+
+function F_drawPortfolioPies(){
+  // 清掉旧图
+  ['F_pie_cost','F_pie_mkt'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&el._chartInstance){el._chartInstance.destroy();el._chartInstance=null;}
+  });
+  setTimeout(()=>{
+    const p=F_calcPortfolio();
+    // 文字标注插件
+    const labelPlugin={
+      id:'pieLabels',
+      afterDraw(chart){
+        const{ctx,data}=chart;
+        const total=data.datasets[0].data.reduce((a,b)=>a+b,0);
+        if(total===0)return;
+        chart.getDatasetMeta(0).data.forEach((arc,i)=>{
+          const val=data.datasets[0].data[i];
+          const pct=Math.round(val/total*100);
+          if(pct<8)return;// 太小就不写
+          const angle=(arc.startAngle+arc.endAngle)/2;
+          const r=arc.outerRadius*0.62;
+          const x=arc.x+Math.cos(angle)*r;
+          const y=arc.y+Math.sin(angle)*r;
+          ctx.save();
+          ctx.textAlign='center';
+          ctx.textBaseline='middle';
+          ctx.fillStyle='#fff';
+          ctx.font='bold 10px -apple-system,sans-serif';
+          ctx.fillText(data.labels[i],x,y-6);
+          ctx.font='10px -apple-system,sans-serif';
+          ctx.fillText(pct+'%',x,y+6);
+          ctx.restore();
+        });
+      }
+    };
+    ['cost','mkt'].forEach(type=>{
+      const canvas=document.getElementById('F_pie_'+type);
+      if(!canvas||!window.Chart)return;
+      const data=type==='cost'?p.costs:p.mkts;
+      const chart=new Chart(canvas,{
+        type:'pie',
+        data:{labels:F_PORT_NAMES,datasets:[{data,backgroundColor:F_PORT_COLORS,borderWidth:2,borderColor:'#fff'}]},
+        options:{
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+            const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+            const pct=total>0?(ctx.parsed/total*100).toFixed(1):0;
+            return ctx.label+': ¥'+ctx.parsed.toFixed(0)+' ('+pct+'%)';
+          }}}},
+          animation:{duration:400}
+        },
+        plugins:[labelPlugin]
+      });
+      canvas._chartInstance=chart;
+    });
+  },150);
+}
+
+function F_openMarketUpdate(){F_modal='market-update';F_renderMain();}
+
+function F_renderMarketUpdateModal(){
+  const mkt=F_getPortfolioMarket();
+  const p=F_calcPortfolio();
+  const ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet">
+    <div class="f-sheet-handle"></div>
+    <div class="f-sheet-title">更新市值</div>
+    <div class="f-sheet-sub">填入各账户当前总市值，不填则保持上次数据</div>
+    <div class="f-section">股票</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_stock" type="number" inputmode="decimal" step="0.01" placeholder="持仓总市值" value="${mkt.stock!=null?mkt.stock:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">持仓成本 ${F_fmtY(p.costs[2])}</div>
+    <div class="f-section">基金</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_fund" type="number" inputmode="decimal" step="0.01" placeholder="所有基金合计市值" value="${mkt.fund!=null?mkt.fund:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[0])}</div>
+    <div class="f-section">黄金</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_gold" type="number" inputmode="decimal" step="0.01" placeholder="黄金积存金当前价值" value="${mkt.gold!=null?mkt.gold:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[1])}</div>
+    <div class="f-section">现金</div>
+    <div style="font-size:12px;color:#555;background:#f8f9fc;border-radius:12px;padding:10px 14px;margin-bottom:14px;">自动取现金安全垫余额 ${F_fmtY(p.costs[3])}，无需手动填写</div>
+    <button class="f-btn-primary" onclick="F_submitMarketUpdate()">保存市值</button>
+  </div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+
+function F_submitMarketUpdate(){
+  const stock=parseFloat(document.getElementById('F_mkt_stock')?.value);
+  const fund=parseFloat(document.getElementById('F_mkt_fund')?.value);
+  const gold=parseFloat(document.getElementById('F_mkt_gold')?.value);
+  const mkt=F_getPortfolioMarket();
+  const now=new Date();
+  const d={
+    stock:isNaN(stock)?mkt.stock:stock,
+    fund:isNaN(fund)?mkt.fund:fund,
+    gold:isNaN(gold)?mkt.gold:gold,
+    updatedAt:`${now.getMonth()+1}月${now.getDate()}日`
+  };
+  F_savePortfolioMarket(d);
+  showToast_f('✓ 市值已更新');
+  F_modal=null;F_renderMain();
+  setTimeout(F_drawPortfolioPies,200);
+}
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
   const el=document.createElement('div');
@@ -3156,6 +3367,192 @@ function F_autoInvest(){
     console.log('自动定投:',item.name,'¥'+item.monthly);
   });
   F_saveData();
+}
+
+// ─── 资产配置 ───
+
+function F_getPortfolioMarket(){
+  const s=F_ld();
+  return s.portfolioMarket||{stock:null,fund:null,gold:null,updatedAt:''};
+}
+function F_savePortfolioMarket(d){
+  const s=F_ld();s.portfolioMarket=d;F_sv(s);
+}
+
+function F_calcPortfolio(){
+  // 投入成本
+  const fundItems=F_ITEMS.filter(i=>i.group==='fund');
+  const goldItems=F_ITEMS.filter(i=>i.group==='gold');
+  const fundCost=fundItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
+  const goldCost=goldItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
+  // 股票成本 = 初始资金 + 所有追加资金（固定资金池）
+  const stockCost=F_STOCK_ACCOUNT.initialCapital+(F_STOCK_ACCOUNT.deposits||[]).reduce((s,d)=>s+d.amount,0);
+  // 现金安全垫余额
+  const cashItem=F_ITEMS.find(i=>i.name==='现金安全垫')||F_ITEMS.find(i=>i.group==='saving');
+  const cashCost=cashItem?F_getTotalInvested(cashItem):0;
+
+  // 市值
+  const mkt=F_getPortfolioMarket();
+  const stockMkt=mkt.stock!=null?mkt.stock:stockCost;
+  const fundMkt=mkt.fund!=null?mkt.fund:fundCost;
+  const goldMkt=mkt.gold!=null?mkt.gold:goldCost;
+  const cashMkt=cashCost;// 现金不浮动
+
+  const costs=[fundCost,goldCost,stockCost,cashCost];
+  const mkts=[fundMkt,goldMkt,stockMkt,cashMkt];
+  const totalCost=costs.reduce((a,b)=>a+b,0);
+  const totalMkt=mkts.reduce((a,b)=>a+b,0);
+
+  return{costs,mkts,totalCost,totalMkt,updatedAt:mkt.updatedAt};
+}
+
+function F_renderPortfolioSection(){
+  const p=F_calcPortfolio();
+  const {costs,mkts,totalCost,totalMkt,updatedAt}=p;
+  // 饼图数据
+  const costPcts=costs.map(v=>totalCost>0?Math.round(v/totalCost*100):25);
+  const mktPcts=mkts.map(v=>totalMkt>0?Math.round(v/totalMkt*100):25);
+
+  const rows=F_PORT_NAMES.map((name,i)=>{
+    const pnl=mkts[i]-costs[i];
+    const pnlPct=costs[i]>0?pnl/costs[i]*100:0;
+    return`<div class="f-portfolio-row">
+      <div class="f-portfolio-dot" style="background:${F_PORT_COLORS[i]}"></div>
+      <span class="f-portfolio-name">${name}</span>
+      <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
+      <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
+      <span class="f-portfolio-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>=0?'+':''}${pnlPct.toFixed(1)}%</span></span>
+    </div>`;
+  }).join('');
+
+  return`<div class="f-portfolio" id="F_portfolio_card">
+    <div class="f-portfolio-title">
+      <span class="f-portfolio-h">🥧 资产配置</span>
+      <span class="f-portfolio-update">${updatedAt?'市值更新于 '+updatedAt:'市值待更新'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div style="text-align:center;">
+        <div class="f-pie-label">投入成本</div>
+        <div style="position:relative;display:inline-block;">
+          <canvas id="F_pie_cost" width="130" height="130"></canvas>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div class="f-pie-label">当前市值</div>
+        <div style="position:relative;display:inline-block;">
+          <canvas id="F_pie_mkt" width="130" height="130"></canvas>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
+      <span>总成本 ${F_fmtY(totalCost)}</span>
+      <span>总市值 ${F_fmtY(totalMkt)}</span>
+      <span style="color:${totalMkt>=totalCost?'#00897b':'#e53935'};font-weight:600">${totalMkt>=totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
+    </div>
+    <div class="f-portfolio-rows">${rows}</div>
+    <button class="f-update-btn" onclick="F_openMarketUpdate()">📊 更新市值</button>
+  </div>`;
+}
+
+function F_drawPortfolioPies(){
+  // 清掉旧图
+  ['F_pie_cost','F_pie_mkt'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&el._chartInstance){el._chartInstance.destroy();el._chartInstance=null;}
+  });
+  setTimeout(()=>{
+    const p=F_calcPortfolio();
+    // 文字标注插件
+    const labelPlugin={
+      id:'pieLabels',
+      afterDraw(chart){
+        const{ctx,data}=chart;
+        const total=data.datasets[0].data.reduce((a,b)=>a+b,0);
+        if(total===0)return;
+        chart.getDatasetMeta(0).data.forEach((arc,i)=>{
+          const val=data.datasets[0].data[i];
+          const pct=Math.round(val/total*100);
+          if(pct<8)return;// 太小就不写
+          const angle=(arc.startAngle+arc.endAngle)/2;
+          const r=arc.outerRadius*0.62;
+          const x=arc.x+Math.cos(angle)*r;
+          const y=arc.y+Math.sin(angle)*r;
+          ctx.save();
+          ctx.textAlign='center';
+          ctx.textBaseline='middle';
+          ctx.fillStyle='#fff';
+          ctx.font='bold 10px -apple-system,sans-serif';
+          ctx.fillText(data.labels[i],x,y-6);
+          ctx.font='10px -apple-system,sans-serif';
+          ctx.fillText(pct+'%',x,y+6);
+          ctx.restore();
+        });
+      }
+    };
+    ['cost','mkt'].forEach(type=>{
+      const canvas=document.getElementById('F_pie_'+type);
+      if(!canvas||!window.Chart)return;
+      const data=type==='cost'?p.costs:p.mkts;
+      const chart=new Chart(canvas,{
+        type:'pie',
+        data:{labels:F_PORT_NAMES,datasets:[{data,backgroundColor:F_PORT_COLORS,borderWidth:2,borderColor:'#fff'}]},
+        options:{
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+            const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+            const pct=total>0?(ctx.parsed/total*100).toFixed(1):0;
+            return ctx.label+': ¥'+ctx.parsed.toFixed(0)+' ('+pct+'%)';
+          }}}},
+          animation:{duration:400}
+        },
+        plugins:[labelPlugin]
+      });
+      canvas._chartInstance=chart;
+    });
+  },150);
+}
+
+function F_openMarketUpdate(){F_modal='market-update';F_renderMain();}
+
+function F_renderMarketUpdateModal(){
+  const mkt=F_getPortfolioMarket();
+  const p=F_calcPortfolio();
+  const ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet">
+    <div class="f-sheet-handle"></div>
+    <div class="f-sheet-title">更新市值</div>
+    <div class="f-sheet-sub">填入各账户当前总市值，不填则保持上次数据</div>
+    <div class="f-section">股票</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_stock" type="number" inputmode="decimal" step="0.01" placeholder="持仓总市值" value="${mkt.stock!=null?mkt.stock:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">持仓成本 ${F_fmtY(p.costs[2])}</div>
+    <div class="f-section">基金</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_fund" type="number" inputmode="decimal" step="0.01" placeholder="所有基金合计市值" value="${mkt.fund!=null?mkt.fund:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[0])}</div>
+    <div class="f-section">黄金</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_gold" type="number" inputmode="decimal" step="0.01" placeholder="黄金积存金当前价值" value="${mkt.gold!=null?mkt.gold:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[1])}</div>
+    <div class="f-section">现金</div>
+    <div style="font-size:12px;color:#555;background:#f8f9fc;border-radius:12px;padding:10px 14px;margin-bottom:14px;">自动取现金安全垫余额 ${F_fmtY(p.costs[3])}，无需手动填写</div>
+    <button class="f-btn-primary" onclick="F_submitMarketUpdate()">保存市值</button>
+  </div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+
+function F_submitMarketUpdate(){
+  const stock=parseFloat(document.getElementById('F_mkt_stock')?.value);
+  const fund=parseFloat(document.getElementById('F_mkt_fund')?.value);
+  const gold=parseFloat(document.getElementById('F_mkt_gold')?.value);
+  const mkt=F_getPortfolioMarket();
+  const now=new Date();
+  const d={
+    stock:isNaN(stock)?mkt.stock:stock,
+    fund:isNaN(fund)?mkt.fund:fund,
+    gold:isNaN(gold)?mkt.gold:gold,
+    updatedAt:`${now.getMonth()+1}月${now.getDate()}日`
+  };
+  F_savePortfolioMarket(d);
+  showToast_f('✓ 市值已更新');
+  F_modal=null;F_renderMain();
+  setTimeout(F_drawPortfolioPies,200);
 }
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
