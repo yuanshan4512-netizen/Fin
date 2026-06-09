@@ -633,8 +633,33 @@ function switchTab(tab){
 const SK='bav7';
 const PIE_COLORS=['#378ADD','#43a047','#D85A30','#7E57C2','#e53935','#F9A825','#5F5E5A','#00ACC1','#EC407A'];
 const INCOME_KW=['收入','赚','兼职','打工','工资','红包','到账','卖','副业','奖金','返现','报销收','利息','提成','外快','接单','发工资','售出','出售'];
-const ECATS=[{k:'餐饮',i:'🍜',bg:'#FFF3E0',tc:'#E65100'},{k:'交通',i:'🚌',bg:'#E3F2FD',tc:'#1565C0'},{k:'购物',i:'🛍',bg:'#FCE4EC',tc:'#880E4F'},{k:'娱乐',i:'🎬',bg:'#EDE7F6',tc:'#4527A0'},{k:'医疗',i:'💊',bg:'#FFEBEE',tc:'#B71C1C'},{k:'学习',i:'📚',bg:'#E8F5E9',tc:'#1B5E20'},{k:'零花',i:'🎯',bg:'#FFF8E1',tc:'#F57F17'},{k:'游戏',i:'🎮',bg:'#F3E5F5',tc:'#6A1B9A'},{k:'运动',i:'🏃',bg:'#E1F5FE',tc:'#0277BD'},{k:'其他',i:'📝',bg:'#F5F5F5',tc:'#424242'}];
-const ICATS=[{k:'兼职',i:'💼',bg:'#E8F5E9',tc:'#1B5E20'},{k:'工资',i:'💰',bg:'#F1F8E9',tc:'#33691E'},{k:'红包',i:'🧧',bg:'#FCE4EC',tc:'#880E4F'},{k:'转账',i:'🔄',bg:'#E3F2FD',tc:'#1565C0'},{k:'其他',i:'📥',bg:'#EDE7F6',tc:'#4527A0'}];
+const ECATS=[
+  {k:'餐饮',i:'🍜',bg:'#FFF3E0',tc:'#E65100'},
+  {k:'交通',i:'🚌',bg:'#E3F2FD',tc:'#1565C0'},
+  {k:'购物',i:'🛍',bg:'#FCE4EC',tc:'#880E4F'},
+  {k:'娱乐',i:'🎬',bg:'#EDE7F6',tc:'#4527A0'},
+  {k:'桌游',i:'🎲',bg:'#FFF3E0',tc:'#BF360C'},
+  {k:'医疗',i:'💊',bg:'#FFEBEE',tc:'#B71C1C'},
+  {k:'学习',i:'📚',bg:'#E8F5E9',tc:'#1B5E20'},
+  {k:'服饰',i:'👕',bg:'#FCE4EC',tc:'#AD1457'},
+  {k:'护肤',i:'🧴',bg:'#F8BBD0',tc:'#880E4F'},
+  {k:'运动',i:'🏃',bg:'#E1F5FE',tc:'#0277BD'},
+  {k:'订阅',i:'📱',bg:'#E8EAF6',tc:'#283593'},
+  {k:'礼金',i:'🎁',bg:'#FCE4EC',tc:'#C62828'},
+  {k:'零花',i:'🎯',bg:'#FFF8E1',tc:'#F57F17'},
+  {k:'游戏',i:'🎮',bg:'#F3E5F5',tc:'#6A1B9A'},
+  {k:'其他',i:'📝',bg:'#F5F5F5',tc:'#424242'}
+];
+const ICATS=[
+  {k:'工资',i:'💰',bg:'#F1F8E9',tc:'#33691E'},
+  {k:'兼职',i:'💼',bg:'#E8F5E9',tc:'#1B5E20'},
+  {k:'卡片',i:'🃏',bg:'#FFF8E1',tc:'#F57F17'},
+  {k:'投资',i:'📈',bg:'#E8F5E9',tc:'#2E7D32'},
+  {k:'红包',i:'🧧',bg:'#FCE4EC',tc:'#880E4F'},
+  {k:'退款',i:'↩️',bg:'#E3F2FD',tc:'#1565C0'},
+  {k:'转账',i:'🔄',bg:'#E8EAF6',tc:'#283593'},
+  {k:'其他',i:'📥',bg:'#EDE7F6',tc:'#4527A0'}
+];
 const RCATS=[{k:'餐饮',i:'🍜',bg:'#FFF3E0',tc:'#E65100'},{k:'交通',i:'🚌',bg:'#E3F2FD',tc:'#1565C0'},{k:'住宿',i:'🏨',bg:'#EDE7F6',tc:'#4527A0'},{k:'办公',i:'💻',bg:'#E8F5E9',tc:'#1B5E20'},{k:'其他',i:'📋',bg:'#F5F5F5',tc:'#424242'}];
 const CKWS={餐饮:['早餐','午餐','晚餐','宵夜','奶茶','咖啡','外卖','零食','饭','吃','喝','菜','面','汤','蛋糕','火锅','炒'],交通:['打车','地铁','公交','滴滴','出租','油','加油','停车','高铁','火车','机票','骑行'],购物:['买','超市','网购','淘宝','京东','衣服','鞋','包','化妆','护肤'],娱乐:['电影','ktv','唱歌','演唱会','门票','景点','旅游','玩'],医疗:['药','医院','看病','诊所'],学习:['书','课','培训','学费','文具','笔'],零花:['零花','零用','杂费'],游戏:['游戏','steam','手游','网游','充值','王者','原神'],运动:['运动','健身','跑步','羽毛球','篮球','游泳','瑜伽','健身房'],兼职:['兼职','打工','接单','外快','副业','卖'],工资:['工资','薪资','底薪'],红包:['红包','压岁','打赏'],转账:['转账','还款','还钱'],住宿:['酒店','宾馆','住宿','民宿','房费']};
 
@@ -3093,7 +3118,7 @@ function F_calcPortfolio(){
   const stockMkt=mkt.stock!=null?mkt.stock:stockCost;
   const fundMkt=mkt.fund!=null?mkt.fund:fundCost;
   const goldMkt=mkt.gold!=null?mkt.gold:goldCost;
-  const cashMkt=cashCost;
+  const cashMkt=mkt.cash!=null?mkt.cash:cashCost;
   const costs=[fundCost,goldCost,stockCost,cashCost];
   const mkts=[fundMkt,goldMkt,stockMkt,cashMkt];
   const totalCost=costs.reduce((a,b)=>a+b,0);
@@ -3211,8 +3236,9 @@ function F_renderMarketUpdateModal(){
     <div class="f-section">黄金</div>
     <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_gold" type="number" inputmode="decimal" step="0.01" placeholder="黄金积存金当前价值" value="${mkt.gold!=null?mkt.gold:''}"></div>
     <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[1])}</div>
-    <div class="f-section">现金</div>
-    <div style="font-size:12px;color:#555;background:#f8f9fc;border-radius:12px;padding:10px 14px;margin-bottom:14px;">自动取现金安全垫余额 ${F_fmtY(p.costs[3])}，无需手动填写</div>
+    <div class="f-section">现金（余额宝）</div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_cash" type="number" inputmode="decimal" step="0.01" placeholder="含利息的实际余额" value="${mkt.cash!=null?mkt.cash:''}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:14px;">现金安全垫本金 ${F_fmtY(p.costs[3])}，填入含利息的实际余额宝余额</div>
     <button class="f-btn-primary" onclick="F_submitMarketUpdate()">保存市值</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
@@ -3222,12 +3248,14 @@ function F_submitMarketUpdate(){
   const stock=parseFloat(document.getElementById('F_mkt_stock')?.value);
   const fund=parseFloat(document.getElementById('F_mkt_fund')?.value);
   const gold=parseFloat(document.getElementById('F_mkt_gold')?.value);
+  const cash=parseFloat(document.getElementById('F_mkt_cash')?.value);
   const mkt=F_getPortfolioMarket();
   const now=new Date();
   const d={
     stock:isNaN(stock)?mkt.stock:stock,
     fund:isNaN(fund)?mkt.fund:fund,
     gold:isNaN(gold)?mkt.gold:gold,
+    cash:isNaN(cash)?mkt.cash:cash,
     updatedAt:`${now.getMonth()+1}月${now.getDate()}日`
   };
   F_savePortfolioMarket(d);
