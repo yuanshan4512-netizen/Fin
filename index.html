@@ -3114,7 +3114,7 @@ function F_renderPortfolioSection(){
       <span class="f-portfolio-name">${name}</span>
       <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
       <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
-      <span class="f-portfolio-pnl ${pnl>=0?'neg':'pos'}">${pnl>=0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>=0?'+':''}${pnlPct.toFixed(1)}%</span></span>
+      <span class="f-portfolio-pnl" style="color:${Math.abs(pnl)<0.01?'#aaa':pnl>0?'#e53935':'#00897b'}">${pnl>0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>0?'+':''}${pnlPct.toFixed(1)}%</span></span>
     </div>`;
   }).join('');
   return`<div class="f-portfolio" id="F_portfolio_card">
@@ -3135,7 +3135,7 @@ function F_renderPortfolioSection(){
     <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
       <span>总成本 ${F_fmtY(totalCost)}</span>
       <span>总市值 ${F_fmtY(totalMkt)}</span>
-      <span style="color:${totalMkt>=totalCost?'#e53935':'#00897b'};font-weight:600">${totalMkt>=totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
+      <span style="color:${Math.abs(totalMkt-totalCost)<0.01?'#aaa':totalMkt>totalCost?'#e53935':'#00897b'};font-weight:600">${totalMkt>totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
     </div>
     <div class="f-portfolio-rows">${rows}</div>
     <button class="f-update-btn" onclick="F_openMarketUpdate()">📊 更新市值</button>
@@ -3182,11 +3182,7 @@ function F_drawPortfolioPies(){
         type:'pie',
         data:{labels:F_PORT_NAMES,datasets:[{data,backgroundColor:F_PORT_COLORS,borderWidth:2,borderColor:'#fff'}]},
         options:{
-          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
-            const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
-            const pct=total>0?(ctx.parsed/total*100).toFixed(1):0;
-            return ctx.label+': \u00a5'+ctx.parsed.toFixed(0)+' ('+pct+'%)';
-          }}}},
+          plugins:{legend:{display:false},tooltip:{enabled:false}},
           animation:{duration:400}
         },
         plugins:[labelPlugin]
