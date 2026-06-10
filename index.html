@@ -2141,7 +2141,7 @@ function M_setBillPaid(billId,paid){
   document.querySelectorAll('.mpaid-btn').forEach((b,i)=>{b.className='mpaid-btn '+(i===0&&!paid?'sel-unpaid':i===1&&paid?'sel-paid':'')});
 }
 function M_saveBillEdit(billId){
-  const amt=parseFloat(document.getElementById('b-amt')?.value);
+  const amt=parseFloat(document.getElementById('F_b_amt')?.value);
   const date=document.getElementById('b-date')?.value||'';
   const st=M_getBillStatus(billId);
   M_setBillStatus(billId,{...st,actualAmount:amt||null,paidDate:date});
@@ -2155,7 +2155,7 @@ function M_saveBillConfig(billId){
   M_saveData();M_modal=null;M_editTarget=null;M_renderMain();
 }
 function M_deleteBill(billId){
-  if(!confirm('确认删除这个账单？'))return;
+  if(!window.confirm('确认删除这个账单？'))return;
   M_CFG.bills=M_CFG.bills.filter(b=>b.id!==billId);
   M_saveData();M_modal=null;M_editTarget=null;M_renderMain();
 }
@@ -2485,6 +2485,7 @@ function F_checkModal(){
   else if(F_modal==='item-add')F_renderItemAddModal();
   else if(F_modal==='data'||F_modal==='data-f')F_renderDataModal();
   else if(F_modal==='market-update')F_renderMarketUpdateModal();
+  else if(F_modal==='edit-buy')F_renderEditBuyModal();
   else if(F_modal==='inv-action')F_renderInvActionModal();
 }
 function mkOv_f(){
@@ -2503,12 +2504,13 @@ function F_renderStockDetailModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
   const ov=mkOv_f();
-  const buyRows=st.buyRecords.map(r=>`
+  const buyRows=st.buyRecords.map((r,i)=>`
     <div class="f-record-row">
       <span class="f-record-date">${r.date}</span>
       <span class="f-record-qty">${r.qty}股</span>
       <span class="f-record-price">@${F_fmtY(r.price)}</span>
-      <span class="f-record-amt" style="color:#e65100">-${F_fmtY(r.amount)}</span>
+      <span class="f-record-amt" style="color:#e65100;flex:1">-${F_fmtY(r.amount)}</span>
+      <button onclick="F_openEditBuyRecord('${st.id}',${i})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
     </div>`).join('');
   const sellRows=st.sellRecords.map(r=>`
     <div class="f-record-row">
@@ -2747,9 +2749,25 @@ function F_deleteInvRecord(itemId,recIdx){
   F_saveData();F_modal='item-detail';F_renderMain();
 }
 function F_deleteInvItem(id){
-  if(!confirm('确认删除这个项目？'))return;
+  const item=F_ITEMS.find(i=>i.id===id);if(!item)return;
+  const existing=document.getElementById('F_del_confirm');
+  if(existing)existing.remove();
+  const box=document.createElement('div');
+  box.id='F_del_confirm';
+  box.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,.15);';
+  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">删除「${item.name}」？</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px;">所有定投记录将一并删除，不可恢复</div>
+    <button onclick="F_confirmDeleteInvItem('${id}')" style="width:100%;height:44px;border-radius:12px;border:none;background:#e53935;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认删除</button>
+    <button onclick="document.getElementById('F_del_confirm').remove()" style="width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:14px;cursor:pointer;">取消</button>`;
+  document.getElementById('panel-finance').appendChild(box);
+}
+function F_confirmDeleteInvItem(id){
   F_ITEMS=F_ITEMS.filter(i=>i.id!==id);
-  F_saveData();F_modal=null;F_editId=null;F_renderMain();
+  F_saveData();
+  const box=document.getElementById('F_del_confirm');
+  if(box)box.remove();
+  F_modal=null;F_editId=null;F_renderMain();
+  showToast_f('✓ 已删除');
 }
 function F_renderItemEditModal(){
   const item=F_ITEMS.find(i=>i.id===F_editId);if(!item)return;
@@ -2945,11 +2963,11 @@ function F_previewLines(){
 let F_tmpTpPlans=null;
 function F_submitBuy(stId){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const date=document.getElementById('b-date')?.value||todayStr();
-  const price=parseFloat(document.getElementById('b-price')?.value);
-  const qty=parseFloat(document.getElementById('b-qty')?.value);
-  const amt=parseFloat(document.getElementById('b-amt')?.value)||(price*qty);
-  const note=document.getElementById('b-note')?.value.trim()||'';
+  const date=document.getElementById('F_b_date')?.value||todayStr();
+  const price=parseFloat(document.getElementById('F_b_price')?.value);
+  const qty=parseFloat(document.getElementById('F_b_qty')?.value);
+  const amt=parseFloat(document.getElementById('F_b_amt')?.value)||(price*qty);
+  const note=document.getElementById('F_b_note')?.value.trim()||'';
   if(!price||!qty||!amt){alert('请填写价格和股数');return;}
   st.buyRecords.push({id:F_genId(),date,price,qty,amount:amt,note});
   F_saveData();F_modal='stock-detail';F_renderMain();
@@ -2959,11 +2977,11 @@ function F_submitBuy(stId){
 function F_submitSell(stId){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
   const c=F_calcStock(st);
-  const date=document.getElementById('s-date')?.value||todayStr();
-  const price=parseFloat(document.getElementById('s-price')?.value);
-  const qty=parseFloat(document.getElementById('s-qty')?.value);
-  const note=document.getElementById('s-note')?.value.trim()||'';
-  const planId=document.getElementById('s-plan')?.value||'';
+  const date=document.getElementById('F_s_date')?.value||todayStr();
+  const price=parseFloat(document.getElementById('F_s_price')?.value);
+  const qty=parseFloat(document.getElementById('F_s_qty')?.value);
+  const note=document.getElementById('F_s_note')?.value.trim()||'';
+  const planId=document.getElementById('F_s_plan')?.value||'';
   if(!price||!qty){alert('请填写价格和股数');return;}
   if(qty>c.holdQty){alert(`持仓只有${c.holdQty}股，无法卖出${qty}股`);return;}
   const sellAmt=price*qty;
@@ -2976,10 +2994,10 @@ function F_submitSell(stId){
 
 // ── 股票编辑 ──
 function F_calcBuyTotal(){
-  const price=parseFloat(document.getElementById('b-price')?.value)||0;
-  const qty=parseFloat(document.getElementById('b-qty')?.value)||0;
+  const price=parseFloat(document.getElementById('F_b_price')?.value)||0;
+  const qty=parseFloat(document.getElementById('F_b_qty')?.value)||0;
   if(price>0&&qty>0){
-    const amt=document.getElementById('b-amt');
+    const amt=document.getElementById('F_b_amt');
     if(amt&&!amt.dataset.manual)amt.value=(price*qty).toFixed(2);
   }
   F_calcBuyAvg();
@@ -2987,9 +3005,9 @@ function F_calcBuyTotal(){
 function F_calcBuyAvg(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const c=F_calcStock(st);
-  const qty=parseFloat(document.getElementById('b-qty')?.value)||0;
-  const amt=parseFloat(document.getElementById('b-amt')?.value)||0;
-  const price=parseFloat(document.getElementById('b-price')?.value)||0;
+  const qty=parseFloat(document.getElementById('F_b_qty')?.value)||0;
+  const amt=parseFloat(document.getElementById('F_b_amt')?.value)||0;
+  const price=parseFloat(document.getElementById('F_b_price')?.value)||0;
   const actualAmt=amt||(price*qty);
   if(qty>0&&actualAmt>0){
     const newQty=c.totalBought+qty;
@@ -3002,8 +3020,8 @@ function F_calcBuyAvg(){
 function F_calcSellProfit(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const c=F_calcStock(st);
-  const price=parseFloat(document.getElementById('s-price')?.value)||0;
-  const qty=parseFloat(document.getElementById('s-qty')?.value)||0;
+  const price=parseFloat(document.getElementById('F_s_price')?.value)||0;
+  const qty=parseFloat(document.getElementById('F_s_qty')?.value)||0;
   if(price>0&&qty>0){
     const sellAmt=price*qty;
     const costAmt=c.avgCost*qty;
@@ -3036,9 +3054,27 @@ function F_saveInitial(){
 
 // ── 投资定投详情 ──
 function F_deleteStock(stId){
-  if(!confirm('确认删除这只股票及所有记录？'))return;
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);
+  if(!st)return;
+  // 用自定义确认，避免 confirm() 在某些环境被拦截
+  const existing=document.getElementById('F_del_confirm');
+  if(existing)existing.remove();
+  const box=document.createElement('div');
+  box.id='F_del_confirm';
+  box.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,.15);';
+  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">删除 ${st.name}？</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px;">所有买入、卖出、止盈记录将一并删除，不可恢复</div>
+    <button onclick="F_confirmDeleteStock('${stId}')" style="width:100%;height:44px;border-radius:12px;border:none;background:#e53935;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认删除</button>
+    <button onclick="document.getElementById('F_del_confirm').remove()" style="width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:14px;cursor:pointer;">取消</button>`;
+  document.getElementById('panel-finance').appendChild(box);
+}
+function F_confirmDeleteStock(stId){
   F_STOCK_ACCOUNT.stocks=F_STOCK_ACCOUNT.stocks.filter(s=>s.id!==stId);
-  F_saveData();F_modal=null;F_editId=null;F_renderMain();
+  F_saveData();
+  const box=document.getElementById('F_del_confirm');
+  if(box)box.remove();
+  F_modal=null;F_editId=null;F_renderMain();
+  showToast_f('✓ 已删除');
 }
 
 // ── 新增股票 ──
@@ -3047,29 +3083,52 @@ function F_renderStockAddModal(){
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">添加股票</div>
-    <div class="mfields" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <div class="f-field-row"><span class="f-field-label">名称</span><input id="n-name" placeholder="如：光伏龙头ETF"></div>
-      <div class="f-field-row"><span class="f-field-label">代码</span><input id="n-code" placeholder="如：sh516160"></div>
-      <div class="f-field-row"><span class="f-field-label">止盈线</span><input id="n-tp" type="number" value="20"><span class="mfield-note">%</span></div>
-      <div class="f-field-row"><span class="f-field-label">止损线</span><input id="n-sl" type="number" value="15"><span class="mfield-note">%（自动取负）</span></div>
-      <div class="f-field-row"><span class="f-field-label">备注</span><input id="n-note" placeholder="投资逻辑"></div>
-    </div>
-    <button class="f-btn-primary" onclick="F_submitAddStock()">添加（再录入买入记录）</button>
+    <div class="f-section">基本信息</div>
+    <div class="f-field-row"><span class="f-field-label">名称</span><input id="F_n_name" placeholder="如：光伏龙头ETF"></div>
+    <div class="f-field-row"><span class="f-field-label">代码</span><input id="F_n_code" placeholder="如：sh516160（可选）"></div>
+    <div class="f-field-row"><span class="f-field-label">止盈线</span><input id="F_n_tp" type="number" value="20"><span class="f-field-note">%</span></div>
+    <div class="f-field-row"><span class="f-field-label">止损线</span><input id="F_n_sl" type="number" value="15"><span class="f-field-note">%</span></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_n_note" placeholder="投资逻辑（可选）"></div>
+    <div class="f-section">第一笔买入</div>
+    <div class="f-field-row"><span class="f-field-label">买入日期</span><input id="F_n_date" type="date" value="${todayStr()}"></div>
+    <div class="f-field-row"><span class="f-field-label">买入价格</span><input id="F_n_price" type="number" inputmode="decimal" step="0.001" placeholder="0.000" oninput="F_calcNewStockAmt()"></div>
+    <div class="f-field-row"><span class="f-field-label">买入股数</span><input id="F_n_qty" type="number" inputmode="numeric" step="100" placeholder="0" oninput="F_calcNewStockAmt()"></div>
+    <div class="f-field-row"><span class="f-field-label">买入金额</span><input id="F_n_amt" type="number" inputmode="decimal" step="0.01" placeholder="自动计算"></div>
+    <button class="f-btn-primary" onclick="F_submitAddStock()">添加并保存</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
+function F_calcNewStockAmt(){
+  const price=parseFloat(document.getElementById('F_n_price')?.value)||0;
+  const qty=parseFloat(document.getElementById('F_n_qty')?.value)||0;
+  if(price>0&&qty>0){
+    const el=document.getElementById('F_n_amt');
+    if(el)el.value=(price*qty).toFixed(2);
+  }
+}
 function F_submitAddStock(){
-  const name=document.getElementById('n-name')?.value.trim();
+  const name=document.getElementById('F_n_name')?.value.trim();
   if(!name){alert('请填写名称');return;}
+  const price=parseFloat(document.getElementById('F_n_price')?.value);
+  const qty=parseFloat(document.getElementById('F_n_qty')?.value);
+  const amt=parseFloat(document.getElementById('F_n_amt')?.value)||(price&&qty?price*qty:0);
+  const date=document.getElementById('F_n_date')?.value||todayStr();
+  const buyRecords=[];
+  if(price>0&&qty>0){
+    buyRecords.push({id:F_genId(),date,price,qty,amount:amt||price*qty,note:'初始买入'});
+  }
   const st={
-    id:F_genId(),code:document.getElementById('n-code')?.value.trim()||'',
-    name,buyRecords:[],sellRecords:[],tpPlans:[],
-    tpPct:parseFloat(document.getElementById('n-tp')?.value)||20,
-    slPct:-(Math.abs(parseFloat(document.getElementById('n-sl')?.value)||15)),
-    note:document.getElementById('n-note')?.value.trim()||'',
+    id:F_genId(),
+    code:document.getElementById('F_n_code')?.value.trim()||'',
+    name,buyRecords,sellRecords:[],tpPlans:[],
+    tpPct:parseFloat(document.getElementById('F_n_tp')?.value)||20,
+    slPct:-(Math.abs(parseFloat(document.getElementById('F_n_sl')?.value)||15)),
+    note:document.getElementById('F_n_note')?.value.trim()||'',
   };
   F_STOCK_ACCOUNT.stocks.push(st);
-  F_saveData();F_editId=st.id;F_modal='stock-detail';F_renderMain();
+  F_saveData();
+  showToast_f('✓ 股票已添加');
+  F_editId=st.id;F_modal='stock-detail';F_renderMain();
 }
 
 // ── 账户资金编辑 ──
@@ -3284,6 +3343,65 @@ function F_autoInvest(){
   F_saveData();
 }
 
+
+function F_openEditBuyRecord(stId,recIdx){
+  F_editId=stId;
+  window._F_editBuyIdx=recIdx;
+  F_modal='edit-buy';
+  F_renderMain();
+}
+
+function F_renderEditBuyModal(){
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
+  const idx=window._F_editBuyIdx||0;
+  const r=st.buyRecords[idx];if(!r)return;
+  const ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet">
+    <div class="f-sheet-handle"></div>
+    <div class="f-sheet-title">编辑买入记录</div>
+    <div class="f-sheet-sub">${st.name} · 第 ${idx+1} 笔买入</div>
+    <div class="f-field-row"><span class="f-field-label">买入日期</span><input id="F_eb_date" type="date" value="${r.date}"></div>
+    <div class="f-field-row"><span class="f-field-label">买入价格</span><input id="F_eb_price" type="number" inputmode="decimal" step="0.001" value="${r.price}" oninput="F_calcEditBuyAmt()"></div>
+    <div class="f-field-row"><span class="f-field-label">买入股数</span><input id="F_eb_qty" type="number" inputmode="numeric" step="100" value="${r.qty}" oninput="F_calcEditBuyAmt()"></div>
+    <div class="f-field-row"><span class="f-field-label">买入金额</span><input id="F_eb_amt" type="number" inputmode="decimal" step="0.01" value="${r.amount}"><span class="f-field-note" style="font-size:10px;color:#aaa;">含手续费</span></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_eb_note" value="${r.note||''}"></div>
+    <button class="f-btn-primary" onclick="F_submitEditBuyRecord('${st.id}',${idx})">保存</button>
+    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteBuyRecord('${st.id}',${idx})">删除这笔买入</button>
+  </div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+
+function F_calcEditBuyAmt(){
+  const price=parseFloat(document.getElementById('F_eb_price')?.value)||0;
+  const qty=parseFloat(document.getElementById('F_eb_qty')?.value)||0;
+  if(price>0&&qty>0){
+    const el=document.getElementById('F_eb_amt');
+    if(el)el.value=(price*qty).toFixed(2);
+  }
+}
+
+function F_submitEditBuyRecord(stId,recIdx){
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
+  const date=document.getElementById('F_eb_date')?.value||todayStr();
+  const price=parseFloat(document.getElementById('F_eb_price')?.value);
+  const qty=parseFloat(document.getElementById('F_eb_qty')?.value);
+  const amt=parseFloat(document.getElementById('F_eb_amt')?.value)||(price*qty);
+  const note=document.getElementById('F_eb_note')?.value.trim()||'';
+  if(!price||!qty){alert('请填写价格和股数');return;}
+  st.buyRecords[recIdx]={...st.buyRecords[recIdx],date,price,qty,amount:amt,note};
+  F_saveData();
+  showToast_f('✓ 买入记录已更新');
+  F_modal='stock-detail';F_renderMain();
+}
+
+function F_deleteBuyRecord(stId,recIdx){
+  if(!confirm('确认删除这笔买入记录？'))return;
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
+  st.buyRecords.splice(recIdx,1);
+  F_saveData();
+  showToast_f('✓ 已删除');
+  F_modal='stock-detail';F_renderMain();
+}
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
   const el=document.createElement('div');
