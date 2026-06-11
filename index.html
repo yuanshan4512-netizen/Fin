@@ -89,9 +89,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .cal-footer-v{font-size:11px;font-weight:600;color:#1a1a1a}
 .cal-footer-l{font-size:9px;color:#aaa;margin-top:1px}
 /* 预算环形卡 */
-.ring-area{display:flex;flex-direction:column;align-items:center;position:relative}
-.ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-58%);text-align:center;pointer-events:none}
-.ring-center-pct{font-size:13px;font-weight:700;color:#1a1a1a;line-height:1}
+.ring-area{display:flex;flex-direction:column;align-items:center}
+.ring-canvas-wrap{position:relative;display:inline-block}
+.ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.ring-center-pct{font-size:20px;font-weight:800;color:#1a1a1a;line-height:1}
 .ring-center-lbl{font-size:8px;color:#aaa;margin-top:1px}
 .ring-nums{display:flex;justify-content:space-between;width:100%;margin-top:5px}
 .rnum{text-align:center}
@@ -102,7 +103,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .budget-predict.over{color:#c62828}
 /* 报销卡 */
 .pie-area{display:flex;flex-direction:column;align-items:center}
-.pie-legend{width:100%;margin-top:5px}
+.pie-card-wrap{position:relative;display:inline-block}
+.pie-card-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.pie-card-lbl{font-size:9px;color:#aaa;line-height:1.4}
+.pie-card-val{font-size:13px;font-weight:800;color:#e53935;line-height:1.2}
 .pli{display:flex;align-items:center;gap:4px;margin-bottom:2px}
 .pld{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .pll{font-size:9px;color:#888;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -195,6 +199,43 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .d-pie-amt{font-size:12px;font-weight:600;color:#1a1a1a;min-width:48px;text-align:right}
 .d-pie-pct{font-size:10px;color:#aaa;min-width:26px;text-align:right}
 .d-pie-sub{font-size:9px;color:#bbb;min-width:52px;text-align:right}
+/* 支出分类下钻 */
+.pie-mode-row{display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px}
+.pie-mode-btn{font-size:13px;font-weight:700;border:none;border-radius:16px;padding:5px 16px;background:#f0f0f0;color:#aaa;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pie-mode-btn.sel-out{background:#ffe5e5;color:#e53935}
+.pie-mode-btn.sel-in{background:#e6f4ea;color:#2e7d32}
+.d-pie-wrap{position:relative;display:flex;justify-content:center;margin-bottom:14px}
+/* 交易列表明细页 */
+.d-txn-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#888;padding:2px 4px 10px}
+.d-txn-sum{font-weight:700;color:#555}
+.d-txn-date{font-size:13px;font-weight:700;color:#666;background:#f5f5f7;border-radius:8px;padding:6px 12px;margin:10px 0 6px}
+.d-txn-row{display:flex;align-items:center;gap:10px;padding:11px 6px;border-bottom:.5px solid #f2f2f2;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.d-txn-time{font-size:11px;color:#aaa;background:#f0f0f0;border-radius:6px;padding:2px 7px;flex-shrink:0}
+.d-txn-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.d-txn-mid{flex:1;min-width:0}
+.d-txn-tag{display:inline-block;font-size:12px;color:#999;background:#f5f5f7;border-radius:6px;padding:2px 8px}
+.d-txn-note{font-size:12px;color:#666;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-txn-amt{font-size:15px;font-weight:700;flex-shrink:0}
+.d-txn-amt.out{color:#e53935}
+.d-txn-amt.in{color:#2e7d32}
+.d-cat-list{display:flex;flex-direction:column;gap:10px}
+.d-cat-block{background:#fff;border-radius:12px;padding:12px 12px 10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.d-cat-head{display:flex;align-items:center;gap:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.d-cat-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.d-cat-name{font-size:15px;font-weight:700;color:#1a1a1a;flex-shrink:0}
+.d-cat-meta{font-size:12px;color:#aaa;flex:1}
+.d-cat-amt{font-size:15px;font-weight:700;color:#1a1a1a}
+.d-cat-arrow{font-size:14px;color:#bbb;width:18px;text-align:center;flex-shrink:0;transition:transform .2s}
+.d-cat-arrow.open{transform:rotate(180deg)}
+.d-cat-barbg{height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;margin-top:9px}
+.d-cat-bar{height:100%;border-radius:3px;transition:width .4s}
+.d-sub-list{margin-top:10px;padding-left:12px;border-left:3px solid #ddd;display:flex;flex-direction:column}
+.d-sub-row{display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:.5px solid #f5f5f5;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.d-sub-row:last-child{border-bottom:none}
+.d-sub-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.d-sub-name{font-size:14px;color:#333;flex:1}
+.d-sub-amt{font-size:14px;font-weight:700;color:#1a1a1a;background:#f5f5f7;border-radius:6px;padding:2px 10px}
+.d-sub-meta{font-size:11px;color:#bbb;min-width:96px;text-align:right}
 /* 报销详情 */
 .reimb-alert{background:#FFF3E0;border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#E65100;display:flex;align-items:center;gap:6px}
 .reimb-list{display:flex;flex-direction:column;gap:6px}
@@ -216,6 +257,25 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .filter-chip.sel{border-color:#378ADD;background:#EBF4FF;color:#0C447C;font-weight:600}
 /* 周报卡片 */
 .report-card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+/* 预算环形卡（替代月度概览）*/
+.bring-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.bring-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.bring-top-l{font-size:13px;color:#888;display:flex;align-items:center;gap:5px}
+.bring-top-v{font-size:22px;font-weight:800;color:#1a1a1a}
+.bring-stats{display:flex;margin-bottom:10px}
+.bring-formula{font-size:10px;color:#bbb;text-align:center;padding-bottom:8px;margin-bottom:2px;border-bottom:.5px solid #f0f0f0}
+.bring-mid{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.bring-ring{flex-shrink:0;position:relative;width:92px;height:92px}
+.bring-ring-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:800;color:#1a1a1a}
+.bring-cols{flex:1;display:flex}
+.bring-col{flex:1;text-align:center}
+.bring-col-v{font-size:18px;font-weight:700}
+.bring-col-l{font-size:11px;color:#aaa;margin-top:3px}
+.bring-rows{border-top:.5px solid #f0f0f0;padding-top:8px;margin-top:8px}
+.bring-prow{display:flex;align-items:center;padding:5px 2px}
+.bring-dot{width:8px;height:8px;border-radius:50%;margin-right:9px;flex-shrink:0}
+.bring-pl{font-size:13px;color:#555;flex:1}
+.bring-pv{font-size:14px;font-weight:700;color:#1a1a1a}
 .rc-title{font-size:12px;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:10px}
 .rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .rc-item{text-align:center}
@@ -588,7 +648,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
       <span class="topbar-title" style="color:#1a1a1a">财务总览</span>
     </div>
     <div class="topbar-right">
-
+      <button class="settbtn" style="color:#378ADD;border-color:#c8dff5;background:#f0f7ff;" onclick="F_openData()">数据</button>
     </div>
   </div>
   <div class="scroll-body"><div id="F_main"></div></div>
@@ -672,6 +732,73 @@ function todayStr(){return dateStr(new Date())}
 function addDaysStr(n){const d=new Date();d.setDate(d.getDate()+n);return dateStr(d)}
 function fmtN(n){const d=ST?.decimals==='2'?2:0;return'¥'+Number(Math.abs(n)).toFixed(d)}
 function fmtRaw(n){const d=ST?.decimals==='2'?2:0;return Number(Math.abs(n)).toFixed(d)}
+// ─── 预算环形卡（替代月度概览，纯展示）───
+function budgetRingData(){
+  const recs=Array.isArray(RC)?RC:[];
+  const now=new Date();
+  const mk=now.getFullYear()+'-'+pad2(now.getMonth()+1);
+  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const today=now.getDate();
+  const dailyBudget=parseFloat(ST?.budget)||0;
+  const pocket=(ST?.hasExtra)?(parseFloat(ST.extraAmount)||0):0;
+  const inMonth=r=>r.date&&r.date.startsWith(mk);
+  const income=recs.filter(r=>r.type==='income'&&inMonth(r)).reduce((a,r)=>a+(r.amount||0),0);
+  const spent=recs.filter(r=>r.type==='expense'&&inMonth(r)).reduce((a,r)=>a+(r.amount||0),0);
+  // 上月结余：直接调用 autoCarryOver，使用历史设置+正确周期逻辑
+  const prevCarry=autoCarryOver(mk+'-01');
+  const totalBudget=dailyBudget*dim+pocket+income+prevCarry;
+  const remain=totalBudget-spent;
+  const daysPassed=Math.max(1,today);
+  const daysLeft=Math.max(0,dim-today);
+  const avgSpent=spent/daysPassed;
+  const avgRemain=daysLeft>0?remain/daysLeft:0;
+  const pct=totalBudget>0?Math.round(spent/totalBudget*100):0;
+  return{mk,dim,today,income,spent,dailyBudget,pocket,prevCarry,totalBudget,remain,daysPassed,daysLeft,avgSpent,avgRemain,pct};
+}
+function fmtSigned(n){return(n<0?'-':'')+fmtN(n)}
+function budgetRingCard(){
+  const r=budgetRingData();
+  const ringColor=r.pct<=70?'#43a047':r.pct<=90?'#F9A825':r.pct<=100?'#e65100':'#e53935';
+  const C=2*Math.PI*42;
+  const off=C*(1-Math.min(1,Math.max(0,r.pct/100)));
+  const remainColor=r.remain>=0?'#2e7d32':'#c62828';
+  const mon=parseInt(r.mk.split('-')[1],10);
+  return `<div class="bring-card">
+    <div class="bring-top">
+      <span class="bring-top-l">${mon}月预算</span>
+      <span class="bring-top-v">${fmtSigned(r.totalBudget)}</span>
+    </div>
+    <div class="bring-mid">
+      <div class="bring-ring">
+        <svg viewBox="0 0 100 100" width="92" height="92">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#eee" stroke-width="11"></circle>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="${ringColor}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"></circle>
+        </svg>
+        <span class="bring-ring-txt">${r.pct}%</span>
+      </div>
+      <div class="bring-cols">
+        <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a">${fmtN(r.spent)}</div><div class="bring-col-l">已消费</div></div>
+        <div class="bring-col"><div class="bring-col-v" style="color:${remainColor}">${fmtSigned(r.remain)}</div><div class="bring-col-l">剩余额度</div></div>
+      </div>
+    </div>
+    <div class="bring-rows">
+      <div class="bring-formula">日¥${fmtRaw(r.dailyBudget)}×${r.dim}天+零花¥${fmtRaw(r.pocket)}${r.prevCarry!==0?(r.prevCarry>0?'+':'-')+'结余¥'+fmtRaw(r.prevCarry):''}+收入¥${fmtRaw(r.income)}</div>
+      <div class="bring-prow"><span class="bring-dot" style="background:#F9A825"></span><span class="bring-pl">日均消费</span><span class="bring-pv">${fmtN(r.avgSpent)}</span></div>
+      <div class="bring-prow"><span class="bring-dot" style="background:#378ADD"></span><span class="bring-pl">剩余日均可消费</span><span class="bring-pv" style="color:${r.avgRemain<0?'#c62828':'#1a1a1a'}">${fmtSigned(r.avgRemain)}</span></div>
+    </div>
+  </div>`;
+}
+function budgetRingHelp(){
+  const r=budgetRingData();
+  alert(`总预算 ${fmtSigned(r.totalBudget)} 的构成：\n\n`+
+    `日预算 ${fmtN(r.dailyBudget)} × ${r.dim}天 = ${fmtN(r.dailyBudget*r.dim)}\n`+
+    `＋ 零花 ${fmtN(r.pocket)}\n`+
+    `＋ 本月收入 ${fmtN(r.income)}\n`+
+    `＋ 上月结余 ${fmtSigned(r.prevCarry)}（超支则为负）\n\n`+
+    `已消费 ${fmtN(r.spent)}\n`+
+    `剩余额度 ${fmtSigned(r.remain)}\n`+
+    `已过 ${r.daysPassed} 天 / 剩余 ${r.daysLeft} 天`);
+}
 function autoType(t){return INCOME_KW.some(k=>t.includes(k))?'income':'expense'}
 function autoCat(t,type){const cats=type==='income'?ICATS:type==='reimbursement'?RCATS:ECATS;for(const c of cats){const kws=CKWS[c.k]||[];if(kws.some(k=>t.includes(k)))return c.k;}return cats[0].k}
 function getCatMeta(k,type){const cats=type==='income'?ICATS:type==='reimbursement'?RCATS:ECATS;return cats.find(c=>c.k===k)||cats[0]}
@@ -831,7 +958,6 @@ function finishQ(){
   showApp();
 }
 
-function loadState(){const s=ld();ST=s.settings||{};RC=s.records||[];RM=s.reimbs||[]}
 function saveState(){const s=ld();s.records=RC;s.reimbs=RM;sv(s)}
 function fullState(){
   // 统一备份：包含记账日记 + 本月账单 + 财务总览
@@ -965,16 +1091,6 @@ function initBudgetHistory(){
   }
 }
 
-function calcPeriodBalance(periodStart,periodEnd){
-  const{daily,extra}=getSettingsForPeriod(periodStart);
-  const days=Math.max(1,daysBetween(periodStart,periodEnd));
-  const recs=RC.filter(r=>r.date>=periodStart&&r.date<=periodEnd);
-  const spent=recs.filter(r=>r.type==='expense').reduce((a,r)=>a+r.amount,0);
-  const earned=recs.filter(r=>r.type==='income').reduce((a,r)=>a+r.amount,0);
-  const accrued=daily*days;
-  const income_add=ST.income_merge==='yes'?earned:0;
-  return accrued+extra+income_add-spent;
-}
 // 自动计算跨周期继承的结余（递归追溯）
 function autoCarryOver(currentPeriodStart){
   if(ST.carryover!=='yes')return ST.hasPrevBalance?(parseFloat(ST.prevBalance)||0):0;
@@ -1022,8 +1138,6 @@ function budgetState(asOf=todayStr()){
   const daysRemain=Math.max(0,daysBetween(asOf,p.end)-1);
   return{periodStart:p.start,periodEnd:p.end,settleDay:p.settleDay,calcStart:start,daily,extra,previous,spent,earned,todaySpent,dailyRemaining,days,accrued,added,balance,periodDays,daysRemain,periodTotal:daily*periodDays};
 }
-function calcBal(){const s=budgetState();return s?s.balance:null}
-function calcDailyLeft(){const s=budgetState();return s?s.dailyRemaining:null}
 function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}}
 function currentEntryDate(){return detailView==='cal'?detailSel:selDate}
 function normalizeTime(v){const m=String(v||'').match(/([01]?\d|2[0-3])[:：点](\d{1,2})?/);return m?pad2(m[1])+':'+pad2(m[2]||0):nowStr()}
@@ -1082,6 +1196,52 @@ function getCatStats(mk){
     dayAvg:todayDay>0?(v.total/todayDay):0
   })).sort((a,b)=>b.total-a.total);
 }
+// ─── 二级分类（子类）引擎 ───
+// 每组：[显示名, ...关键词]；餐饮无关键词命中时按时间分
+const SUBCAT_RULES={
+  '餐饮':{meal:true,kw:[['早餐','早餐','早饭','早点'],['午餐','午餐','午饭','中餐','中饭'],['下午茶','下午茶','奶茶','咖啡','星巴克','喜茶','瑞幸'],['晚餐','晚餐','晚饭'],['宵夜','宵夜','夜宵','烧烤']]},
+  '交通':{kw:[['地铁','地铁'],['公交','公交','巴士'],['打车','打车','滴滴','出租','网约','taxi'],['共享单车','单车','哈啰','青桔','美团单车'],['停车','停车'],['加油','加油','油费']]},
+  '购物':{kw:[['外卖','外卖','美团','饿了么'],['超市','超市','便利店'],['网购','网购','淘宝','京东','拼多多','天猫']]},
+  '娱乐':{kw:[['电影','电影','影院'],['KTV','ktv','唱歌'],['游戏','游戏','steam']]}
+};
+function timeMeal(time){
+  const h=parseInt((time||'').split(':')[0],10);
+  if(isNaN(h))return '其他';
+  if(h>=5&&h<10)return '早餐';
+  if(h>=10&&h<14)return '午餐';
+  if(h>=14&&h<17)return '下午茶';
+  if(h>=17&&h<21)return '晚餐';
+  return '宵夜';
+}
+function getSubCat(rec){
+  const rule=SUBCAT_RULES[rec.cat];
+  if(!rule)return null;// 该大类无二级
+  const lbl=(rec.label||'').toLowerCase();
+  for(const grp of rule.kw){for(let i=1;i<grp.length;i++){if(lbl.includes(grp[i].toLowerCase()))return grp[0];}}
+  if(rule.meal)return timeMeal(rec.time);
+  return '其他';
+}
+function hasSubCats(cat){return !!SUBCAT_RULES[cat];}
+function getCatStatsByType(mk,type){
+  if(!mk){const now=new Date();mk=now.getFullYear()+'-'+pad2(now.getMonth()+1);}
+  const catMap={};
+  RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.type===type).forEach(r=>{
+    if(!catMap[r.cat])catMap[r.cat]={total:0,count:0};
+    catMap[r.cat].total+=r.amount;catMap[r.cat].count++;
+  });
+  return Object.entries(catMap).map(([cat,v])=>({cat,total:v.total,count:v.count})).sort((a,b)=>b.total-a.total);
+}
+function getSubStats(mk,cat,type){
+  const recs=RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.type===type&&r.cat===cat);
+  const sum=recs.reduce((a,r)=>a+r.amount,0);
+  const map={};
+  recs.forEach(r=>{const s=getSubCat(r)||'其他';if(!map[s])map[s]={total:0,count:0};map[s].total+=r.amount;map[s].count++;});
+  return Object.entries(map).map(([sub,v])=>({sub,total:v.total,count:v.count,pct:sum>0?v.total/sum*100:0})).sort((a,b)=>b.total-a.total);
+}
+function setPieMode(m){window._pieMode=m;window._pieExpand={};renderDetail();}
+function togglePieExpand(cat){window._pieExpand=window._pieExpand||{};window._pieExpand[cat]=!window._pieExpand[cat];const db=document.querySelector('#detail-screen .detail-body');const sy=db?db.scrollTop:0;renderDetail();const db2=document.querySelector('#detail-screen .detail-body');if(db2)db2.scrollTop=sy;}
+function openSubDetail(cat,sub){window._subCat=cat;window._subName=sub;window._subMode=window._pieMode||'expense';detailView='subdetail';renderDetail();const db=document.querySelector('#detail-screen .detail-body');if(db)db.scrollTop=0;}
+function detailBack(){if(detailView==='subdetail'){detailView='pie';renderDetail();}else showApp();}
 // 获取有记录的所有月份列表
 function getAllMonths(){
   const months=new Set();
@@ -1282,12 +1442,15 @@ function renderApp(){
         </div>
         <div class="card" onclick="openDetail('budget')">
           <div class="card-hdr"><span class="card-title">${ST.purpose==='budget'?'今日预算':'支出概览'}</span>${dailyRemaining!=null?`<span class="card-badge" style="background:${dailyRemaining<0?'#FFEBEE':'#E8F5E9'};color:${dailyRemaining<0?'#c62828':'#2e7d32'}">${dailyRemaining<0?'-':''}${fmtRaw(Math.abs(dailyRemaining))}</span>`:''}</div>
+          <div class="bring-stats" style="margin-bottom:10px">
+            <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a;font-size:14px">${fmtN(budget)}</div><div class="bring-col-l">预算</div></div>
+            <div class="bring-col"><div class="bring-col-v" style="color:#e53935;font-size:14px">${fmtN(todaySpent)}</div><div class="bring-col-l">支出</div></div>
+            <div class="bring-col"><div class="bring-col-v" style="color:${dailyRemaining!=null&&dailyRemaining<0?'#c62828':'#2e7d32'};font-size:14px">${dailyRemaining!=null?(dailyRemaining<0?'-':'')+fmtRaw(Math.abs(dailyRemaining)):'—'}</div><div class="bring-col-l">剩余</div></div>
+          </div>
           <div class="ring-area">
-            <canvas id="ring-c" width="80" height="80"></canvas>
-            <div class="ring-center"><div class="ring-center-pct" style="color:${pctRound>100?'#c62828':pctRound>80?'#e65100':'#1a1a1a'}">${pctRound}%</div><div class="ring-center-lbl">今日已用</div></div>
-            <div class="ring-nums">
-              <div class="rnum"><div class="rnum-v" style="color:#c62828">${fmtN(todaySpent)}</div><div class="rnum-l">今日支出</div></div>
-              <div class="rnum"><div class="rnum-v" style="color:${(bal||0)>=0?'#185FA5':'#c62828'}">${bal!=null?(bal<0?'-':'')+fmtN(bal):'—'}</div><div class="rnum-l">累计可用</div></div>
+            <div class="ring-canvas-wrap">
+              <canvas id="ring-c" width="110" height="110"></canvas>
+              <div class="ring-center"><div class="ring-center-pct" style="color:${pctRound>100?'#c62828':pctRound>80?'#e65100':'#1a1a1a'}">${pctRound}%</div></div>
             </div>
             <div class="budget-predict ${predictClass}">${predictText}</div>
           </div>
@@ -1303,19 +1466,10 @@ function renderApp(){
         </div>
         <div class="card" onclick="openDetail('pie')">
           <div class="card-hdr"><span class="card-title">支出分类</span><span class="card-expand">展开 ›</span></div>
-          <div class="pie-area"><canvas id="pie-c" width="76" height="76"></canvas><div class="pie-legend" id="pie-leg"></div></div>
+          <div class="pie-area"><div class="pie-card-wrap"><canvas id="pie-c" width="150" height="150"></canvas><div class="pie-card-center"><div class="pie-card-lbl">总支出</div><div class="pie-card-val">${catE.length?fmtN(totalMonthSpent):'¥0'}</div></div></div></div>
         </div>
       </div>
-      <div class="report-card" onclick="openDetail('report')">
-        <div class="rc-title">📊 月度概览</div>
-        <div class="rc-grid">
-          <div class="rc-item"><div class="rc-v out">${fmtN(wc.thisWk)}</div><div class="rc-l">本周支出</div></div>
-          <div class="rc-item"><div class="rc-v neu">${fmtN(ms.dayAvg)}</div><div class="rc-l">日均花销</div></div>
-          <div class="rc-item"><div class="rc-v in">${fmtN(totalMonthIncome)}</div><div class="rc-l">本月收入</div></div>
-        </div>
-        <div class="trend-bar-row">${trendBars}</div>
-        <div style="margin-top:8px;text-align:center"><span class="rc-compare ${compareClass}">${compareText}</span></div>
-      </div>
+      ${budgetRingCard()}
       <div class="feed-section">${feedHtml}</div>
     </div>
     ${quickInputHtml('qi-app')}`;
@@ -1330,9 +1484,22 @@ function renderApp(){
     const pc=document.getElementById('pie-c');
     if(pc&&window.Chart){
       if(catE.length){
-        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}}});
-        const lg=document.getElementById('pie-leg');
-        if(lg)lg.innerHTML=catE.slice(0,3).map((e,i)=>`<div class="pli"><div class="pld" style="background:${PIE_COLORS[i%9]}"></div><span class="pll">${e[0]}</span><span class="pla">${fmtN(e[1])}</span></div>`).join('');
+        const cardPiePlugin={id:'cardPiePlugin',afterDraw(chart){
+          const ctx=chart.ctx;const ds=chart.getDatasetMeta(0);if(!ds||!ds.data)return;
+          const total=catE.reduce((a,e)=>a+e[1],0);
+          ctx.save();
+          ds.data.forEach((arc,i)=>{
+            if(i>=3)return;
+            const val=catE[i]?catE[i][1]:0;const pct=total>0?val/total*100:0;if(pct<5)return;
+            const ang=(arc.startAngle+arc.endAngle)/2;const r=arc.outerRadius+10;
+            const x=arc.x+Math.cos(ang)*r,y=arc.y+Math.sin(ang)*r;
+            ctx.textAlign='center';ctx.textBaseline='middle';
+            ctx.fillStyle='#444';ctx.font='700 10px -apple-system,sans-serif';
+            ctx.fillText(Math.round(pct)+'%',x,y);
+          });
+          ctx.restore();
+        }};
+        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:14,bottom:14,left:14,right:14}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[cardPiePlugin]});
       }else{
         const lg=document.getElementById('pie-leg');
         if(lg)lg.innerHTML=`<div style="font-size:10px;color:#bbb;text-align:center;padding:6px 0">暂无支出</div>`;
@@ -1472,19 +1639,65 @@ function renderDetail(){
       </div>`;
   } else if(detailView==='pie'){
     const vmP=getViewMonth();const[vpY,vpM]=vmP.split('-').map(Number);
-    title=`${vpM}月支出分类`;
-    const catStats=getCatStats(vmP);const total=catStats.reduce((a,c)=>a+c.total,0);
-    body=`<div style="display:flex;justify-content:center;margin-bottom:14px"><canvas id="d-pie" width="160" height="160"></canvas></div>
-      <div class="d-pie-list">${catStats.map((c,i)=>`
-        <div class="d-pie-row">
-          <div class="d-pie-dot" style="background:${PIE_COLORS[i%9]}"></div>
-          <span class="d-pie-lbl">${c.cat}</span>
-          <div class="d-pie-bar-bg"><div class="d-pie-bar" style="width:${total>0?Math.round(c.total/total*100):0}%;background:${PIE_COLORS[i%9]}"></div></div>
-          <span class="d-pie-amt">${fmtN(c.total)}</span>
-          <span class="d-pie-pct">${total>0?Math.round(c.total/total*100):0}%</span>
-          <span class="d-pie-sub">日均${fmtN(c.dayAvg)}</span>
-        </div>`).join('')}
-        ${!catStats.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:16px">暂无支出记录</div>`:''}</div>`;
+    const pmode=window._pieMode||'expense';
+    title=`${vpM}月${pmode==='income'?'收入':'支出'}分类`;
+    const catStats=getCatStatsByType(vmP,pmode);const total=catStats.reduce((a,c)=>a+c.total,0);
+    window._pieExpand=window._pieExpand||{};
+    body=`<div class="pie-mode-row">
+        <button class="pie-mode-btn${pmode==='expense'?' sel-out':''}" onclick="setPieMode('expense')">支出</button>
+        <button class="pie-mode-btn${pmode==='income'?' sel-in':''}" onclick="setPieMode('income')">收入</button>
+      </div>
+      <div class="d-pie-wrap"><canvas id="d-pie" width="300" height="240"></canvas></div>
+      <div class="d-cat-list">${catStats.map((c,i)=>{
+        const meta=getCatMeta(c.cat,pmode);const pct=total>0?(c.total/total*100):0;const color=PIE_COLORS[i%9];
+        const expandable=hasSubCats(c.cat);const isOpen=window._pieExpand[c.cat];
+        const subs=isOpen?getSubStats(vmP,c.cat,pmode):[];
+        return `<div class="d-cat-block">
+          <div class="d-cat-head" onclick="${expandable?`togglePieExpand('${c.cat}')`:`openSubDetail('${c.cat}','__all__')`}">
+            <div class="d-cat-icon" style="background:${meta.bg}">${meta.i}</div>
+            <span class="d-cat-name">${c.cat}</span>
+            <span class="d-cat-meta">(${pct.toFixed(2)}%, ${c.count}笔)</span>
+            <span class="d-cat-amt">${fmtN(c.total)}</span>
+            ${expandable?`<span class="d-cat-arrow${isOpen?' open':''}">⌄</span>`:`<span class="d-cat-arrow" style="color:#ddd">›</span>`}
+          </div>
+          <div class="d-cat-barbg"><div class="d-cat-bar" style="width:${pct}%;background:${color}"></div></div>
+          ${isOpen?`<div class="d-sub-list" style="border-left-color:${color}">${subs.map(s=>`
+            <div class="d-sub-row" onclick="openSubDetail('${c.cat}','${s.sub}')">
+              <span class="d-sub-dot" style="background:${color}"></span>
+              <span class="d-sub-name">${s.sub}</span>
+              <span class="d-sub-amt">${fmtN(s.total)}</span>
+              <span class="d-sub-meta">[${s.count}笔, ${s.pct.toFixed(2)}%]</span>
+            </div>`).join('')}</div>`:''}
+        </div>`;
+      }).join('')}
+      ${!catStats.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:16px">暂无${pmode==='income'?'收入':'支出'}记录</div>`:''}</div>`;
+  } else if(detailView==='subdetail'){
+    const vm=getViewMonth();const mode=window._subMode||'expense';
+    const cat=window._subCat;const sub=window._subName;
+    title='交易列表';inputHtml='';
+    let recs=RC.filter(r=>r.date&&r.date.startsWith(vm)&&r.type===mode&&r.cat===cat);
+    if(sub!=='__all__')recs=recs.filter(r=>(getSubCat(r)||'其他')===sub);
+    recs.sort((a,b)=>b.ts-a.ts);
+    const sumAmt=recs.reduce((a,r)=>a+r.amount,0);
+    const meta=getCatMeta(cat,mode);
+    const tagTxt=sub==='__all__'?cat:`${cat}-${sub}`;
+    const groups={};recs.forEach(r=>{(groups[r.date]=groups[r.date]||[]).push(r)});
+    const dates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+    const sgn=mode==='income'?'+':'-';const amtCls=mode==='income'?'in':'out';
+    body=`<div class="d-txn-head"><span>${tagTxt}</span><span class="d-txn-sum">共${recs.length}笔 · ${fmtN(sumAmt)}</span></div>
+      ${dates.map(d=>{const[y,mo,dd]=d.split('-');
+        return `<div class="d-txn-date">${y}年${Number(mo)}月${Number(dd)}日</div>
+          ${groups[d].map(r=>`<div class="d-txn-row" onclick="openEdit(${r.ts})">
+            <span class="d-txn-time">${r.time||''}</span>
+            <div class="d-txn-icon" style="background:${meta.bg}">${meta.i}</div>
+            <div class="d-txn-mid">
+              <div class="d-txn-tag">${cat}-${getSubCat(r)||'其他'} ›</div>
+              <div class="d-txn-note">${r.label||''}</div>
+            </div>
+            <span class="d-txn-amt ${amtCls}">${sgn}${fmtN(r.amount)}</span>
+          </div>`).join('')}`;
+      }).join('')}
+      ${!recs.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:24px">这个分类下还没有记录</div>`:''}`;
   } else if(detailView==='reimb'){
     title='报销管理';inputHtml=reimbQuickInputHtml('ri-detail');
     const pending=RM.filter(r=>!r.reimbursed);const done=RM.filter(r=>r.reimbursed);
@@ -1585,15 +1798,39 @@ function renderDetail(){
     }
   }
 
-  ds.innerHTML=`<div class="detail-bar"><button class="back-btn" onclick="showApp()">←</button><div class="detail-title">${title}</div></div><div class="detail-body">${body}</div>${inputHtml}`;
+  ds.innerHTML=`<div class="detail-bar"><button class="back-btn" onclick="detailBack()">←</button><div class="detail-title">${title}</div></div><div class="detail-body">${body}</div>${inputHtml}`;
 
   if(detailView==='pie'){
     setTimeout(()=>{
       const vmPie=getViewMonth();
-      const catSpend={};RC.filter(r=>r.type==='expense'&&r.date&&r.date.startsWith(vmPie)).forEach(r=>{catSpend[r.cat]=(catSpend[r.cat]||0)+r.amount});
+      const pm=window._pieMode||'expense';
+      const catSpend={};RC.filter(r=>r.type===pm&&r.date&&r.date.startsWith(vmPie)).forEach(r=>{catSpend[r.cat]=(catSpend[r.cat]||0)+r.amount});
       const entries=Object.entries(catSpend).sort((a,b)=>b[1]-a[1]);
       const pc=document.getElementById('d-pie');
-      if(pc&&entries.length&&window.Chart)charts.dpie=new Chart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'60%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}}});
+      const total=entries.reduce((a,e)=>a+e[1],0);
+      const cols=PIE_COLORS;
+      const leaderLabels={id:'leaderLabels',afterDraw(chart){
+        const ctx=chart.ctx;const ds=chart.getDatasetMeta(0);if(!ds||!ds.data)return;
+        ctx.save();
+        ds.data.forEach((arc,i)=>{
+          const val=entries[i]?entries[i][1]:0;const pct=total>0?val/total*100:0;if(pct<0.3)return;
+          const ang=(arc.startAngle+arc.endAngle)/2;const r=arc.outerRadius;
+          const ca=Math.cos(ang),sa=Math.sin(ang);const right=ca>=0;
+          const x0=arc.x+ca*r,y0=arc.y+sa*r;
+          const x1=arc.x+ca*(r+10),y1=arc.y+sa*(r+10);
+          const x2=x1+(right?14:-14);
+          ctx.strokeStyle=cols[i%9];ctx.lineWidth=1;
+          ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.lineTo(x2,y1);ctx.stroke();
+          const tx=x2+(right?3:-3);
+          ctx.textAlign=right?'left':'right';ctx.textBaseline='middle';
+          ctx.fillStyle='#333';ctx.font='600 11px -apple-system,sans-serif';
+          ctx.fillText(entries[i][0],tx,y1-6);
+          ctx.fillStyle='#999';ctx.font='600 10px -apple-system,sans-serif';
+          ctx.fillText(pct.toFixed(1)+'%',tx,y1+6);
+        });
+        ctx.restore();
+      }};
+      if(pc&&entries.length&&window.Chart)charts.dpie=new Chart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:18,bottom:18,left:46,right:46}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[leaderLabels]});
     },30);
   }
   checkModal();
@@ -1879,8 +2116,6 @@ const M_DIARY_SK="bav7";
 
 function M_ld(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
 function M_sv(d){localStorage.setItem(M_SK,JSON.stringify(d))}
-function _unused_pad2(n){return String(n).padStart(2,'0')}
-function _unused_todayStr(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
 function M_monthKey(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)}
 function M_fmt(n,dec=0){return'¥'+Number(Math.abs(n)).toFixed(dec)}
 function M_daysInMonth(){const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()}
@@ -1928,15 +2163,6 @@ function M_getLifeAmount(){
   return (M_CFG.dailyLife||50)*M_daysInMonth();
 }
 
-function M_getDiarySpending(){
-  const diary=M_ld(M_DIARY_SK);
-  const records=diary.records||[];
-  const mk=M_monthKey();
-  const monthRecs=records.filter(r=>r.type==='expense'&&r.date&&r.date.startsWith(mk));
-  const byCategory={};
-  monthRecs.forEach(r=>{byCategory[r.cat]=(byCategory[r.cat]||0)+r.amount});
-  return byCategory;
-}
 
 function M_getBillStatus(billId){
   const mk=M_monthKey();
@@ -1949,10 +2175,6 @@ function M_setBillStatus(billId,status){
   M_BILLS_STATUS[mk][billId]=status;M_saveData();
 }
 
-function M_getBudgetAmount(b){
-  if(b.dynDays)return M_getLifeAmount();
-  return b.amount;
-}
 
 function M_getAlerts(){
   const alerts=[];const today=M_todayDay();const alertDays=M_CFG.alertDays||3;
@@ -1980,6 +2202,7 @@ function M_getSummary(){
   return{totalFixed,paidFixed,unpaidFixed};
 }
 
+// ─── 月度预算环形卡：数据计算 ───// 上月结余 = max(0, 上月总预算 - 上月支出)，不向更早月份递归
 function M_renderMain(){
   const today=M_todayDay();const dim=M_daysInMonth();
   const pctDay=Math.round(today/dim*100);  const summary=M_getSummary();
@@ -2241,7 +2464,6 @@ function M_saveSettings(){
 }
 
 
-function M_init(){M_loadData();M_renderMain();}
 
 // ─── 财务总览 JS ───
 
@@ -2268,7 +2490,6 @@ function F_ld(){try{return JSON.parse(localStorage.getItem(F_SK)||'{}')}catch(e)
 function F_sv(d){localStorage.setItem(F_SK,JSON.stringify(d))}
 function F_fmt2(n){return Number(Math.abs(n)).toFixed(2)}
 function F_fmtY(n,dec=2){return'¥'+F_fmt2(n)}
-function F_fmtPct(n){return(n>=0?'+':'')+Number(n).toFixed(1)+'%'}
 function F_genId(){return'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 let F_ITEMS=[],F_STOCK_ACCOUNT={},F_modal=null,F_editId=null,F_editSub=null;
 
@@ -2487,6 +2708,7 @@ function F_checkModal(){
   else if(F_modal==='market-update')F_renderMarketUpdateModal();
   else if(F_modal==='edit-buy')F_renderEditBuyModal();
   else if(F_modal==='inv-action')F_renderInvActionModal();
+  else if(F_modal==='edit-inv-record')F_renderEditInvRecordModal();
 }
 function mkOv_f(){
   const ov=document.createElement('div');ov.className='modal-overlay';
@@ -2702,6 +2924,7 @@ function F_renderSellAddModal(){
         ${isW?'🔴 取用':isA?'🤖 自动定投':'🟢 存入'}${!isA&&r.note?' · '+r.note:''}${isW&&isR?' (已归还)':''}
       </span>
       ${isW&&!isR?`<button onclick="F_markReturned('${item.id}',${(item.records||[]).length-1-ri})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
+      <button onclick="F_openEditInvRecord('${item.id}',${(item.records||[]).length-1-ri})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
       <button onclick="F_deleteInvRecord('${item.id}',${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
     </div>`;
   }).join(''):`<div class="f-empty">还没有记录</div>`;
@@ -2731,16 +2954,6 @@ function F_renderSellAddModal(){
     <button class="f-btn-danger" onclick="F_deleteInvItem('${item.id}')">删除此项目</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
-}
-function F_submitInvRecord(itemId){
-  const amt=parseFloat(document.getElementById('r-amt')?.value);
-  const date=document.getElementById('r-date')?.value||todayStr();
-  const note=document.getElementById('r-note')?.value.trim()||'';
-  if(!amt||amt<=0){alert('请填写金额');return;}
-  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
-  if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
-  F_ITEMS[idx].records.push({date,amount:amt,note});
-  F_saveData();F_modal='item-detail';F_renderMain();
 }
 function F_deleteInvRecord(itemId,recIdx){
   if(!confirm('确认删除？'))return;
@@ -3139,14 +3352,92 @@ function F_openInvAction(itemId,type){
   F_modal='inv-action';
   F_renderMain();
 }
+function F_renderInvActionModal(){
+  const item=F_ITEMS.find(i=>i.id===F_editId);
+  if(!item){F_modal=null;F_renderMain();return;}
+  const type=window._F_invActionType||'deposit';
+  const isDeposit=type==='deposit';
+  const inv=F_getTotalInvested(item);
+  const ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet">
+    <div class="f-sheet-handle"></div>
+    <div class="f-sheet-title">${isDeposit?'＋ 存入':'－ 取用'} · ${item.name}</div>
+    <div class="f-sheet-sub">当前余额 ${F_fmtY(inv)} / 目标 ${F_fmtY(item.target)}</div>
+    <div class="f-field-row"><span class="f-field-label">金额</span><input id="r-amt" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div>
+    <div class="f-field-row"><span class="f-field-label">日期</span><input id="r-date" type="date" value="${todayStr()}"></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="r-note" placeholder="可选"></div>
+    <button class="f-btn-primary" style="background:${isDeposit?'#1a5fd4':'#e65100'};margin-top:8px;" onclick="F_submitInvAction('${item.id}','${type}')">确认${isDeposit?'存入':'取用'}</button>
+    <button class="f-btn-secondary" onclick="F_modal='item-detail';F_renderMain()">取消</button>
+  </div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+function F_submitInvAction(itemId,type){
+  const amt=parseFloat(document.getElementById('r-amt')?.value);
+  const date=document.getElementById('r-date')?.value||todayStr();
+  const note=document.getElementById('r-note')?.value.trim()||'';
+  if(!amt||amt<=0){alert('请填写金额');return;}
+  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
+  if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
+  const isWithdraw=type==='withdraw';
+  F_ITEMS[idx].records.push({date,amount:amt,note,type:isWithdraw?'withdraw':'deposit',returned:false});
+  F_saveData();
+  showToast_f(isWithdraw?'✓ 取用已记录':'✓ 存入已记录');
+  F_modal='item-detail';F_renderMain();
+}
 function F_markReturned(itemId,recIdx){
   const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
   if(F_ITEMS[idx].records[recIdx])F_ITEMS[idx].records[recIdx].returned=true;
   F_saveData();showToast_f('✓ 已标记归还');F_renderMain();
 }
+function F_openEditInvRecord(itemId,recIdx){
+  F_editId=itemId;
+  window._F_editInvIdx=recIdx;
+  F_modal='edit-inv-record';
+  F_renderMain();
+}
+function F_ei_toggleReturned(){
+  window._F_ei_returned=!window._F_ei_returned;
+  const lbl=document.getElementById('F_ei_ret_lbl');
+  if(lbl){lbl.textContent=window._F_ei_returned?'✓ 已归还':'未归还（点击切换）';lbl.style.color=window._F_ei_returned?'#2e7d32':'#aaa';}
+}
+function F_renderEditInvRecordModal(){
+  const item=F_ITEMS.find(i=>i.id===F_editId);if(!item){F_modal='item-detail';F_renderMain();return;}
+  const idx=window._F_editInvIdx;
+  const r=(item.records||[])[idx];if(!r){F_modal='item-detail';F_renderMain();return;}
+  const isW=r.type==='withdraw';
+  const isA=r.type==='auto';
+  const typeLabel=isW?'取用':isA?'自动定投':'存入';
+  window._F_ei_returned=!!r.returned;
+  const ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet">
+    <div class="f-sheet-handle"></div>
+    <div class="f-sheet-title">编辑记录</div>
+    <div class="f-sheet-sub">${item.name} · ${typeLabel}</div>
+    <div class="f-field-row"><span class="f-field-label">日期</span><input id="F_ei_date" type="date" value="${r.date}"></div>
+    <div class="f-field-row"><span class="f-field-label">金额</span><input id="F_ei_amt" type="number" inputmode="decimal" step="0.01" value="${r.amount}"></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_ei_note" value="${r.note||''}"></div>
+    ${isW?`<div class="f-field-row" onclick="F_ei_toggleReturned()" style="cursor:pointer"><span class="f-field-label">已归还</span><span id="F_ei_ret_lbl" style="flex:1;color:${r.returned?'#2e7d32':'#aaa'};font-size:13px">${r.returned?'✓ 已归还':'未归还（点击切换）'}</span></div>`:''}
+    <button class="f-btn-primary" onclick="F_submitEditInvRecord('${item.id}',${idx})">保存</button>
+    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteInvRecord('${item.id}',${idx})">删除这条记录</button>
+  </div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+function F_submitEditInvRecord(itemId,recIdx){
+  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
+  const rec=F_ITEMS[idx].records[recIdx];if(!rec)return;
+  const date=document.getElementById('F_ei_date')?.value||rec.date;
+  const amt=parseFloat(document.getElementById('F_ei_amt')?.value);
+  const note=document.getElementById('F_ei_note')?.value.trim()||'';
+  if(!amt||amt<=0){alert('请填写金额');return;}
+  const upd={...rec,date,amount:amt,note};
+  if(rec.type==='withdraw')upd.returned=!!window._F_ei_returned;
+  F_ITEMS[idx].records[recIdx]=upd;
+  F_saveData();
+  showToast_f('✓ 记录已更新');
+  F_modal='item-detail';F_renderMain();
+}
 
 function F_openItemDetail(id){F_modal='item-detail';F_editId=id;F_renderMain();}
-function F_openAddInv(){F_modal='item-add';F_editId=null;window._F_addGroup='fund';F_renderMain();}
 function F_openAddInvGroup(g){F_modal='item-add';F_editId=null;window._F_addGroup=g||'saving';F_renderMain();}
 
 
@@ -3410,7 +3701,6 @@ function showToast_f(msg){
   document.getElementById('panel-finance').appendChild(el);
   setTimeout(()=>el.remove(),1800);
 }
-function F_init(){F_loadData();F_autoInvest();F_renderMain();}
 
 // ─── 启动 ───
 (function(){
