@@ -1441,10 +1441,10 @@ function renderApp(){
           ${calFooter}
         </div>
         <div class="card" onclick="openDetail('budget')">
-          <div class="card-hdr"><span class="card-title">${ST.purpose==='budget'?'今日预算':'支出概览'}</span>${dailyRemaining!=null?`<span class="card-badge" style="background:${dailyRemaining<0?'#FFEBEE':'#E8F5E9'};color:${dailyRemaining<0?'#c62828':'#2e7d32'}">${dailyRemaining<0?'-':''}${fmtRaw(Math.abs(dailyRemaining))}</span>`:''}</div>
+          <div class="card-hdr"><span class="card-title">${ST.purpose==='budget'?'今日预算':'支出概览'}</span>${bal!=null?`<span class="card-badge" style="background:${(bal||0)<0?'#FFEBEE':'#E8F5E9'};color:${(bal||0)<0?'#c62828':'#2e7d32'}">可用余额 ${(bal||0)<0?'-':''}${fmtRaw(Math.abs(bal||0))}</span>`:''}</div>
           <div class="bring-stats" style="margin-bottom:10px">
-            <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a;font-size:14px">${fmtN(budget)}</div><div class="bring-col-l">预算</div></div>
-            <div class="bring-col"><div class="bring-col-v" style="color:#e53935;font-size:14px">${fmtN(todaySpent)}</div><div class="bring-col-l">支出</div></div>
+            <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a;font-size:14px">${fmtRaw(budget)}</div><div class="bring-col-l">预算</div></div>
+            <div class="bring-col"><div class="bring-col-v" style="color:#e53935;font-size:14px">${fmtRaw(todaySpent)}</div><div class="bring-col-l">支出</div></div>
             <div class="bring-col"><div class="bring-col-v" style="color:${dailyRemaining!=null&&dailyRemaining<0?'#c62828':'#2e7d32'};font-size:14px">${dailyRemaining!=null?(dailyRemaining<0?'-':'')+fmtRaw(Math.abs(dailyRemaining)):'—'}</div><div class="bring-col-l">剩余</div></div>
           </div>
           <div class="ring-area">
@@ -1490,16 +1490,20 @@ function renderApp(){
           ctx.save();
           ds.data.forEach((arc,i)=>{
             if(i>=3)return;
-            const val=catE[i]?catE[i][1]:0;const pct=total>0?val/total*100:0;if(pct<5)return;
-            const ang=(arc.startAngle+arc.endAngle)/2;const r=arc.outerRadius+10;
-            const x=arc.x+Math.cos(ang)*r,y=arc.y+Math.sin(ang)*r;
+            const val=catE[i]?catE[i][1]:0;const pct=total>0?val/total*100:0;if(pct<8)return;
+            const ang=(arc.startAngle+arc.endAngle)/2;
+            const r=arc.outerRadius+13;
+            const x=arc.x+Math.cos(ang)*r;const y=arc.y+Math.sin(ang)*r;
+            const name=catE[i][0].length>3?catE[i][0].slice(0,3):catE[i][0];
             ctx.textAlign='center';ctx.textBaseline='middle';
-            ctx.fillStyle='#444';ctx.font='700 10px -apple-system,sans-serif';
-            ctx.fillText(Math.round(pct)+'%',x,y);
+            ctx.fillStyle='#666';ctx.font='500 9px -apple-system,sans-serif';
+            ctx.fillText(name,x,y-6);
+            ctx.fillStyle='#222';ctx.font='700 10px -apple-system,sans-serif';
+            ctx.fillText(Math.round(pct)+'%',x,y+6);
           });
           ctx.restore();
         }};
-        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:14,bottom:14,left:14,right:14}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[cardPiePlugin]});
+        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:20,bottom:20,left:20,right:20}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[cardPiePlugin]});
       }else{
         const lg=document.getElementById('pie-leg');
         if(lg)lg.innerHTML=`<div style="font-size:10px;color:#bbb;text-align:center;padding:6px 0">暂无支出</div>`;
@@ -1730,6 +1734,12 @@ function renderDetail(){
     const prevMk=prevMonth(rMk);const msP=getMonthStats(prevMk);
     const diffSpent=msR.totalSpent-msP.totalSpent;
     const diffIncome=msR.totalIncome-msP.totalIncome;
+    const rPrevCarry=autoCarryOver(rMk+'-01');
+    // 查看月结余（仅历史月显示，当月不显示）
+    const _nowMk=new Date().getFullYear()+'-'+pad2(new Date().getMonth()+1);
+    const _rThisP=periodBounds(rMk+'-15');
+    const _rThisRecs=RC.filter(r=>r.date>=_rThisP.start&&r.date<=_rThisP.end);
+    const rMonthBalance=_rThisRecs.length?calcPeriodBalanceWithCarry(_rThisP.start,_rThisP.end,rPrevCarry):null;
     // 报销汇总
     const pendReimb=RM.filter(r=>!r.reimbursed&&r.date&&r.date.startsWith(rMk));
     const doneReimb=RM.filter(r=>r.reimbursed&&r.date&&r.date.startsWith(rMk));
@@ -1771,6 +1781,8 @@ function renderDetail(){
             <div class="rc-item"><div class="rc-v in">${fmtN(msR.totalIncome)}</div><div class="rc-l">总收入</div></div>
             <div class="rc-item"><div class="rc-v neu">${fmtN(msR.dayAvg)}</div><div class="rc-l">日均花销</div></div>
           </div>
+          ${rPrevCarry>0?`<div style="display:flex;justify-content:space-between;align-items:center;border-top:.5px solid #f0f0f0;padding-top:8px;margin-top:2px"><span style="font-size:12px;color:#888">上月结余带入</span><span style="font-size:14px;font-weight:700;color:#c62828">+${fmtN(rPrevCarry)}</span></div>`:''}
+          ${rMk!==_nowMk&&rMonthBalance!==null?`<div style="display:flex;justify-content:space-between;align-items:center;border-top:.5px solid #f0f0f0;padding-top:8px;margin-top:2px"><span style="font-size:12px;color:#888">${rM}月结余</span><span style="font-size:14px;font-weight:700;color:${rMonthBalance>=0?'#c62828':'#2e7d32'}">${rMonthBalance>=0?'+':''}${fmtN(rMonthBalance)}</span></div>`:''}
           ${msP.totalSpent>0?`<div style="margin-top:8px;text-align:center"><span class="rc-compare ${diffSpent>0?'up':'down'}">${diffSpent>0?'↑':'↓'} 比上月${diffSpent>0?'多':'少'} ${fmtN(Math.abs(diffSpent))}</span></div>`:''}
           ${msR.maxDay?`<div style="font-size:11px;color:#aaa;text-align:center;margin-top:6px">消费最多：${msR.maxDay[0].slice(5)} 花了 ${fmtN(msR.maxDay[1])}</div>`:''}
         </div>
