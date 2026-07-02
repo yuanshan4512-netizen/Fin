@@ -782,7 +782,7 @@ function budgetRingCard(){
       </div>
     </div>
     <div class="bring-rows">
-      <div class="bring-formula">日¥${fmtRaw(r.dailyBudget)}×${r.dim}天+零花¥${fmtRaw(r.pocket)}${r.prevCarry!==0?(r.prevCarry>0?'+':'-')+'结余¥'+fmtRaw(r.prevCarry):''}+收入¥${fmtRaw(r.income)}</div>
+      <div class="bring-formula">日¥${fmtRaw(r.dailyBudget)}×${r.dim}天+零花¥${fmtRaw(r.pocket)}${r.prevCarry!==0?(r.prevCarry>0?'+':'-')+'结余¥'+fmtRaw(r.prevCarry):''}${r.income>0?'+收入¥'+fmtRaw(r.income):''}</div>
       <div class="bring-prow"><span class="bring-dot" style="background:#F9A825"></span><span class="bring-pl">日均消费</span><span class="bring-pv">${fmtN(r.avgSpent)}</span></div>
       <div class="bring-prow"><span class="bring-dot" style="background:#378ADD"></span><span class="bring-pl">剩余日均可消费</span><span class="bring-pv" style="color:${r.avgRemain<0?'#c62828':'#1a1a1a'}">${fmtSigned(r.avgRemain)}</span></div>
     </div>
@@ -1280,7 +1280,7 @@ function cleanReimbLabel(text,amountText){
 }
 function reimbMatchFilter(r){
   if(reimbFilter==='all')return true;if(reimbFilter==='done')return !!r.reimbursed;
-  if(reimbFilter==='noinv')return !r.hasInvoice;
+  if(reimbFilter==='noinv')return !r.hasInvoice&&!r.reimbursed;
   if(reimbFilter==='unissued')return !!r.hasInvoice&&(r.invoiceStatus||'未开')==='未开'&&!r.reimbursed;
   if(reimbFilter==='issued')return !!r.hasInvoice&&['已开','已拿到'].includes(r.invoiceStatus)&&!r.reimbursed;
   return true;
@@ -1479,7 +1479,7 @@ function renderApp(){
     if(rc&&window.Chart){
       const rem=Math.max(0,budget-todaySpent);
       const overSpent=todaySpent>budget?todaySpent-budget:0;
-      charts.ring=new Chart(rc,{type:'doughnut',data:{datasets:[{data:budget>0?overSpent>0?[budget,overSpent]:[todaySpent,rem]:[0,1],backgroundColor:budget>0?overSpent>0?['#e53935','#ff8a80']:['#e53935','#C8E6C9']:['#e0e0e0','#e0e0e0'],borderWidth:0}]},options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}}});
+      charts.ring=new Chart(rc,{type:'doughnut',data:{datasets:[{data:budget>0?overSpent>0?[budget,overSpent]:[todaySpent,rem]:[0,1],backgroundColor:budget>0?overSpent>0?['#e53935','#ff8a80']:['#e53935','#C8E6C9']:['#e0e0e0','#e0e0e0'],borderWidth:0}]},options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}}});
     }
     const pc=document.getElementById('pie-c');
     if(pc&&window.Chart){
@@ -1503,7 +1503,7 @@ function renderApp(){
           });
           ctx.restore();
         }};
-        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:20,bottom:20,left:20,right:20}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[cardPiePlugin]});
+        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:20,bottom:20,left:20,right:20}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}},plugins:[cardPiePlugin]});
       }else{
         const lg=document.getElementById('pie-leg');
         if(lg)lg.innerHTML=`<div style="font-size:10px;color:#bbb;text-align:center;padding:6px 0">暂无支出</div>`;
@@ -2225,7 +2225,9 @@ function M_renderMain(){
   const daysLeftUtil=util.monthlyAvg>0?Math.floor(util.balance/(util.monthlyAvg/30)):999;
   const utilStatus=daysLeftUtil>20?'ok':daysLeftUtil>10?'warn':'low';
   // 本月预计消耗 vs 余额
-  const thisMonthConsume=util.monthlyAvg; // 月均就是本月预计消耗
+  const _now=new Date();const _dim=new Date(_now.getFullYear(),_now.getMonth()+1,0).getDate();
+  const _daysLeft=_dim-_now.getDate()+1; // 含今天
+  const thisMonthConsume=util.monthlyAvg>0?Math.round(util.monthlyAvg/_dim*_daysLeft*100)/100:0;
   const afterThisMonth=util.balance-thisMonthConsume;
 
   const d=new Date();
@@ -3125,18 +3127,18 @@ function F_resetData(){
 function F_submitStockEdit(stId){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
   const c=F_calcStock(st);
-  st.name=document.getElementById('e-name')?.value.trim()||st.name;
-  st.code=document.getElementById('e-code')?.value.trim()||'';
-  st.note=document.getElementById('e-note')?.value.trim()||'';
-  st.tpPct=parseFloat(document.getElementById('e-tp')?.value)||20;
-  st.slPct=-(Math.abs(parseFloat(document.getElementById('e-sl')?.value)||15));
+  st.name=document.getElementById('F_e_name')?.value.trim()||st.name;
+  st.code=document.getElementById('F_e_code')?.value.trim()||'';
+  st.note=document.getElementById('F_e_note')?.value.trim()||'';
+  st.tpPct=parseFloat(document.getElementById('F_e_tp')?.value)||20;
+  st.slPct=-(Math.abs(parseFloat(document.getElementById('F_e_sl')?.value)||15));
   // 读取止盈计划
   const plans=F_tmpTpPlans||st.tpPlans;
   const newPlans=[];
   plans.forEach((tp,i)=>{
-    const price=parseFloat(document.getElementById(`tp-price-${i}`)?.value)||tp.price;
-    const qty=parseFloat(document.getElementById(`tp-qty-${i}`)?.value)||tp.qty;
-    const note=document.getElementById(`tp-note-${i}`)?.value.trim()||tp.note||'';
+    const price=parseFloat(document.getElementById(`F_tp_price_${i}`)?.value)||tp.price;
+    const qty=parseFloat(document.getElementById(`F_tp_qty_${i}`)?.value)||tp.qty;
+    const note=document.getElementById(`F_tp_note_${i}`)?.value.trim()||tp.note||'';
     if(price>0||tp.done)newPlans.push({...tp,price,qty,note});
   });
   st.tpPlans=newPlans;
