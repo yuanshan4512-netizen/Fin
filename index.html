@@ -1487,19 +1487,34 @@ function renderApp(){
         const cardPiePlugin={id:'cardPiePlugin',afterDraw(chart){
           const ctx=chart.ctx;const ds=chart.getDatasetMeta(0);if(!ds||!ds.data)return;
           const total=catE.reduce((a,e)=>a+e[1],0);
-          ctx.save();
+          const lbls=[];
           ds.data.forEach((arc,i)=>{
             if(i>=3)return;
             const val=catE[i]?catE[i][1]:0;const pct=total>0?val/total*100:0;if(pct<8)return;
             const ang=(arc.startAngle+arc.endAngle)/2;
             const r=arc.outerRadius+13;
-            const x=arc.x+Math.cos(ang)*r;const y=arc.y+Math.sin(ang)*r;
-            const name=catE[i][0].length>3?catE[i][0].slice(0,3):catE[i][0];
+            lbls.push({x:arc.x+Math.cos(ang)*r,y:arc.y+Math.sin(ang)*r,
+              name:catE[i][0].length>3?catE[i][0].slice(0,3):catE[i][0],pct:Math.round(pct)});
+          });
+          // 碰撞推开：y 轴迭代
+          const GAP=20;
+          for(let it=0;it<10;it++){
+            lbls.sort((a,b)=>a.y-b.y);
+            for(let i=1;i<lbls.length;i++){
+              const dy=lbls[i].y-lbls[i-1].y;
+              if(dy<GAP){const push=(GAP-dy)/2;lbls[i-1].y-=push;lbls[i].y+=push;}
+            }
+          }
+          // 边界夹紧
+          const pad=12;
+          lbls.forEach(l=>{l.y=Math.max(pad,Math.min(chart.height-pad,l.y));});
+          ctx.save();
+          lbls.forEach(({x,y,name,pct})=>{
             ctx.textAlign='center';ctx.textBaseline='middle';
             ctx.fillStyle='#666';ctx.font='500 9px -apple-system,sans-serif';
             ctx.fillText(name,x,y-6);
             ctx.fillStyle='#222';ctx.font='700 10px -apple-system,sans-serif';
-            ctx.fillText(Math.round(pct)+'%',x,y+6);
+            ctx.fillText(pct+'%',x,y+6);
           });
           ctx.restore();
         }};
@@ -1823,22 +1838,40 @@ function renderDetail(){
       const cols=PIE_COLORS;
       const leaderLabels={id:'leaderLabels',afterDraw(chart){
         const ctx=chart.ctx;const ds=chart.getDatasetMeta(0);if(!ds||!ds.data)return;
-        ctx.save();
+        // 收集标签信息
+        const items=[];
         ds.data.forEach((arc,i)=>{
-          const val=entries[i]?entries[i][1]:0;const pct=total>0?val/total*100:0;if(pct<0.3)return;
+          const val=entries[i]?entries[i][1]:0;const pct=total>0?val/total*100:0;
+          if(pct<3)return; // 小于3%不标
           const ang=(arc.startAngle+arc.endAngle)/2;const r=arc.outerRadius;
           const ca=Math.cos(ang),sa=Math.sin(ang);const right=ca>=0;
-          const x0=arc.x+ca*r,y0=arc.y+sa*r;
-          const x1=arc.x+ca*(r+10),y1=arc.y+sa*(r+10);
-          const x2=x1+(right?14:-14);
-          ctx.strokeStyle=cols[i%9];ctx.lineWidth=1;
-          ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.lineTo(x2,y1);ctx.stroke();
+          items.push({i,x0:arc.x+ca*r,y0:arc.y+sa*r,
+            x1:arc.x+ca*(r+10),x2:arc.x+ca*(r+10)+(right?14:-14),
+            y:arc.y+sa*(r+10),right,pct,name:entries[i][0],col:cols[i%9]});
+        });
+        // 碰撞推开：左右两侧分别处理
+        ['right','left'].forEach(side=>{
+          const g=items.filter(l=>(side==='right'?l.right:!l.right)).sort((a,b)=>a.y-b.y);
+          const GAP=18;
+          for(let it=0;it<15;it++){
+            for(let k=1;k<g.length;k++){
+              const dy=g[k].y-g[k-1].y;
+              if(dy<GAP){const push=(GAP-dy)/2;g[k-1].y-=push;g[k].y+=push;}
+            }
+          }
+          const m=10;g.forEach(l=>{l.y=Math.max(m,Math.min(chart.height-m,l.y));});
+        });
+        // 绘制
+        ctx.save();
+        items.forEach(({x0,y0,x1,x2,y,right,pct,name,col})=>{
+          ctx.strokeStyle=col;ctx.lineWidth=1;
+          ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
           const tx=x2+(right?3:-3);
           ctx.textAlign=right?'left':'right';ctx.textBaseline='middle';
           ctx.fillStyle='#333';ctx.font='600 11px -apple-system,sans-serif';
-          ctx.fillText(entries[i][0],tx,y1-6);
+          ctx.fillText(name,tx,y-6);
           ctx.fillStyle='#999';ctx.font='600 10px -apple-system,sans-serif';
-          ctx.fillText(pct.toFixed(1)+'%',tx,y1+6);
+          ctx.fillText(pct.toFixed(1)+'%',tx,y+6);
         });
         ctx.restore();
       }};
@@ -2631,9 +2664,9 @@ function F_renderMain(){
           <div class="f-sl-hint">均价 ${F_fmtY(cal.avgCost)}</div>
         </div>
         <div class="f-sl-item f-sl-sl">
-          <div class="f-sl-label">止损 ${st.slPct}%</div>
-          <div class="f-sl-price">${F_fmtY(cal.slPrice)}</div>
-          <div class="f-sl-hint">最大损失 ${F_fmtY(cal.holdCost*Math.abs(st.slPct/100))}</div>
+          <div class="f-sl-label">止损 ${st.slPct?st.slPct+'%':'未设置'}</div>
+          <div class="f-sl-price">${st.slPct?F_fmtY(cal.slPrice):'—'}</div>
+          <div class="f-sl-hint">${st.slPct?'最大损失 '+F_fmtY(cal.holdCost*Math.abs(st.slPct/100)):'可在编辑中设置'}</div>
         </div>
       </div>
       <div class="f-tp-list">${st.tpPlans.map((tp,i)=>`
@@ -2771,9 +2804,9 @@ function F_renderStockDetailModal(){
         <div class="f-sl-hint">预期 +${F_fmtY((cal.tpPrice-cal.avgCost)*cal.holdQty)}</div>
       </div>
       <div class="f-sl-item f-sl-sl">
-        <div class="f-sl-label">止损 ${st.slPct}%</div>
-        <div class="f-sl-price">${F_fmtY(cal.slPrice)}</div>
-        <div class="f-sl-hint">最大损失 ${F_fmtY(cal.holdCost*Math.abs(st.slPct/100))}</div>
+        <div class="f-sl-label">止损 ${st.slPct?st.slPct+'%':'未设置'}</div>
+        <div class="f-sl-price">${st.slPct?F_fmtY(cal.slPrice):'—'}</div>
+        <div class="f-sl-hint">${st.slPct?'最大损失 '+F_fmtY(cal.holdCost*Math.abs(st.slPct/100)):'可在编辑中设置'}</div>
       </div>
     </div>
     <div class="f-section">止盈计划</div>
@@ -2788,7 +2821,8 @@ function F_renderStockDetailModal(){
       </div>`).join('')}
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
       <button class="f-btn-primary" style="background:#00897b;" onclick="F_modal='buy-add';F_renderMain()">＋ 记录买入 / 补仓</button>
-      <button class="f-btn-primary" style="background:#e65100;" onclick="F_modal='sell-add';F_renderMain()">↑ 记录止盈卖出</button>
+      <button class="f-btn-primary" style="background:#e65100;" onclick="window._F_sellType='tp';F_modal='sell-add';F_renderMain()">↑ 记录止盈卖出</button>
+      <button class="f-btn-secondary" style="color:#c62828;border-color:#c62828;" onclick="window._F_sellType='sl';F_modal='sell-add';F_renderMain()">↓ 记录止损卖出</button>
       <button class="f-btn-secondary" onclick="F_modal='stock-edit';F_renderMain()">编辑止盈止损 / 计划</button>
     </div>
     <div class="f-section">买入记录</div>
@@ -2826,21 +2860,22 @@ function F_renderSellAddModal(){
   const pendPlans=st.tpPlans.filter(t=>!t.done);
   const planOpts=pendPlans.map(t=>`<option value="${t.id}">${t.note} · ${t.qty}股 @ ${F_fmtY(t.price)}</option>`).join('');
   const ov=mkOv_f();
+  const _sellType=window._F_sellType||'tp';const _isSL=_sellType==='sl';
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">止盈卖出</div>
+    <div class="f-sheet-title" style="color:${_isSL?'#c62828':'#e65100'}">${_isSL?'↓ 止损卖出':'↑ 止盈卖出'}</div>
     <div class="f-sheet-sub">${st.name} · 均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股</div>
-    ${pendPlans.length?`<div class="f-field-row"><span class="f-field-label">对应计划</span><select id="F_s_plan"><option value="">不对应计划</option>${planOpts}</select></div>`:''}
+    ${pendPlans.length&&!_isSL?`<div class="f-field-row"><span class="f-field-label">对应计划</span><select id="F_s_plan"><option value="">不对应计划</option>${planOpts}</select></div>`:''}
     <div class="f-field-row"><span class="f-field-label">卖出日期</span><input id="F_s_date" type="date" value="${todayStr()}"></div>
     <div class="f-field-row"><span class="f-field-label">卖出价格</span><input id="F_s_price" type="number" inputmode="decimal" step="0.001" placeholder="0.000" oninput="F_calcSellProfit()"></div>
     <div class="f-field-row"><span class="f-field-label">卖出股数</span><input id="F_s_qty" type="number" inputmode="numeric" step="100" placeholder="0" oninput="F_calcSellProfit()"></div>
-    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_s_note" placeholder="如：止盈①"></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_s_note" placeholder="${_isSL?'如：止损出局':'如：止盈①'}"></div>
     <div class="f-calc-box" id="F_sell_calc" style="display:none">
       <div class="f-calc-row"><span class="f-calc-label">卖出金额</span><span class="f-calc-val" id="F_sc_amt">—</span></div>
       <div class="f-calc-row"><span class="f-calc-label">本次利润</span><span class="f-calc-val" id="F_sc_profit">—</span></div>
       <div class="f-calc-row"><span class="f-calc-label">卖出后剩余</span><span class="f-calc-val" id="F_sc_remain">—</span></div>
     </div>
-    <button class="f-btn-primary" style="background:#e53935;" onclick="F_submitSell('${st.id}')">确认卖出</button>
+    <button class="f-btn-primary" style="background:${_isSL?'#c62828':'#e53935'};" onclick="F_submitSell('${st.id}','${_sellType}')">确认卖出</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }function F_renderStockEditModal(){
@@ -3149,31 +3184,31 @@ function F_removeTpRow(i){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   if(!F_tmpTpPlans)F_tmpTpPlans=[...st.tpPlans];
   F_tmpTpPlans.splice(i,1);
-  const container=document.getElementById('tp-rows');
+  const container=document.getElementById('F_tp_rows');
   if(container)container.innerHTML=F_tmpTpPlans.map((tp,i)=>`
-    <div class="tp-row-item">
-      <div class="tp-row-label">${tp.done?'✓ 已完成':'计划'} ${i+1}</div>
-      <div class="tp-row-fields">
-        <input class="tp-row-input" id="tp-price-${i}" type="number" inputmode="decimal" step="0.001" value="${tp.price}" placeholder="价格" style="width:80px">
-        <input class="tp-row-input" id="tp-qty-${i}" type="number" inputmode="numeric" step="100" value="${tp.qty}" placeholder="股数" style="width:70px">
-        <input class="tp-row-input" id="tp-note-${i}" value="${tp.note||''}" placeholder="备注" style="flex:1">
-        <button class="tp-row-del" onclick="F_removeTpRow(${i})">×</button>
+    <div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:11px;color:#aaa;margin-bottom:6px;">${tp.done?'✓ 已完成':'计划'} ${i+1}</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${tp.price}" placeholder="价格">
+        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${tp.qty}" placeholder="股数">
+        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${tp.note||''}" placeholder="备注">
+        <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
       </div>
     </div>`).join('');
 }
 function F_addTpRow(){
-  const container=document.getElementById('tp-rows');if(!container)return;
+  const container=document.getElementById('F_tp_rows');if(!container)return;
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   if(!F_tmpTpPlans)F_tmpTpPlans=[...st.tpPlans];
   const i=F_tmpTpPlans.length;
   F_tmpTpPlans.push({id:F_genId(),price:0,qty:0,note:'',done:false});
-  container.innerHTML+=`<div class="tp-row-item">
-    <div class="tp-row-label">计划 ${i+1}</div>
-    <div class="tp-row-fields">
-      <input class="tp-row-input" id="tp-price-${i}" type="number" inputmode="decimal" step="0.001" placeholder="价格" style="width:80px">
-      <input class="tp-row-input" id="tp-qty-${i}" type="number" inputmode="numeric" step="100" placeholder="股数" style="width:70px">
-      <input class="tp-row-input" id="tp-note-${i}" placeholder="备注" style="flex:1">
-      <button class="tp-row-del" onclick="F_removeTpRow(${i})">×</button>
+  container.innerHTML+=`<div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+    <div style="font-size:11px;color:#aaa;margin-bottom:6px;">计划 ${i+1}</div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" placeholder="价格">
+      <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" placeholder="股数">
+      <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" placeholder="备注">
+      <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
     </div>
   </div>`;
 }
@@ -3200,8 +3235,8 @@ function F_submitBuy(stId){
   F_saveData();F_modal='stock-detail';F_renderMain();
 }
 
-// ── 止盈卖出 ──
-function F_submitSell(stId){
+// ── 止盈/止损卖出 ──
+function F_submitSell(stId,sellType){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
   const c=F_calcStock(st);
   const date=document.getElementById('F_s_date')?.value||todayStr();
@@ -3213,9 +3248,11 @@ function F_submitSell(stId){
   if(qty>c.holdQty){alert(`持仓只有${c.holdQty}股，无法卖出${qty}股`);return;}
   const sellAmt=price*qty;
   const profit=sellAmt-c.avgCost*qty;
-  st.sellRecords.push({id:F_genId(),date,price,qty,amount:sellAmt,profit,note});
+  const type=sellType||window._F_sellType||'tp';
+  st.sellRecords.push({id:F_genId(),date,price,qty,amount:sellAmt,profit,note,type});
   // 标记对应止盈计划为已完成
-  if(planId){const tp=st.tpPlans.find(t=>t.id===planId);if(tp)tp.done=true;}
+  if(planId&&type==='tp'){const tp=st.tpPlans.find(t=>t.id===planId);if(tp)tp.done=true;}
+  window._F_sellType=null;
   F_saveData();F_modal='stock-detail';F_renderMain();
 }
 
