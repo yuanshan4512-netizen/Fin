@@ -1726,13 +1726,14 @@ function renderDetail(){
     const shown=RM.filter(reimbMatchFilter);
     const alerts=pending.filter(r=>{if(!r.deadline)return false;const dl=daysLeft(r.deadline);return dl!=null&&dl<=7&&dl>=0});
     // tab顺序：无发票、待开票、有发票、已报销、全部
-    const tabs=[['noinv','无发票',noInv.length],['unissued','待开票',unissued.length],['issued','有发票',issued.length],['done','已报销',done.length],['all','全部',RM.length]];
+    const reimbSumAmt=arr=>arr.reduce((a,r)=>a+(r.amount||0),0);
+    const tabs=[['noinv','无发票',noInv.length,reimbSumAmt(noInv)],['unissued','待开票',unissued.length,reimbSumAmt(unissued)],['issued','有发票',issued.length,reimbSumAmt(issued)],['done','已报销',done.length,reimbSumAmt(done)],['all','全部',RM.length,reimbSumAmt(RM)]];
     body=`<div class="d-stat-grid" style="margin-bottom:10px">
       <div class="d-stat"><div class="d-stat-v" style="color:#185FA5">${fmtN(pending.reduce((a,r)=>a+r.amount,0))}</div><div class="d-stat-l">待报销</div></div>
       <div class="d-stat"><div class="d-stat-v" style="color:#2e7d32">${fmtN(done.reduce((a,r)=>a+r.amount,0))}</div><div class="d-stat-l">已报销</div></div>
       <div class="d-stat"><div class="d-stat-v">${fmtN(RM.reduce((a,r)=>a+r.amount,0))}</div><div class="d-stat-l">总计</div></div>
     </div>
-    <div class="filter-row">${tabs.map(f=>`<button class="filter-chip${reimbFilter===f[0]?' sel':''}" onclick="setReimbFilter('${f[0]}')">${f[1]}${f[2]>0?' '+f[2]:''}</button>`).join('')}</div>
+    <div class="filter-row">${tabs.map(f=>`<button class="filter-chip${reimbFilter===f[0]?' sel':''}" onclick="setReimbFilter('${f[0]}')" style="display:flex;flex-direction:column;align-items:center;gap:1px"><span>${f[1]}${f[2]>0?' '+f[2]:''}</span>${f[3]>0?'<span style="font-size:10px;opacity:0.75">'+fmtRaw(f[3])+'</span>':''}</button>`).join('')}</div>
     ${alerts.map(r=>`<div class="reimb-alert">⚠️ <b>${r.name}</b> 还有 ${daysLeft(r.deadline)} 天截止</div>`).join('')}
     <div class="reimb-list">${shown.map(r=>`<div class="reimb-item" onclick="openReimbEdit(${r.ts})"><div class="ri-top"><span class="ri-name${r.reimbursed?' done':''}">${r.name}</span><span class="ri-amt">${fmtN(r.amount)}</span></div><div class="ri-bot">${r.hasInvoice?`<span class="rbadge inv">有发票·${r.invoiceStatus||'未开'}</span>`:`<span class="rbadge noinv">无发票</span>`}${r.reimbursed?`<span class="rbadge done">已报销</span>`:''}${r.deadline?`<span class="ri-dl">截止 ${r.deadline}${daysLeft(r.deadline)!=null?' ('+daysLeft(r.deadline)+'天)':''}</span>`:''}</div></div>`).join('')}${!shown.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:24px">${reimbFilter==='done'?'还没有已报销记录':'这个分类下还没有记录'}</div>`:''}</div>`;
   } else if(detailView==='report'){
@@ -1875,7 +1876,7 @@ function renderDetail(){
         });
         ctx.restore();
       }};
-      if(pc&&entries.length&&window.Chart)charts.dpie=new Chart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:18,bottom:18,left:46,right:46}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[leaderLabels]});
+      if(pc&&entries.length&&window.Chart)charts.dpie=new Chart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:18,bottom:18,left:70,right:70}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[leaderLabels]});
     },30);
   }
   checkModal();
