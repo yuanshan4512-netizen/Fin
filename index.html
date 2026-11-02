@@ -604,6 +604,12 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-portfolio-pnl{font-size:11px;font-weight:600;width:72px;text-align:right;}
 .f-portfolio-pnl.pos{color:#e53935;}
 .f-portfolio-pnl.neg{color:#00897b;}
+.f-pnl.pos{color:#e53935;}
+.f-pnl.neg{color:#00897b;}
+.f-pnl.zero{color:#999;}
+.f-hero-stat-v.f-pnl.pos{color:#ff6b6b;}
+.f-hero-stat-v.f-pnl.neg{color:#69f0ae;}
+.f-hero-stat-v.f-pnl.zero{color:rgba(255,255,255,.7);}
 .f-update-btn{width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#f8f9fc;color:#1a1a1a;font-size:13px;font-weight:600;cursor:pointer;}
 
 /* ─── 覆盖：各panel的shell占满空间 ─── */
@@ -2536,8 +2542,10 @@ const F_DEFAULT_STOCK_ACCOUNT={
 
 function F_ld(){try{return JSON.parse(localStorage.getItem(F_SK)||'{}')}catch(e){return{}}}
 function F_sv(d){localStorage.setItem(F_SK,JSON.stringify(d))}
-function F_fmt2(n){return Number(Math.abs(n)).toFixed(2)}
-function F_fmtY(n,dec=2){return'¥'+F_fmt2(n)}
+function F_fmt2(n){const value=Number(n).toFixed(2);return Number(value)===0?'0.00':value}
+function F_fmtY(n,dec=2){const value=F_fmt2(n);return value.startsWith('-')?'-¥'+value.slice(1):'¥'+value}
+function F_fmtPnl(n){return(Number(F_fmt2(n))>0?'+':'')+F_fmtY(n)}
+function F_pnlClass(n){const value=Number(F_fmt2(n));return value>0?'pos':value<0?'neg':'zero'}
 function F_genId(){return'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
 let F_ITEMS=[],F_STOCK_ACCOUNT={},F_modal=null,F_editId=null,F_editSub=null;
 
@@ -2617,7 +2625,7 @@ function F_renderMain(){
     <div class="f-hero-row">
       <div class="f-hero-stat"><div class="f-hero-stat-l">已投入</div><div class="f-hero-stat-v">¥${F_fmt2(totalInvested)}</div></div>
       <div class="f-hero-stat"><div class="f-hero-stat-l">还差</div><div class="f-hero-stat-v warn">¥${F_fmt2(totalRemain)}</div></div>
-      <div class="f-hero-stat"><div class="f-hero-stat-l">股票获利</div><div class="f-hero-stat-v pos">+¥${F_fmt2(acc.totalProfit)}</div></div>
+      <div class="f-hero-stat"><div class="f-hero-stat-l">股票盈亏</div><div class="f-hero-stat-v f-pnl ${F_pnlClass(acc.totalProfit)}">${F_fmtPnl(acc.totalProfit)}</div></div>
     </div>
     <div class="f-hero-bar-bg"><div class="f-hero-bar-fill" style="width:${overallPct}%"></div></div>
     <div class="f-hero-bar-row"><span>整体完成度 ${overallPct}%</span><span>¥${F_fmt2(totalInvested)} / ¥${F_fmt2(totalTarget)}</span></div>
@@ -2631,8 +2639,8 @@ function F_renderMain(){
         <div class="f-account-avail" style="color:${acc.available>=0?'#1a1a1a':'#e53935'}">${F_fmtY(acc.available)}</div>
       </div>
       <div>
-        <div class="f-account-profit-l">累计止盈</div>
-        <div class="f-account-profit">+${F_fmtY(acc.totalProfit)}</div>
+        <div class="f-account-profit-l">累计盈亏</div>
+        <div class="f-account-profit f-pnl ${F_pnlClass(acc.totalProfit)}">${F_fmtPnl(acc.totalProfit)}</div>
       </div>
     </div>
     <div class="f-account-grid">
@@ -2654,8 +2662,8 @@ function F_renderMain(){
           <div class="f-stock-meta">均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股 · 成本 ${F_fmtY(cal.holdCost)}</div>
         </div>
         <div>
-          <div class="f-stock-pnl-l">已获利</div>
-          <div class="f-stock-pnl">+${F_fmtY(cal.totalProfit)}</div>
+          <div class="f-stock-pnl-l">已实现盈亏</div>
+          <div class="f-stock-pnl f-pnl ${F_pnlClass(cal.totalProfit)}">${F_fmtPnl(cal.totalProfit)}</div>
         </div>
       </div>
       <div class="f-sl-row">
@@ -2677,7 +2685,7 @@ function F_renderMain(){
             <div class="f-tp-note ${tp.done?'done':''}">${tp.note}</div>
             <div class="f-tp-detail">${tp.qty}股 @ ${F_fmtY(tp.price)}</div>
           </div>
-          <div class="f-tp-profit ${tp.done?'done':'active'}">${tp.done?'已完成':'+'+F_fmtY((tp.price-cal.avgCost)*tp.qty)}</div>
+          <div class="f-tp-profit ${tp.done?'done':'active f-pnl '+F_pnlClass((tp.price-cal.avgCost)*tp.qty)}">${tp.done?'已完成':F_fmtPnl((tp.price-cal.avgCost)*tp.qty)}</div>
         </div>`).join('')}
       </div>
     </div>`;
@@ -2787,7 +2795,7 @@ function F_renderStockDetailModal(){
       <span class="f-record-date">${r.date}</span>
       <span class="f-record-qty">${r.qty}股</span>
       <span class="f-record-price">@${F_fmtY(r.price)}</span>
-      <span class="f-record-amt pos">+${F_fmtY(r.profit)}</span>
+      <span class="f-record-amt f-pnl ${F_pnlClass(r.profit)}">${F_fmtPnl(r.profit)}</span>
     </div>`).join('');
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
@@ -2796,13 +2804,13 @@ function F_renderStockDetailModal(){
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
       <div class="f-account-stat"><div class="f-account-stat-l">持仓均价</div><div class="f-account-stat-v">${F_fmtY(cal.avgCost)}</div></div>
       <div class="f-account-stat"><div class="f-account-stat-l">持仓股数</div><div class="f-account-stat-v">${cal.holdQty}股</div></div>
-      <div class="f-account-stat"><div class="f-account-stat-l">累计获利</div><div class="f-account-stat-v" style="color:#00897b">+${F_fmtY(cal.totalProfit)}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">累计盈亏</div><div class="f-account-stat-v f-pnl ${F_pnlClass(cal.totalProfit)}">${F_fmtPnl(cal.totalProfit)}</div></div>
     </div>
     <div class="f-sl-row" style="margin-bottom:14px;">
       <div class="f-sl-item f-sl-tp">
         <div class="f-sl-label">止盈 +${st.tpPct}%</div>
         <div class="f-sl-price">${F_fmtY(cal.tpPrice)}</div>
-        <div class="f-sl-hint">预期 +${F_fmtY((cal.tpPrice-cal.avgCost)*cal.holdQty)}</div>
+        <div class="f-sl-hint">预期 ${F_fmtPnl((cal.tpPrice-cal.avgCost)*cal.holdQty)}</div>
       </div>
       <div class="f-sl-item f-sl-sl">
         <div class="f-sl-label">止损 ${st.slPct?st.slPct+'%':'未设置'}</div>
@@ -2818,7 +2826,7 @@ function F_renderStockDetailModal(){
           <div class="f-tp-note ${tp.done?'done':''}">${tp.note}</div>
           <div class="f-tp-detail">${tp.qty}股 @ ${F_fmtY(tp.price)}</div>
         </div>
-        <div class="f-tp-profit ${tp.done?'done':'active'}">${tp.done?'已完成':'+'+F_fmtY((tp.price-cal.avgCost)*tp.qty)}</div>
+        <div class="f-tp-profit ${tp.done?'done':'active f-pnl '+F_pnlClass((tp.price-cal.avgCost)*tp.qty)}">${tp.done?'已完成':F_fmtPnl((tp.price-cal.avgCost)*tp.qty)}</div>
       </div>`).join('')}
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
       <button class="f-btn-primary" style="background:#00897b;" onclick="F_modal='buy-add';F_renderMain()">＋ 记录买入 / 补仓</button>
@@ -2873,7 +2881,7 @@ function F_renderSellAddModal(){
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_s_note" placeholder="${_isSL?'如：止损出局':'如：止盈①'}"></div>
     <div class="f-calc-box" id="F_sell_calc" style="display:none">
       <div class="f-calc-row"><span class="f-calc-label">卖出金额</span><span class="f-calc-val" id="F_sc_amt">—</span></div>
-      <div class="f-calc-row"><span class="f-calc-label">本次利润</span><span class="f-calc-val" id="F_sc_profit">—</span></div>
+      <div class="f-calc-row"><span class="f-calc-label">本次盈亏</span><span class="f-calc-val" id="F_sc_profit">—</span></div>
       <div class="f-calc-row"><span class="f-calc-label">卖出后剩余</span><span class="f-calc-val" id="F_sc_remain">—</span></div>
     </div>
     <button class="f-btn-primary" style="background:${_isSL?'#c62828':'#e53935'};" onclick="F_submitSell('${st.id}','${_sellType}')">确认卖出</button>
@@ -3291,12 +3299,12 @@ function F_calcSellProfit(){
     const sellAmt=price*qty;
     const costAmt=c.avgCost*qty;
     const profit=sellAmt-costAmt;
-    document.getElementById('sell-calc').style.display='';
-    document.getElementById('sc-amt').textContent=F_fmtY(sellAmt);
-    document.getElementById('sc-profit').textContent=(profit>=0?'+':'')+F_fmtY(profit);
-    document.getElementById('sc-profit').className='calc-val'+(profit>=0?'':' neg');
-    document.getElementById('sc-remain').textContent=(c.holdQty-qty)+'股';
-  }
+    document.getElementById('F_sell_calc').style.display='';
+    document.getElementById('F_sc_amt').textContent=F_fmtY(sellAmt);
+    document.getElementById('F_sc_profit').textContent=F_fmtPnl(profit);
+    document.getElementById('F_sc_profit').className='f-calc-val f-pnl '+F_pnlClass(profit);
+    document.getElementById('F_sc_remain').textContent=(c.holdQty-qty)+'股';
+  }else document.getElementById('F_sell_calc').style.display='none';
 }
 function F_submitDeposit(){
   const amt=parseFloat(document.getElementById('a-dep')?.value);
@@ -3541,7 +3549,7 @@ function F_renderPortfolioSection(){
       <span class="f-portfolio-name">${name}</span>
       <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
       <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
-      <span class="f-portfolio-pnl" style="color:${Math.abs(pnl)<0.01?'#aaa':pnl>0?'#e53935':'#00897b'}">${pnl>0?'+':''}${F_fmtY(pnl)}<br><span style="font-size:10px">${pnl>0?'+':''}${pnlPct.toFixed(1)}%</span></span>
+      <span class="f-portfolio-pnl f-pnl ${F_pnlClass(pnl)}">${F_fmtPnl(pnl)}<br><span style="font-size:10px">${pnl>0?'+':''}${pnlPct.toFixed(1)}%</span></span>
     </div>`;
   }).join('');
   return`<div class="f-portfolio" id="F_portfolio_card">
@@ -3562,7 +3570,7 @@ function F_renderPortfolioSection(){
     <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
       <span>总成本 ${F_fmtY(totalCost)}</span>
       <span>总市值 ${F_fmtY(totalMkt)}</span>
-      <span style="color:${Math.abs(totalMkt-totalCost)<0.01?'#aaa':totalMkt>totalCost?'#e53935':'#00897b'};font-weight:600">${totalMkt>totalCost?'+':''}${F_fmtY(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
+      <span class="f-pnl ${F_pnlClass(totalMkt-totalCost)}" style="font-weight:600">${F_fmtPnl(totalMkt-totalCost)} (${totalCost>0?((totalMkt-totalCost)/totalCost*100).toFixed(1):0}%)</span>
     </div>
     <div class="f-portfolio-rows">${rows}</div>
     <button class="f-update-btn" onclick="F_openMarketUpdate()">📊 更新市值</button>
