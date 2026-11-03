@@ -257,6 +257,35 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .filter-chip.sel{border-color:#378ADD;background:#EBF4FF;color:#0C447C;font-weight:600}
 /* 周报卡片 */
 .report-card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.report-tabs{display:flex;gap:4px;background:#e8e8ed;padding:4px;border-radius:12px;margin-bottom:12px}
+.report-tab{flex:1;border:0;border-radius:9px;background:transparent;color:#777;padding:9px;font-size:13px;font-weight:600;cursor:pointer}
+.report-tab.active{background:#fff;color:#185FA5;box-shadow:0 1px 3px #0000000d}
+.year-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+.year-title{font-size:15px;font-weight:700;color:#222}
+.year-select{font:inherit;font-size:13px;padding:6px 10px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#185FA5}
+.year-totals{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.year-total-label{font-size:11px;color:#888;margin-bottom:4px}
+.year-total-value{font-size:22px;font-weight:750;color:#c62828;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.year-total-value.income{color:#2e7d32}
+.year-chart-caption{font-size:11px;color:#888;display:flex;justify-content:space-between;gap:8px;margin-bottom:5px}
+.year-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;align-items:end;height:106px;border-bottom:1px solid #eee;padding-bottom:5px}
+.year-bar{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%;padding:0;cursor:pointer;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
+.year-bar-fill{width:100%;max-width:19px;border-radius:4px 4px 1px 1px;background:#f0aaaa;min-height:2px}
+.year-bar.highest .year-bar-fill{background:#d85a57}
+.year-bar.current .year-bar-fill{background:#378ADD}
+.year-bar:disabled{cursor:default;color:#ccc}
+.year-bar:disabled .year-bar-fill{background:#eee}
+.year-months{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.year-month{border:1px solid #eee;border-radius:12px;background:#fff;min-width:0;padding:10px 9px;text-align:left;cursor:pointer;box-shadow:0 1px 3px #00000005}
+.year-month.current{border-color:#8dbce8;background:#f6faff}
+.year-month-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#666;margin-bottom:6px}
+.year-current-badge{font-size:9px;background:#e1effc;color:#185FA5;border-radius:4px;padding:1px 3px}
+.year-month-spent{display:block;font-size:15px;font-weight:700;color:#c62828;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.year-month-income{display:block;font-size:10px;color:#888;margin-top:4px;overflow-wrap:anywhere}
+.year-month:disabled{background:#f7f7f9;box-shadow:none;cursor:default}
+.year-month:disabled .year-month-spent,.year-month:disabled .year-month-head{color:#bbb}
+.year-footnote{font-size:11px;color:#999;line-height:1.6;padding:0 2px 10px}
+.report-tab:focus-visible,.year-month:focus-visible,.year-bar:focus-visible{outline:2px solid #378ADD;outline-offset:2px}
 /* 预算环形卡（替代月度概览）*/
 .bring-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .bring-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
@@ -1374,16 +1403,16 @@ function normalizeTime(v){const m=String(v||'').match(/([01]?\d|2[0-3])[:：点]
 function showToast(msg){const shell=document.getElementById('panel-diary');if(!shell)return;const old=shell.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;shell.appendChild(t);setTimeout(()=>t.remove(),1600)}
 
 // ─── 月统计辅助 ───
-function getMonthStats(mk){
+function getMonthStats(mk,asOf='9999-12-31'){
   // 支持传入指定月份，默认当月
   if(!mk){const now=new Date();mk=now.getFullYear()+'-'+pad2(now.getMonth()+1);}
   const[yr,mo]=mk.split('-').map(Number);
   const daysInM=new Date(yr,mo,0).getDate();
-  const monthRecs=RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.type==='expense');
+  const monthRecs=RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.date<=asOf&&r.type==='expense');
   const isThisMonth=isCurrentMonth(mk);
   const todayDay=isThisMonth?new Date().getDate():daysInM;
   const totalSpent=monthRecs.reduce((a,r)=>a+r.amount,0);
-  const totalIncome=RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.type==='income').reduce((a,r)=>a+r.amount,0);
+  const totalIncome=RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.date<=asOf&&r.type==='income').reduce((a,r)=>a+r.amount,0);
   const dayAvg=todayDay>0?(totalSpent/todayDay):0;
   const dayMap={};monthRecs.forEach(r=>{dayMap[r.date]=(dayMap[r.date]||0)+r.amount});
   const maxDay=Object.entries(dayMap).sort((a,b)=>b[1]-a[1])[0];
@@ -1409,14 +1438,14 @@ function getWeekCompare(){
   return{thisWk,lastWk,diff:thisWk-lastWk,pct:lastWk>0?((thisWk-lastWk)/lastWk*100):0};
 }
 // 分类统计（支持指定月份）
-function getCatStats(mk){
+function getCatStats(mk,asOf='9999-12-31'){
   if(!mk){const now=new Date();mk=now.getFullYear()+'-'+pad2(now.getMonth()+1);}
   const[yr,mo]=mk.split('-').map(Number);
   const daysInM=new Date(yr,mo,0).getDate();
   const isThisMonth=isCurrentMonth(mk);
   const todayDay=isThisMonth?new Date().getDate():daysInM;
   const catMap={};
-  RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.type==='expense').forEach(r=>{
+  RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.date<=asOf&&r.type==='expense').forEach(r=>{
     if(!catMap[r.cat])catMap[r.cat]={total:0,count:0,max:0};
     catMap[r.cat].total+=r.amount;catMap[r.cat].count++;
     if(r.amount>catMap[r.cat].max)catMap[r.cat].max=r.amount;
@@ -1479,6 +1508,66 @@ function getAllMonths(){
   RM.forEach(r=>{if(r.date&&r.date.length>=7)months.add(r.date.slice(0,7))});
   const now=new Date();months.add(now.getFullYear()+'-'+pad2(now.getMonth()+1));
   return Array.from(months).sort((a,b)=>b.localeCompare(a));
+}
+
+// Calendar-month overview reads diary entries only; budgets and other ledgers are not expenses.
+function reportValidDate(value){
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+  const date=new Date(value+'T00:00:00Z');
+  return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value;
+}
+function getReportYears(){
+  const nowYear=new Date().getFullYear(),years=new Set([nowYear]);
+  [...RC,...RM].forEach(r=>{if(reportValidDate(r.date)){const year=Number(r.date.slice(0,4));if(year<=nowYear)years.add(year);}});
+  return [...years].sort((a,b)=>b-a);
+}
+function getYearOverview(year){
+  const asOf=todayStr(),nowYear=Number(asOf.slice(0,4));
+  year=Number(year);if(!Number.isInteger(year)||year<1||year>9999)year=nowYear;
+  const currentMonth=asOf.slice(0,7),yearText=String(year).padStart(4,'0');
+  const months=Array.from({length:12},(_,i)=>{
+    const mk=yearText+'-'+pad2(i+1);
+    return{mk,month:i+1,spent:0,income:0,count:0,isCurrent:mk===currentMonth,isFuture:mk>currentMonth};
+  });
+  RC.forEach(r=>{
+    if(!reportValidDate(r.date)||r.date>asOf||r.date.slice(0,4)!==yearText||!['expense','income'].includes(r.type)||!Number.isFinite(r.amount)||r.amount<0)return;
+    const row=months[Number(r.date.slice(5,7))-1];
+    row[r.type==='expense'?'spent':'income']+=r.amount;row.count++;
+  });
+  const totalSpent=months.reduce((sum,m)=>sum+m.spent,0),totalIncome=months.reduce((sum,m)=>sum+m.income,0);
+  const highestMonth=months.reduce((best,m)=>m.spent>0&&(!best||m.spent>best.spent)?m:best,null);
+  return{year,months,totalSpent,totalIncome,highestMonth,asOf};
+}
+function reportScrollTop(){const body=document.querySelector('#detail-screen .detail-body');if(body)body.scrollTop=0;}
+function setReportMode(mode){window._reportMode=mode==='month'?'month':'overview';renderDetail();reportScrollTop();}
+function setReportYear(value){const year=Number(value);if(!getReportYears().includes(year))return;window._reportYear=year;renderDetail();reportScrollTop();}
+function openReportMonth(mk){
+  if(typeof mk!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(mk)||mk>todayStr().slice(0,7))return;
+  window._reportMk=mk;window._reportYear=Number(mk.slice(0,4));window._reportMode='month';renderDetail();reportScrollTop();
+}
+function renderReportTabs(mode){return`<div class="report-tabs" role="group" aria-label="统计查看方式">
+  <button class="report-tab ${mode==='overview'?'active':''}" aria-pressed="${mode==='overview'}" onclick="setReportMode('overview')">月度总览</button>
+  <button class="report-tab ${mode==='month'?'active':''}" aria-pressed="${mode==='month'}" onclick="setReportMode('month')">单月明细</button>
+</div>`;}
+function renderYearOverview(year){
+  const data=getYearOverview(year),max=Math.max(1,...data.months.map(m=>m.spent));
+  const years=getReportYears(),highest=data.highestMonth;
+  const options=years.map(y=>`<option value="${y}" ${y===data.year?'selected':''}>${y}年</option>`).join('');
+  const bars=data.months.map(m=>`<button class="year-bar ${m.isCurrent?'current':''} ${highest?.mk===m.mk?'highest':''}" ${m.isFuture?'disabled':''} onclick="openReportMonth(${jsAttr(m.mk)})" aria-label="${m.month}月${m.isFuture?'未到':'支出 '+fmtN(m.spent)+'，查看明细'}" title="${m.month}月${m.isFuture?'未到':'支出 '+fmtN(m.spent)}">
+    <span class="year-bar-fill" style="height:${Math.max(2,Math.round(m.spent/max*76))}px"></span><span>${m.month}</span></button>`).join('');
+  const cards=data.months.map(m=>`<button class="year-month ${m.isCurrent?'current':''}" ${m.isFuture?'disabled':''} onclick="openReportMonth(${jsAttr(m.mk)})" aria-label="${m.month}月${m.isFuture?'未到':'支出 '+fmtN(m.spent)+'，收入 '+fmtN(m.income)+'，查看明细'}">
+    <span class="year-month-head"><span>${m.month}月</span>${m.isCurrent?'<span class="year-current-badge">本月</span>':''}</span>
+    <span class="year-month-spent">${m.isFuture?'—':fmtN(m.spent)}</span>
+    <span class="year-month-income">${m.isFuture?'未到':m.count?'收入 '+fmtN(m.income):'无记录'}</span>
+  </button>`).join('');
+  return`<section class="report-card" aria-label="年度支出概览">
+    <div class="year-head"><span class="year-title">每月花了多少</span><select class="year-select" aria-label="统计年份" onchange="setReportYear(this.value)">${options}</select></div>
+    <div class="year-totals"><div><div class="year-total-label">${data.year}年已记支出</div><div class="year-total-value">${fmtN(data.totalSpent)}</div></div><div><div class="year-total-label">${data.year}年已记收入</div><div class="year-total-value income">${fmtN(data.totalIncome)}</div></div></div>
+  </section><div class="year-months" role="group" aria-label="每月支出及收入">${cards}</div>
+  <section class="report-card" aria-label="月支出对比">
+    <div class="year-chart-caption"><span>月支出对比</span><span>${highest?'最高 '+highest.month+'月 · '+fmtN(highest.spent):'本年暂无支出记录'}</span></div>
+    <div class="year-bars" role="group" aria-label="12个月支出柱状图">${bars}</div>
+  </section><p class="year-footnote">按自然月汇总记账流水，截至 ${escHtml(data.asOf)}${data.year===Number(data.asOf.slice(0,4))?'；本月尚未结束':''}。“无记录”表示未记账，不代表没有花费。点月份查看原有明细。</p>`;
 }
 
 function quickInputHtml(id='qi'){
@@ -1782,6 +1871,7 @@ function switchMonth(dir){
 }
 function selDay(ds){selDate=ds;showApp()}
 function openDetail(view){
+  if(view==='report'){window._reportMode='overview';window._reportYear=new Date().getFullYear();}
   destroyCharts();detailView=view;
   // 进入日历详情，保持当前选中日期；如果选中日期不在 viewMonth，重置为 viewMonth 第一天
   const vm=getViewMonth();
@@ -1971,16 +2061,24 @@ function renderDetail(){
     <div class="reimb-list">${shown.map(r=>`<div class="reimb-item" onclick="openReimbEdit(${jsAttr(r.ts)})"><div class="ri-top"><span class="ri-name${r.reimbursed?' done':''}">${escHtml(r.name)}</span><span class="ri-amt">${fmtN(r.amount)}</span></div><div class="ri-bot">${r.hasInvoice?`<span class="rbadge inv">有发票·${escHtml(r.invoiceStatus||'未开')}</span>`:`<span class="rbadge noinv">无发票</span>`}${r.reimbursed?`<span class="rbadge done">已报销</span>`:''}${r.deadline?`<span class="ri-dl">截止 ${escHtml(r.deadline)}${daysLeft(r.deadline)!=null?' ('+daysLeft(r.deadline)+'天)':''}</span>`:''}</div></div>`).join('')}${!shown.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:24px">${reimbFilter==='done'?'还没有已报销记录':'这个分类下还没有记录'}</div>`:''}</div>`;
   } else if(detailView==='report'){
     title='统计报告';inputHtml='';
+    const reportMode=window._reportMode==='month'?'month':'overview';
+    body=renderReportTabs(reportMode);
+    if(reportMode==='overview'){
+      const years=getReportYears();
+      const year=years.includes(window._reportYear)?window._reportYear:new Date().getFullYear();
+      body+=renderYearOverview(year);
+    }else{
     // 月报
     // 月份选择
-    const allMs=getAllMonths();const rMk=window._reportMk||getViewMonth();
+    const rMk=window._reportMk||getViewMonth();
+    const allMs=[...new Set([rMk,...getAllMonths()])].sort((a,b)=>b.localeCompare(a));
     const[rY,rM]=rMk.split('-').map(Number);
-    const msR=getMonthStats(rMk);
-    const catStatsR=getCatStats(rMk);
+    const msR=getMonthStats(rMk,todayStr());
+    const catStatsR=getCatStats(rMk,todayStr());
     const totalR=catStatsR.reduce((a,cv)=>a+cv.total,0);
     const wc=getWeekCompare();const trend=get7DayTrend();const maxTrend=Math.max(...trend.map(d=>d.spent),1);
     // 上月对比
-    const prevMk=prevMonth(rMk);const msP=getMonthStats(prevMk);
+    const prevMk=prevMonth(rMk);const msP=getMonthStats(prevMk,todayStr());
     const diffSpent=msR.totalSpent-msP.totalSpent;
     const diffIncome=msR.totalIncome-msP.totalIncome;
     const rPrevCarry=autoCarryOver(rMk+'-01');
@@ -1998,7 +2096,7 @@ function renderDetail(){
     const monthBarDays=[];
     const[bY,bM]=rMk.split('-').map(Number);
     for(let d=1;d<=msR.daysInMonth;d++)monthBarDays.push(`${bY}-${pad2(bM)}-${pad2(d)}`);
-    const dayMap2={};RC.filter(r=>r.date&&r.date.startsWith(rMk)&&r.type==='expense').forEach(r=>{dayMap2[r.date]=(dayMap2[r.date]||0)+r.amount});
+    const dayMap2={};RC.filter(r=>r.date&&r.date.startsWith(rMk)&&r.date<=todayStr()&&r.type==='expense').forEach(r=>{dayMap2[r.date]=(dayMap2[r.date]||0)+r.amount});
     const monthMax=Math.max(...Object.values(dayMap2),1);
     const monthBars=monthBarDays.map(ds=>{
       const amt=dayMap2[ds]||0;const h=amt>0?Math.max(3,Math.round(amt/monthMax*48)):1;
@@ -2015,7 +2113,7 @@ function renderDetail(){
     // 月份选择器
     const mkOpts=allMs.map(m=>{const[y,mo]=m.split('-').map(Number);return`<option value="${escHtml(m)}" ${m===rMk?'selected':''}>${escHtml(y)}年${mo}月</option>`}).join('');
     {
-      body=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      body+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <select onchange="window._reportMk=this.value;renderDetail()" style="flex:1;height:36px;border-radius:10px;border:1px solid #e8e8e8;background:#fff;font-size:13px;color:#1a1a1a;padding:0 10px;outline:none">${mkOpts}</select>
         </div>
         <div class="report-card">
@@ -2024,7 +2122,7 @@ function renderDetail(){
           <div style="display:flex;justify-content:space-between;font-size:10px;color:#bbb"><span>1日</span><span>${rM}月${msR.daysInMonth}日</span></div>
         </div>
         <div class="report-card">
-          <div class="rc-title">汇总</div>
+          <div class="rc-title">汇总 · 截至 ${escHtml(todayStr())}</div>
           <div class="rc-grid">
             <div class="rc-item"><div class="rc-v out">${fmtN(msR.totalSpent)}</div><div class="rc-l">总支出</div></div>
             <div class="rc-item"><div class="rc-v in">${fmtN(msR.totalIncome)}</div><div class="rc-l">总收入</div></div>
@@ -2056,6 +2154,7 @@ function renderDetail(){
           </div>
           ${pendReimb.length?`<div style="font-size:11px;color:#e65100;margin-top:6px;text-align:center">还有 ${pendReimb.length} 笔待报销</div>`:`<div style="font-size:11px;color:#2e7d32;margin-top:6px;text-align:center">✓ 本月报销已全部完成</div>`}
         </div>`;
+    }
     }
   }
 
