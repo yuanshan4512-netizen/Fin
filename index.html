@@ -683,7 +683,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
       <span class="topbar-title" style="color:#1a1a1a">财务总览</span>
     </div>
     <div class="topbar-right">
-      <button class="settbtn" style="color:#378ADD;border-color:#c8dff5;background:#f0f7ff;" onclick="F_openData()">数据</button>
+      <button class="settbtn" onclick="F_openData()">数据</button>
     </div>
   </div>
   <div class="scroll-body"><div id="F_main"></div></div>
@@ -3159,7 +3159,6 @@ function F_renderMain(){
           </div>
           <span class="f-inv-card-badge ${badgeClass}">${badgeText}</span>
         </div>
-        ${F_goldSummaryHtml(item,true)}
         <div class="f-inv-card-bar-bg"><div class="f-inv-card-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
         <div class="f-inv-card-footer">
           <span class="f-inv-card-pct ${done?'done':''}">${pct}%</span>
@@ -3585,17 +3584,19 @@ function F_renderDataModal(){
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">数据备份</div>
-    <div class="minfo">此处仅导出和恢复财务总览；全部模块备份请到记账日记的数据页。完整备份在此导入时只恢复财务总览。</div>
-    <div class="data-btns">
-      <button class="data-btn export" onclick="F_exportData()">📤 导出财务总览</button>
-      <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份（全部账本）</button>
-      <button class="data-btn" onclick="CR_openRepair()">补回历史股票记录</button>
-      <button class="data-btn" onclick="GR_openRepair()">核对黄金明细</button>
-      <button class="data-btn import" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
-      <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
-      <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
-      <button class="data-btn danger" onclick="F_resetData()">🗑 恢复默认数据</button>
-    </div>
+    <div class="f-sheet-sub" style="line-height:1.7">导出与导入仅处理财务数据，云备份包含全部账本。</div>
+    <button class="f-btn-primary" onclick="F_exportData()">📤 导出财务总览</button>
+    <button class="f-btn-secondary" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
+    <button class="f-btn-secondary" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
+    <button class="f-btn-secondary" onclick="undoLastImport()">↩️ 撤销上次导入</button>
+    <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
+    <details>
+      <summary class="f-section" style="cursor:pointer">历史记录整理</summary>
+      <button class="f-btn-secondary" onclick="CR_openRepair()">补回历史股票记录</button>
+      <button class="f-btn-secondary" onclick="GR_openRepair()">核对黄金明细</button>
+    </details>
+    <div class="f-section">重置</div>
+    <button class="f-btn-danger" onclick="F_resetData()">恢复默认数据</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
