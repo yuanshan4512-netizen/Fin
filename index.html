@@ -1245,9 +1245,9 @@ function undoLastImport(){
   }catch(e){showToast(e.message||'恢复失败');}
 }
 function clearCacheAndReload(){
-  if(!confirm('确认清除本财务管家的本地数据？\n\n请确保已导出备份；清除后账本和导入恢复副本不可恢复。'))return;
+  if(!confirm('确认清除本财务管家的本地数据？\n\n请确保已导出备份；清除后账本和导入恢复副本不可恢复，云备份授权也会从本机移除。'))return;
   try{
-    [...APP_STORAGE_KEYS,RECOVERY_STORAGE_KEY].forEach(k=>localStorage.removeItem(k));
+    [...APP_STORAGE_KEYS,RECOVERY_STORAGE_KEY,'fin_cloud_backup_v1','fin_cloud_backup_attempt_v1'].forEach(k=>localStorage.removeItem(k));
     showToast('本应用数据已清除，正在重载...');
     setTimeout(()=>window.location.reload(),1200);
   }catch(e){showToast('清除失败，请检查浏览器存储权限');}
@@ -2368,6 +2368,7 @@ function renderDataModal(){
     <div class="data-note">一次导出包含全部数据：<b>记账日记</b>（${c.records}条）+ <b>报销</b>（${c.reimbs}条）+ <b>本月账单</b> + <b>财务总览</b>（${c.financeCount}个项目）<br>完整备份恢复全部模块；旧版或部分备份只恢复包含的数据。</div>
     <div class="data-actions">
       <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
+      <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
       <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除本应用数据并重载</button>
@@ -3535,6 +3536,7 @@ function F_renderDataModal(){
     <div class="minfo">此处仅导出和恢复财务总览；全部模块备份请到记账日记的数据页。完整备份在此导入时只恢复财务总览。</div>
     <div class="data-btns">
       <button class="data-btn export" onclick="F_exportData()">📤 导出财务总览</button>
+      <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份（全部账本）</button>
       <button class="data-btn import" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
@@ -4220,6 +4222,262 @@ function showToast_f(msg){
   setTimeout(()=>el.remove(),1800);
 }
 
+// GitHub snapshots are append-only. This module never changes the three financial data stores.
+const CB_CONFIG_KEY='fin_cloud_backup_v1';
+const CB_MAX_BACKUP_BYTES=5*1024*1024;
+let CB_uploadPromise=null,CB_activeAbort=null,CB_revision=0,CB_nonceCounter=0,CB_sessionRevoked=false;
+function CB_defaults(){return{version:1,owner:'yuanshan4512-netizen',repo:'Fin-backups',deviceLabel:'手机',enabled:false,consent:false,token:'',lastSuccessAt:null,lastSuccessTarget:null,lastSuccessPath:null,lastSuccessSha:null,lastError:'',lastAttemptAt:null};}
+function CB_readConfig(){
+  try{const value=JSON.parse(localStorage.getItem(CB_CONFIG_KEY)||'null');return value&&typeof value==='object'&&!Array.isArray(value)?{...CB_defaults(),...value}:CB_defaults();}
+  catch(e){return CB_defaults();}
+}
+function CB_validTarget(owner,repo){
+  return typeof owner==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(owner)&&typeof repo==='string'&&/^[A-Za-z0-9_.-]{1,100}$/.test(repo)&&repo!=='.'&&repo!=='..';
+}
+function CB_validToken(token){return typeof token==='string'&&/^github_pat_[A-Za-z0-9_]{20,500}$/.test(token);}
+function CB_getStatus(){
+  const c=CB_readConfig();
+  return{owner:c.owner,repo:c.repo,deviceLabel:c.deviceLabel,enabled:!CB_sessionRevoked&&c.enabled===true,hasCredentials:!CB_sessionRevoked&&c.consent===true&&CB_validToken(c.token)&&CB_validTarget(c.owner,c.repo),lastSuccessAt:c.lastSuccessAt||null,lastSuccessTarget:c.lastSuccessTarget||null,lastSuccessPath:c.lastSuccessPath||null,lastSuccessSha:c.lastSuccessSha||null,lastError:typeof c.lastError==='string'?c.lastError:'',lastAttemptAt:c.lastAttemptAt||null,busy:!!CB_uploadPromise};
+}
+function CB_error(code){const error=new Error(code);error.cloudBackupCode=code;return error;}
+function CB_errorMessage(code){
+  const messages={CONFIG:'请填写有效的 GitHub 账户和仓库名称。',TOKEN:'请亲自填入仅授权目标仓库的 fine-grained token，并勾选仅在此设备保存授权。',EMPTY:'当前设备没有可备份的账目，请先记账或导入已有备份。',INVALID:'本机账目无法完整读取或校验，请先导出并检查原始数据；本次没有上传。',SIZE:'完整备份超过 5 MB，请先使用本地导出备份。',SECRET:'账目中含有当前授权内容，为保护授权，本次没有上传。',REPO:'仓库必须是你指定的私有仓库，且不能是 fork、已归档或已停用仓库。',AUTH:'GitHub 授权无效或已到期，请重新创建并填写授权。',PERMISSION:'GitHub 拒绝访问，请检查目标仓库的 Contents 读写权限，或稍后重试。',NOT_FOUND:'无法访问目标仓库，请核对名称及授权所选仓库。',CONFLICT:'GitHub 未接受新快照，请稍后重试；既有备份没有被覆盖。',VERIFY:'已发送快照，但未能核对远端文件；本次不会标记成功，请稍后重试。',NETWORK:'网络连接或请求超时，请联网后重试。',STORAGE:'无法保存本机备份状态，请检查浏览器存储空间与权限。',CANCELLED:'授权已清除或设置已变更，本次操作已停止。',UNKNOWN:'云备份未完成，请稍后重试。'};
+  return messages[code]||messages.UNKNOWN;
+}
+function CB_target(c){return c.owner+'/'+c.repo;}
+function CB_ensureCurrent(c,revision){
+  const current=CB_readConfig();
+  if(CB_sessionRevoked||revision!==CB_revision||current.token!==c.token||current.consent!==true||CB_target(current).toLowerCase()!==CB_target(c).toLowerCase())throw CB_error('CANCELLED');
+}
+function CB_updateState(c,revision,updates){
+  CB_ensureCurrent(c,revision);
+  try{localStorage.setItem(CB_CONFIG_KEY,JSON.stringify({...CB_readConfig(),...updates}));}
+  catch(e){throw CB_error('STORAGE');}
+}
+function CB_httpError(status){return status===401?'AUTH':status===403||status===429?'PERMISSION':status===404?'NOT_FOUND':status===409||status===422?'CONFLICT':'NETWORK';}
+async function CB_request(url,c,revision,options={}){
+  CB_ensureCurrent(c,revision);
+  const destination=new URL(url);
+  if(destination.origin!=='https://api.github.com'||destination.username||destination.password)throw CB_error('CONFIG');
+  const controller=new AbortController();CB_activeAbort=controller;
+  const timer=setTimeout(()=>controller.abort(),25000);
+  try{
+    const response=await fetch(destination.href,{...options,redirect:'error',credentials:'omit',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal,headers:{Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',Authorization:'Bearer '+c.token,...(options.method==='PUT'?{'Content-Type':'application/json'}:{})}});
+    if(!response.ok)throw CB_error(CB_httpError(response.status));
+    const data=await response.json();
+    CB_ensureCurrent(c,revision);
+    if(!data||typeof data!=='object'||Array.isArray(data))throw CB_error('NETWORK');
+    return data;
+  }catch(error){
+    if(error&&error.cloudBackupCode)throw error;
+    CB_ensureCurrent(c,revision);
+    throw CB_error('NETWORK');
+  }finally{clearTimeout(timer);if(CB_activeAbort===controller)CB_activeAbort=null;}
+}
+function CB_checkRepository(repo,c){
+  if(repo.private!==true||repo.fork!==false||repo.archived!==false||repo.disabled===true||typeof repo.full_name!=='string'||repo.full_name.toLowerCase()!==CB_target(c).toLowerCase()||typeof repo.owner?.login!=='string'||repo.owner.login.toLowerCase()!==c.owner.toLowerCase()||typeof repo.name!=='string'||repo.name.toLowerCase()!==c.repo.toLowerCase())throw CB_error('REPO');
+  if(typeof repo.default_branch!=='string'||!repo.default_branch||repo.default_branch.length>255||/[\x00-\x20\x7f]/.test(repo.default_branch))throw CB_error('REPO');
+  if(repo.permissions&&repo.permissions.push===false)throw CB_error('PERMISSION');
+  return repo.default_branch;
+}
+function CB_hasLedgerData(diary,monthly,finance){
+  const nonempty=a=>Array.isArray(a)&&a.length>0;
+  if(nonempty(diary.records)||nonempty(diary.reimbs)||nonempty(diary.budgetHistory)||nonempty(diary.goals))return true;
+  if(nonempty(monthly.bills)||nonempty(monthly.budgets)||nonempty(monthly.archivedUtilityBills))return true;
+  if(monthly.billsStatus&&Object.values(monthly.billsStatus).some(v=>v&&typeof v==='object'&&Object.keys(v).length))return true;
+  if(monthly.utility&&(Number(monthly.utility.balance)!==0&&Number.isFinite(Number(monthly.utility.balance))||monthly.utility.lastUpdate))return true;
+  if(nonempty(finance.items))return true;
+  const account=finance.stockAccount||{};
+  if(nonempty(account.stocks)||nonempty(account.deposits))return true;
+  if(Number.isFinite(account.initialCapital)&&account.initialCapital>=0&&account.initialCapital!==10000)return true;
+  return !!finance.portfolioMarket&&['stock','fund','gold','cash'].some(key=>Number.isFinite(finance.portfolioMarket[key]));
+}
+function CB_buildSnapshot(c){
+  const modules={};
+  try{
+    for(const[key,name]of[['bav7','diary'],['monthly_v1','monthly'],['finance_v1','finance']]){
+      const raw=localStorage.getItem(key);
+      const data=raw===null?{}:JSON.parse(raw);
+      if(!data||typeof data!=='object'||Array.isArray(data))throw CB_error('INVALID');
+      modules[name]=data;
+    }
+  }catch(e){throw CB_error('INVALID');}
+  if(!CB_hasLedgerData(modules.diary,modules.monthly,modules.finance))throw CB_error('EMPTY');
+  const exportedAt=new Date().toISOString();
+  const payload={app:'财务管家',schema:4,exportedAt,deviceLabel:c.deviceLabel,...modules};
+  try{if(typeof prepareImportedState!=='function')throw CB_error('INVALID');prepareImportedState(payload,'all');}
+  catch(e){throw CB_error('INVALID');}
+  // Validation above is read-only. Export the original stored objects, not normalized defaults.
+  const json=JSON.stringify(payload,null,2);
+  if(json.includes(c.token))throw CB_error('SECRET');
+  const bytes=new TextEncoder().encode(json);
+  if(bytes.length>CB_MAX_BACKUP_BYTES)throw CB_error('SIZE');
+  let binary='';for(let offset=0;offset<bytes.length;offset+=0x8000)binary+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));
+  return{exportedAt,bytes:bytes.length,content:btoa(binary)};
+}
+function CB_newPath(exportedAt){
+  let random='';
+  if(globalThis.crypto?.getRandomValues){const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);random=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
+  else random=Math.random().toString(36).slice(2,12);
+  const stamp=exportedAt.replace(/[-:.]/g,'');
+  return'backups/'+exportedAt.slice(0,4)+'/'+exportedAt.slice(5,7)+'/finance-'+stamp+'-'+random+'-'+(++CB_nonceCounter).toString(36)+'.json';
+}
+function CB_showToast(message){
+  // A global toast stays visible on every tab. Callers pass fixed, secret-free messages.
+  try{
+    document.getElementById('cb-toast')?.remove();
+    const toast=document.createElement('div');toast.id='cb-toast';
+    toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');
+    toast.textContent=message;
+    toast.style.cssText='position:fixed;left:50%;bottom:85px;transform:translateX(-50%);max-width:85vw;box-sizing:border-box;z-index:10020;background:rgba(0,0,0,.88);color:#fff;padding:11px 16px;border-radius:12px;font-size:13px;line-height:1.5;text-align:center;pointer-events:none;';
+    document.body.appendChild(toast);setTimeout(()=>toast.remove(),3200);
+  }catch(e){}
+}
+function CB_paintStatus(message){
+  const status=CB_getStatus();
+  const main=document.getElementById('cb-status');if(main&&message)main.textContent=message;
+  const last=document.getElementById('cb-last-success');
+  if(last)last.textContent='上次成功：'+(status.lastSuccessAt?new Date(status.lastSuccessAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'（北京时间）':'尚未完成');
+  const error=document.getElementById('cb-last-error');if(error)error.textContent=status.lastError?'最近错误：'+status.lastError:'';
+  for(const id of ['cb-save','cb-upload']){const button=document.getElementById(id);if(button)button.disabled=status.busy;}
+}
+function CB_uploadBackup(options={}){
+  if(CB_uploadPromise)return CB_uploadPromise;
+  const c=CB_readConfig(),revision=CB_revision;
+  const task=async()=>{
+    try{
+      if(!CB_validTarget(c.owner,c.repo))throw CB_error('CONFIG');
+      if(c.consent!==true||!CB_validToken(c.token))throw CB_error('TOKEN');
+      CB_updateState(c,revision,{lastAttemptAt:new Date().toISOString(),lastError:''});
+      CB_paintStatus('正在检查私有仓库…');
+      const base='https://api.github.com/repos/'+encodeURIComponent(c.owner)+'/'+encodeURIComponent(c.repo);
+      const metadata=await CB_request(base,c,revision);
+      const branch=CB_checkRepository(metadata,c);
+      const snapshot=CB_buildSnapshot(c);
+      const path=CB_newPath(snapshot.exportedAt);
+      const fileUrl=base+'/contents/'+path.split('/').map(encodeURIComponent).join('/');
+      CB_paintStatus('正在上传完整快照…');
+      const uploaded=await CB_request(fileUrl,c,revision,{method:'PUT',body:JSON.stringify({message:'Finance backup · '+c.deviceLabel+' · '+snapshot.exportedAt,content:snapshot.content,branch})});
+      const sha=uploaded.content?.sha;
+      if(typeof sha!=='string'||!sha)throw CB_error('VERIFY');
+      CB_paintStatus('正在核对远端文件…');
+      let verified;
+      try{verified=await CB_request(fileUrl+'?ref='+encodeURIComponent(branch),c,revision);}catch(e){if(e.cloudBackupCode==='CANCELLED')throw e;throw CB_error('VERIFY');}
+      if(verified.sha!==sha)throw CB_error('VERIFY');
+      const at=new Date().toISOString();
+      CB_updateState(c,revision,{lastSuccessAt:at,lastSuccessTarget:CB_target(c),lastSuccessPath:path,lastSuccessSha:sha,lastSuccessBytes:snapshot.bytes,lastError:''});
+      CB_paintStatus('备份成功，已核对远端文件。');CB_showToast('GitHub 私有云备份成功');
+      return{ok:true,at,path,sha};
+    }catch(error){
+      const code=error&&error.cloudBackupCode||'UNKNOWN';
+      const message=CB_errorMessage(code);
+      if(code!=='CANCELLED')try{CB_updateState(c,revision,{lastError:message});}catch(e){}
+      CB_paintStatus(message);
+      if(code!=='CANCELLED')CB_showToast('云备份失败，请到数据 → GitHub 云备份查看');
+      return{ok:false,code,error:message};
+    }
+  };
+  CB_uploadPromise=Promise.resolve().then(task).finally(()=>{CB_uploadPromise=null;CB_paintStatus();});
+  CB_paintStatus('准备备份…');
+  return CB_uploadPromise;
+}
+function CB_closeSettings(){document.getElementById('cb-overlay')?.remove();}
+function CB_saveSettings(){
+  if(CB_uploadPromise){CB_paintStatus('备份正在进行，请完成后再保存设置。');return false;}
+  const previous=CB_readConfig();
+  const owner=(document.getElementById('cb-owner')?.value||'').trim();
+  const repo=(document.getElementById('cb-repo')?.value||'').trim();
+  const deviceLabel=(document.getElementById('cb-device')?.value||'手机').trim();
+  const tokenInput=document.getElementById('cb-token');
+  const typedToken=(tokenInput?.value||'').trim();
+  const sameTarget=CB_target({owner,repo}).toLowerCase()===CB_target(previous).toLowerCase();
+  const token=typedToken||(sameTarget?previous.token:'');
+  const consent=document.getElementById('cb-consent')?.checked===true;
+  if(!CB_validTarget(owner,repo)){CB_paintStatus(CB_errorMessage('CONFIG'));return false;}
+  if(!deviceLabel||deviceLabel.length>40||/[\x00-\x1f\x7f]/.test(deviceLabel)){CB_paintStatus('设备标签请输入1至40个正常字符。');return false;}
+  if(!consent||!CB_validToken(token)){CB_paintStatus(CB_errorMessage('TOKEN'));return false;}
+  const next={...CB_defaults(),...(sameTarget?previous:{}),version:1,owner,repo,deviceLabel,enabled:document.getElementById('cb-enabled')?.checked===true,consent:true,token,lastError:''};
+  try{localStorage.setItem(CB_CONFIG_KEY,JSON.stringify(next));localStorage.removeItem('fin_cloud_backup_attempt_v1');}
+  catch(e){CB_paintStatus(CB_errorMessage('STORAGE'));return false;}
+  CB_revision++;CB_sessionRevoked=false;
+  if(tokenInput)tokenInput.value='';
+  CB_paintStatus(next.enabled?'设置已保存，准备首次或本周尚未完成的备份。':'设置已保存，可点击“立即备份”。');
+  if(typeof CB_maybeAutoBackup==='function')Promise.resolve(CB_maybeAutoBackup()).catch(()=>{});
+  return true;
+}
+function CB_disableAndClear(){
+  CB_revision++;CB_sessionRevoked=true;if(CB_activeAbort)CB_activeAbort.abort();
+  try{localStorage.removeItem(CB_CONFIG_KEY);localStorage.removeItem('fin_cloud_backup_attempt_v1');}
+  catch(e){CB_paintStatus('本次会话已停止备份，但无法清除保存的授权。请检查浏览器存储权限后再次清除。');return false;}
+  const token=document.getElementById('cb-token');if(token)token.value='';
+  for(const id of ['cb-enabled','cb-consent']){const field=document.getElementById(id);if(field)field.checked=false;}
+  CB_paintStatus('本机自动备份已关闭，保存的授权已清除。云端历史快照保留。');
+  return true;
+}
+function CB_openSettings(){
+  CB_closeSettings();
+  const config=CB_readConfig();
+  const overlay=document.createElement('div');overlay.id='cb-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:10000;display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;';
+  // This template is constant. Configuration and status are assigned with value/textContent below.
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="cb-title" style="background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;padding:20px;box-sizing:border-box;color:#222;font-size:14px;line-height:1.6"><div style="display:flex;justify-content:space-between;align-items:center"><strong id="cb-title" style="font-size:18px">GitHub 私有云备份</strong><button id="cb-close" type="button" aria-label="关闭" style="border:0;background:none;font-size:24px;padding:0 4px">×</button></div><p style="font-size:12px;color:#666">每周（北京时间周一开始）首次打开网页自动备份。保存并启用后，会立即进行首次或本周尚未完成的备份。网页关闭时无法运行。</p><label style="display:block;margin:10px 0">GitHub 账户<input id="cb-owner" autocomplete="off" autocapitalize="none" spellcheck="false" style="display:block;box-sizing:border-box;width:100%;padding:9px;border:1px solid #ddd;border-radius:8px"></label><label style="display:block;margin:10px 0">私有仓库<input id="cb-repo" autocomplete="off" autocapitalize="none" spellcheck="false" style="display:block;box-sizing:border-box;width:100%;padding:9px;border:1px solid #ddd;border-radius:8px"></label><label style="display:block;margin:10px 0">设备标签<input id="cb-device" maxlength="40" style="display:block;box-sizing:border-box;width:100%;padding:9px;border:1px solid #ddd;border-radius:8px"></label><p style="font-size:12px;color:#666">创建 fine-grained token：Repository access 选择 Only select repositories，只勾选目标备份仓库；Repository permissions → Contents 设为 Read and write。请在这台手机页面亲自填写 token，不要发到聊天。</p><p style="font-size:12px"><a id="cb-pat-link" target="_blank" rel="noopener noreferrer">创建专用授权码（GitHub）</a> · <a id="cb-repo-link" target="_blank" rel="noopener noreferrer">查看备份仓库</a></p><label style="display:block;margin:10px 0">GitHub 专用授权码<input id="cb-token" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false" style="display:block;box-sizing:border-box;width:100%;padding:9px;border:1px solid #ddd;border-radius:8px"></label><label style="display:flex;gap:8px;margin:10px 0;align-items:flex-start"><input id="cb-enabled" type="checkbox" style="margin-top:6px">启用每周首次打开网页自动备份</label><label style="display:flex;gap:8px;margin:10px 0;align-items:flex-start;font-size:12px"><input id="cb-consent" type="checkbox" style="margin-top:5px">我已仅授权此备份仓库的 Contents 读写权限，并同意只在当前设备的浏览器保存 token。清理浏览器数据会清除授权。</label><div style="display:flex;gap:8px;margin-top:14px"><button id="cb-save" type="button" style="flex:1;padding:10px;border:0;border-radius:9px;background:#378ADD;color:white">保存设置</button><button id="cb-upload" type="button" style="flex:1;padding:10px;border:0;border-radius:9px;background:#208357;color:white">立即备份</button></div><button id="cb-clear" type="button" style="margin-top:10px;padding:10px;width:100%;border:1px solid #e2a5a5;border-radius:9px;background:#fff;color:#a32626">关闭自动备份并清除授权（仅本机）</button><p id="cb-status" role="status" aria-live="polite" style="font-size:12px;margin-bottom:6px"></p><p id="cb-last-success" style="font-size:12px;color:#666;margin:4px 0"></p><p id="cb-last-error" style="font-size:12px;color:#a32626;margin:4px 0"></p><p style="font-size:11px;color:#888">每次上传前核实仓库为私有；每次创建新的完整快照，不覆盖旧文件。token 不会写入备份。只有核对远端文件成功，才更新成功时间。</p></section>';
+  document.body.appendChild(overlay);
+  for(const[id,value]of[['cb-owner',config.owner],['cb-repo',config.repo],['cb-device',config.deviceLabel]]){const field=document.getElementById(id);if(field)field.value=typeof value==='string'?value:'';}
+  const token=document.getElementById('cb-token');if(token)token.placeholder=CB_getStatus().hasCredentials?'已保存授权；留空则保持原授权':'github_pat_…';
+  const enabled=document.getElementById('cb-enabled');if(enabled)enabled.checked=CB_getStatus().enabled;
+  const consent=document.getElementById('cb-consent');if(consent)consent.checked=false;
+  const safeTarget=CB_validTarget(config.owner,config.repo)?config:CB_defaults();
+  const pat=document.getElementById('cb-pat-link');if(pat)pat.href='https://github.com/settings/personal-access-tokens/new?name=Fin-weekly-backup&target_name='+encodeURIComponent(safeTarget.owner)+'&expires_in=90&contents=write';
+  const repo=document.getElementById('cb-repo-link');if(repo)repo.href='https://github.com/'+encodeURIComponent(safeTarget.owner)+'/'+encodeURIComponent(safeTarget.repo);
+  for(const[id,handler]of[['cb-close',CB_closeSettings],['cb-save',CB_saveSettings],['cb-upload',()=>CB_uploadBackup({automatic:false})],['cb-clear',CB_disableAndClear]])document.getElementById(id)?.addEventListener('click',handler);
+  overlay.addEventListener('click',event=>{if(event.target===overlay)CB_closeSettings();});
+  CB_paintStatus(CB_getStatus().hasCredentials?'已在本机保存授权。备份前会重新核实目标仓库。':'先填写授权并勾选同意，再保存设置。');
+}
+
+// Weekly backups run when this browser is open; weeks start Monday in Beijing.
+const CB_ATTEMPT_KEY='fin_cloud_backup_attempt_v1';
+let CB_autoRunning=false;
+function CB_weekKey(value=new Date()){
+  const time=new Date(value).getTime();if(!Number.isFinite(time))return '';
+  const day=new Date(time+8*60*60*1000);
+  day.setUTCDate(day.getUTCDate()-(day.getUTCDay()+6)%7);
+  return day.toISOString().slice(0,10);
+}
+async function CB_maybeAutoBackup(now=new Date()){
+  if(CB_autoRunning)return {skipped:'busy'};
+  if(document.visibilityState==='hidden'||navigator.onLine===false)return {skipped:'unavailable'};
+  const time=new Date(now).getTime(),week=CB_weekKey(now);
+  if(!Number.isFinite(time)||!week)return {skipped:'clock'};
+  const run=async()=>{
+    const status=CB_getStatus();
+    if(!status.enabled||!status.hasCredentials)return {skipped:'disabled'};
+    if(status.busy)return {skipped:'busy'};
+    const target=(status.owner+'/'+status.repo).toLowerCase();
+    if(String(status.lastSuccessTarget||'').toLowerCase()===target&&CB_weekKey(status.lastSuccessAt)===week)return {skipped:'done'};
+    try{
+      const attempt=JSON.parse(localStorage.getItem(CB_ATTEMPT_KEY)||'null');
+      if(attempt?.target===target&&Number.isFinite(attempt.at)&&time>=attempt.at&&time-attempt.at<60*60*1000)return {skipped:'retry-later'};
+      localStorage.setItem(CB_ATTEMPT_KEY,JSON.stringify({target,at:time}));
+    }catch(e){return {skipped:'storage-unavailable'};}
+    return await CB_uploadBackup({automatic:true});
+  };
+  CB_autoRunning=true;
+  try{
+    if(navigator.locks?.request)return await navigator.locks.request('fin-weekly-backup',{ifAvailable:true},lock=>lock?run():{skipped:'busy'});
+    return await run();
+  }catch(e){return {skipped:'failed'};}
+  finally{CB_autoRunning=false;}
+}
+function CB_startAutoBackup(){
+  const check=()=>{CB_maybeAutoBackup();};
+  setTimeout(check,1500);
+  window.addEventListener('pageshow',check);
+  window.addEventListener('online',check);
+  document.addEventListener('visibilitychange',check);
+  window.addEventListener('storage',event=>{if(event.key==='fin_cloud_backup_v1')check();});
+  setInterval(check,15*60*1000);
+}
+
 // ─── 启动 ───
 (function(){
   try{
@@ -4238,6 +4496,8 @@ function showToast_f(msg){
     try{F_loadData();}catch(e){console.error('F_loadData:',e.message,e.stack);}
     try{F_renderMain();}catch(e){console.error('F_renderMain:',e.message,e.stack);}
   },100);
+  CB_startAutoBackup();
+  if(window.location.hash==='#cloud-backup')setTimeout(CB_openSettings,400);
 })();
 </script>
 </body>
