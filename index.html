@@ -2369,6 +2369,7 @@ function renderDataModal(){
     <div class="data-actions">
       <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
       <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
+      <button class="data-btn" onclick="CR_openRepair()">补回历史股票记录</button>
       <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除本应用数据并重载</button>
@@ -3537,6 +3538,7 @@ function F_renderDataModal(){
     <div class="data-btns">
       <button class="data-btn export" onclick="F_exportData()">📤 导出财务总览</button>
       <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份（全部账本）</button>
+      <button class="data-btn" onclick="CR_openRepair()">补回历史股票记录</button>
       <button class="data-btn import" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
@@ -4427,7 +4429,7 @@ function CB_openSettings(){
   const enabled=document.getElementById('cb-enabled');if(enabled)enabled.checked=CB_getStatus().enabled;
   const consent=document.getElementById('cb-consent');if(consent)consent.checked=false;
   const safeTarget=CB_validTarget(config.owner,config.repo)?config:CB_defaults();
-  const pat=document.getElementById('cb-pat-link');if(pat)pat.href='https://github.com/settings/personal-access-tokens/new?name=Fin-weekly-backup&target_name='+encodeURIComponent(safeTarget.owner)+'&expires_in=90&contents=write';
+  const pat=document.getElementById('cb-pat-link');if(pat)pat.href='https://github.com/settings/personal-access-tokens/new?name=Fin-weekly-backup-permanent&target_name='+encodeURIComponent(safeTarget.owner)+'&expires_in=none&contents=write';
   const repo=document.getElementById('cb-repo-link');if(repo)repo.href='https://github.com/'+encodeURIComponent(safeTarget.owner)+'/'+encodeURIComponent(safeTarget.repo);
   for(const[id,handler]of[['cb-close',CB_closeSettings],['cb-save',CB_saveSettings],['cb-upload',()=>CB_uploadBackup({automatic:false})],['cb-clear',CB_disableAndClear]])document.getElementById(id)?.addEventListener('click',handler);
   overlay.addEventListener('click',event=>{if(event.target===overlay)CB_closeSettings();});
@@ -4478,6 +4480,168 @@ function CB_startAutoBackup(){
   setInterval(check,15*60*1000);
 }
 
+// Generic private-repository repair reader. No personal transaction data belongs here.
+const CR_REPAIR_PATH='repairs/pending-stock.json';
+const CR_REPAIR_TARGET='yuanshan4512-netizen/Fin-backups';
+const CR_MAX_BYTES=64*1024;
+let CR_pending=null,CR_openPromise=null,CR_applyPromise=null,CR_generation=0;
+function CR_error(code){const e=new Error(code);e.stockRepairCode=code;return e;}
+function CR_message(code){
+  const messages={AUTH:'请先在 GitHub 云备份中保存本机专用授权码。',TARGET:'补回记录只支持已配置的指定私有备份仓库。',BUSY:'正在进行云备份或补回操作，请完成后再试。',PACKAGE:'云端补回记录的格式或买卖记录不符合要求，原账本未改动。',SIZE:'补回文件超过 64 KB，原账本未改动。',EMPTY:'本机尚无可用的财务账本，请先确认打开的是原来记账的浏览器。',LOCAL:'本机财务账本无法完整校验，原账本未改动。',CONFLICT:'本机已有同名、同代码或同编号的不同股票记录。为避免重复，本次没有修改，请先核对记录。',CANCELLED:'授权、预览或设置已变更，请重新打开补回预览。',STORAGE:'无法完成本机保存。请保留当前页面，检查存储空间；可在数据中使用“撤销上次导入”恢复保存前的财务数据。',NETWORK:'无法读取私有补回文件，请检查网络、专用授权码和仓库权限。',UNKNOWN:'补回未完成，原账本未改动，请重新打开预览。'};
+  return messages[code]||messages.UNKNOWN;
+}
+function CR_code(error){
+  if(error&&error.stockRepairCode)return error.stockRepairCode;
+  if(error&&error.cloudBackupCode==='CANCELLED')return'CANCELLED';
+  return'NETWORK';
+}
+function CR_normalize(value){return String(value==null?'':value).normalize('NFKC').replace(/\s+/g,'').toLowerCase();}
+function CR_canonical(value){
+  if(Array.isArray(value))return'['+value.map(CR_canonical).join(',')+']';
+  if(value&&typeof value==='object')return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+CR_canonical(value[k])).join(',')+'}';
+  return JSON.stringify(value);
+}
+function CR_validatePackage(raw){
+  try{
+    backupSafeTree(raw);
+    if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).sort().join(',')!=='app,id,kind,schema,stock'||raw.app!=='财务管家'||raw.schema!==1||raw.kind!=='append-hidden-stock'||typeof raw.id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(raw.id))throw 0;
+    const st=raw.stock;
+    if(!st||typeof st!=='object'||Array.isArray(st)||st.hidden!==true||!CR_normalize(st.id)||!CR_normalize(st.name)||!Array.isArray(st.buyRecords)||!st.buyRecords.length||!Array.isArray(st.sellRecords)||!st.sellRecords.length||!Array.isArray(st.tpPlans))throw 0;
+    validateFinanceBackup({items:[],stockAccount:{initialCapital:0,deposits:[],stocks:[st]}});
+    const cal=F_calcStock(st);
+    if(!cal.valid||cal.holdQty!==0||!['totalCost','totalSoldAmt','totalProfit','holdCost'].every(k=>Number.isFinite(cal[k]))||cal.sellProfits.length!==st.sellRecords.length||!cal.sellProfits.every(Number.isFinite))throw 0;
+    return raw;
+  }catch(e){throw CR_error('PACKAGE');}
+}
+function CR_readFinance(){
+  let raw,f;
+  try{raw=localStorage.getItem('finance_v1');}catch(e){throw CR_error('LOCAL');}
+  if(!raw)throw CR_error('EMPTY');
+  try{
+    f=JSON.parse(raw);backupSafeTree(f);
+    if(!f||typeof f!=='object'||Array.isArray(f)||!f.stockAccount||!Array.isArray(f.items)||!Array.isArray(f.stockAccount.stocks)||!Array.isArray(f.stockAccount.deposits))throw 0;
+    validateFinanceBackup(f);
+    if(Object.prototype.hasOwnProperty.call(f,'repairReceipts')&&!Array.isArray(f.repairReceipts))throw 0;
+  }catch(e){throw CR_error('LOCAL');}
+  if(!CB_hasLedgerData({}, {}, f))throw CR_error('EMPTY');
+  return{raw,finance:f};
+}
+function CR_prepareAppend(pkg,sourceSha=''){
+  CR_validatePackage(pkg);
+  const current=CR_readFinance(),f=current.finance,st=pkg.stock;
+  const id=CR_normalize(st.id),name=CR_normalize(st.name),code=CR_normalize(st.code);
+  const matches=f.stockAccount.stocks.filter(s=>CR_normalize(s.id)===id||CR_normalize(s.name)===name||(code&&CR_normalize(s.code)===code));
+  const cal=F_calcStock(st),cashDelta=cal.totalSoldAmt-cal.totalCost,profitDelta=cal.totalProfit;
+  if(matches.length){
+    if(matches.length===1&&CR_canonical(matches[0])===CR_canonical(st))return{alreadyApplied:true,next:f,cal,cashDelta:0,profitDelta:0};
+    throw CR_error('CONFLICT');
+  }
+  const next={...f,stockAccount:{...f.stockAccount,stocks:[...f.stockAccount.stocks,JSON.parse(JSON.stringify(st))]},repairReceipts:[...(f.repairReceipts||[]),{id:pkg.id,stockId:st.id,appliedAt:new Date().toISOString(),sourceSha}]};
+  try{backupSafeTree(next);validateFinanceBackup(next);}catch(e){throw CR_error('LOCAL');}
+  return{alreadyApplied:false,next,cal,cashDelta,profitDelta};
+}
+function CR_decodeFile(file){
+  if(!file||file.type!=='file'||file.path!==CR_REPAIR_PATH||file.encoding!=='base64'||!Number.isInteger(file.size)||file.size<1||file.size>CR_MAX_BYTES||typeof file.content!=='string'||file.content.length>Math.ceil(CR_MAX_BYTES/3)*4+4096||typeof file.sha!=='string'||!/^[a-f0-9]{40,64}$/i.test(file.sha))throw CR_error(file&&file.size>CR_MAX_BYTES?'SIZE':'PACKAGE');
+  try{
+    const base64=file.content.replace(/[\r\n]/g,'');
+    if(!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64))throw 0;
+    const binary=atob(base64);
+    if(binary.length>CR_MAX_BYTES)throw CR_error('SIZE');
+    if(binary.length!==file.size)throw 0;
+    const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+    return CR_validatePackage(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));
+  }catch(e){if(e&&e.stockRepairCode)throw e;throw CR_error('PACKAGE');}
+}
+function CR_status(message){const el=document.getElementById('cr-status');if(el)el.textContent=message;}
+function CR_buttonState(){const b=document.getElementById('cr-apply');if(b)b.disabled=!CR_pending||CR_pending.alreadyApplied||!!CR_applyPromise;}
+function CR_closeRepair(){
+  CR_generation++;CR_pending=null;
+  const el=document.getElementById('cr-overlay');if(el)el.remove();
+}
+function CR_mount(){
+  const old=document.getElementById('cr-overlay');if(old)old.remove();
+  const overlay=document.createElement('div');overlay.id='cr-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box';
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="cr-title" style="background:#fff;color:#243142;border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-sizing:border-box"><h2 id="cr-title" style="font-size:20px;margin:0 0 12px">补回已隐藏股票记录</h2><p style="font-size:13px;line-height:1.7">从已授权的私有备份仓库读取一只已清仓股票。只追加缺失记录，保留手机现有账目和隐藏状态。</p><div id="cr-status" role="status" style="font-size:14px;line-height:1.7;margin:10px 0">正在读取补回文件…</div><div id="cr-preview"></div><p style="font-size:12px;color:#64748b;line-height:1.7">保存前会保留本机财务恢复副本。若需撤销，请在数据中使用“撤销上次导入”；这会恢复整个财务模块，随后新增的财务记录也会被撤销。</p><div style="display:flex;gap:10px;margin-top:16px"><button id="cr-apply" type="button" disabled style="flex:1;min-height:44px;border:0;border-radius:9px;background:#3379df;color:white;padding:10px">补回这只股票</button><button id="cr-close" type="button" style="min-height:44px;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:10px 16px">关闭</button></div></section>';
+  document.body.appendChild(overlay);
+  document.getElementById('cr-close').onclick=CR_closeRepair;
+  document.getElementById('cr-apply').onclick=CR_applyRepair;
+}
+function CR_renderPreview(pkg,result){
+  const host=document.getElementById('cr-preview');if(!host)return;
+  host.textContent='';
+  const add=(text,bold=false)=>{const el=document.createElement(bold?'h3':'p');el.textContent=text;el.style.cssText='font-size:14px;line-height:1.7;margin:8px 0;overflow-wrap:anywhere';host.appendChild(el);};
+  const money=n=>(n>=0?'+':'−')+'¥'+Math.abs(n).toFixed(2);
+  add(pkg.stock.name+(pkg.stock.code?'（'+pkg.stock.code+'）':''),true);
+  add('状态：已隐藏 · 已清仓 · '+pkg.stock.buyRecords.length+' 笔买入 / '+pkg.stock.sellRecords.length+' 笔卖出');
+  pkg.stock.buyRecords.forEach(r=>add('买入 '+r.date+' · '+r.qty+' 股 × ¥'+r.price+' · 实付 ¥'+Number(r.amount).toFixed(2)));
+  pkg.stock.sellRecords.forEach((r,i)=>add('卖出 '+r.date+' · '+r.qty+' 股 × ¥'+r.price+' · 实收 ¥'+Number(r.amount).toFixed(2)+' · 盈亏 '+money(result.cal.sellProfits[i])));
+  add('此股票累计盈亏：'+money(result.cal.totalProfit));
+  add('补回后账户可用资金变化：'+money(result.cashDelta)+'；累计盈亏变化：'+money(result.profitDelta));
+  add('补回后可从“财务 → 股票账户 → 已隐藏股票 → 查看记录”查看，无需恢复显示。');
+}
+function CR_openRepair(){
+  if(CR_openPromise)return CR_openPromise;
+  if(CR_applyPromise)return Promise.resolve({ok:false,code:'BUSY'});
+  const generation=++CR_generation;CR_pending=null;CR_mount();
+  const run=async()=>{
+    try{
+      if(CB_uploadPromise)throw CR_error('BUSY');
+      const c=CB_readConfig(),revision=CB_revision;
+      if(c.consent!==true||!CB_validToken(c.token)||!CB_validTarget(c.owner,c.repo))throw CR_error('AUTH');
+      if(CB_target(c).toLowerCase()!==CR_REPAIR_TARGET.toLowerCase())throw CR_error('TARGET');
+      CB_ensureCurrent(c,revision);
+      const base='https://api.github.com/repos/'+encodeURIComponent(c.owner)+'/'+encodeURIComponent(c.repo);
+      const metadata=await CB_request(base,c,revision);
+      const branch=CB_checkRepository(metadata,c);
+      if(generation!==CR_generation)throw CR_error('CANCELLED');
+      if(CB_uploadPromise)throw CR_error('BUSY');
+      const file=await CB_request(base+'/contents/'+CR_REPAIR_PATH+'?ref='+encodeURIComponent(branch),c,revision);
+      if(generation!==CR_generation)throw CR_error('CANCELLED');
+      CB_ensureCurrent(c,revision);
+      const pkg=CR_decodeFile(file),result=CR_prepareAppend(pkg,file.sha);
+      CR_pending={pkg,sha:file.sha,c,revision,generation,alreadyApplied:result.alreadyApplied};
+      CR_renderPreview(pkg,result);CR_status(result.alreadyApplied?'本机已有完全相同的股票记录，无需重复补回。':'请核对以下记录，然后点击“补回这只股票”。');CR_buttonState();
+      return{ok:true,alreadyApplied:result.alreadyApplied};
+    }catch(e){const code=CR_code(e);if(generation===CR_generation){CR_pending=null;CR_status(CR_message(code));CR_buttonState();}return{ok:false,code};}
+  };
+  CR_openPromise=Promise.resolve().then(run).finally(()=>{CR_openPromise=null;});
+  return CR_openPromise;
+}
+function CR_applyRepair(){
+  if(CR_applyPromise)return CR_applyPromise;
+  const pending=CR_pending;
+  const commit=()=>{
+    if(!pending||pending.generation!==CR_generation||CR_pending!==pending)throw CR_error('CANCELLED');
+    if(CB_uploadPromise)throw CR_error('BUSY');
+    CB_ensureCurrent(pending.c,pending.revision);
+    // Re-read immediately before the synchronous transaction. Never save stale finance globals.
+    const result=CR_prepareAppend(pending.pkg,pending.sha);
+    if(result.alreadyApplied)return{alreadyApplied:true};
+    try{writeAppStorageTransaction({finance_v1:JSON.stringify(result.next)});}catch(e){throw CR_error('STORAGE');}
+    return{alreadyApplied:false};
+  };
+  const run=async()=>{
+    let committed=false;
+    try{
+      CR_status('正在保存本机财务恢复副本并补回记录…');
+      const result=typeof navigator!=='undefined'&&navigator.locks&&typeof navigator.locks.request==='function'?await navigator.locks.request('fin-stock-repair-write',commit):commit();
+      if(result.alreadyApplied){if(CR_pending===pending)pending.alreadyApplied=true;CR_status('本机已有完全相同的股票记录，无需重复补回。');return{ok:true,alreadyApplied:true};}
+      committed=true;if(CR_pending===pending)pending.alreadyApplied=true;
+      let displayOk=true;try{F_loadData();F_renderMain();}catch(e){displayOk=false;}
+      CR_status('已补回本机隐藏股票记录，正在创建新的完整云备份…');
+      let backup;
+      try{CB_ensureCurrent(pending.c,pending.revision);backup=await CB_uploadBackup({automatic:false});}catch(e){backup={ok:false};}
+      const message=backup&&backup.ok?'已补回隐藏股票记录，并已完成新的完整云备份。':'本机记录已补回，新的云备份尚未成功；请到 GitHub 云备份中点击“立即备份”。';
+      CR_status(message+(displayOk?'':' 页面刷新未完成，请重新打开财务页。'));CB_showToast(message);
+      return{ok:true,alreadyApplied:false,backup:backup||{ok:false},displayOk};
+    }catch(e){const code=CR_code(e);CR_status(committed?'本机记录已保存，请重新打开财务页并检查云备份状态。':CR_message(code));return{ok:committed,code};}
+  };
+  CR_applyPromise=Promise.resolve().then(run).finally(()=>{CR_applyPromise=null;CR_buttonState();});CR_buttonState();
+  return CR_applyPromise;
+}
+
+
 // ─── 启动 ───
 (function(){
   try{
@@ -4497,7 +4661,12 @@ function CB_startAutoBackup(){
     try{F_renderMain();}catch(e){console.error('F_renderMain:',e.message,e.stack);}
   },100);
   CB_startAutoBackup();
-  if(window.location.hash==='#cloud-backup')setTimeout(CB_openSettings,400);
+  const openLinkedPanel=()=>{
+    if(window.location.hash==='#cloud-backup')CB_openSettings();
+    if(window.location.hash==='#restore-stock')CR_openRepair();
+  };
+  window.addEventListener('hashchange',openLinkedPanel);
+  setTimeout(openLinkedPanel,400);
 })();
 </script>
 </body>
