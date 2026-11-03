@@ -1142,6 +1142,11 @@ function validateFinanceBackup(raw){
       const rp=p+'.records['+j+']';backupObject(r,rp);backupDate(r.date,rp+'.date');backupNumber(r.amount,rp+'.amount',0);
       backupFields(r,rp,[],['note'],['returned']);
       if(backupOwn(r,'type'))backupEnum(r.type,['deposit','withdraw','auto','note'],rp+'.type');
+      if(item.group==='gold'){
+        if(backupOwn(r,'grams')){backupNumber(r.grams,rp+'.grams',0);if(r.grams<=0)backupError(rp+'.grams');}
+        if(backupOwn(r,'fee'))backupNumber(r.fee,rp+'.fee',0,r.amount);
+        if(backupOwn(r,'allocationMonth')&&!F_validGoldMonth(r.allocationMonth))backupError(rp+'.allocationMonth');
+      }
     });
   });backupUnique(f.items,'id','finance.items');
   if(!backupOwn(f,'stockAccount'))f.stockAccount={initialCapital:10000,deposits:[],stocks:[]};
@@ -2370,6 +2375,7 @@ function renderDataModal(){
       <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
       <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
       <button class="data-btn" onclick="CR_openRepair()">补回历史股票记录</button>
+      <button class="data-btn" onclick="GR_openRepair()">核对黄金明细</button>
       <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除本应用数据并重载</button>
@@ -2996,6 +3002,48 @@ function F_getTotalWithdrawn(item){
 function F_getRemain(item){return Math.max(0,item.target-F_getTotalInvested(item))}
 function F_getPct(item){return Math.min(100,Math.round(F_getTotalInvested(item)/item.target*100))}
 function F_isCompleted(item){return F_getTotalInvested(item)>=item.target}
+function F_validGoldMonth(value){return typeof value==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(value)&&Number(value.slice(0,4))>0;}
+function F_getGoldSummary(item){
+  const summary={totalGrams:0,totalFee:0,buyCount:0,knownGramsCount:0,knownFeeCount:0,missingGramsCount:0,missingFeeCount:0};
+  if(!item||item.group!=='gold')return summary;
+  for(const r of item.records||[]){
+    if(!r||!['deposit','auto'].includes(r.type)||r.returned===true)continue;
+    summary.buyCount++;
+    if(typeof r.grams==='number'&&Number.isFinite(r.grams)&&r.grams>0){summary.totalGrams+=r.grams;summary.knownGramsCount++;}else summary.missingGramsCount++;
+    if(typeof r.fee==='number'&&Number.isFinite(r.fee)&&r.fee>=0&&r.fee<=r.amount){summary.totalFee+=r.fee;summary.knownFeeCount++;}else summary.missingFeeCount++;
+  }
+  return summary;
+}
+function F_goldSummaryHtml(item,compact=false){
+  if(item.group!=='gold')return'';
+  const s=F_getGoldSummary(item);
+  const grams=s.knownGramsCount?s.totalGrams.toFixed(4)+' g':'未录入';
+  const fee=s.knownFeeCount?F_fmtY(s.totalFee):'未录入';
+  return`<div style="font-size:${compact?'11':'12'}px;color:#806515;line-height:1.7;margin:8px 0;overflow-wrap:anywhere"><div>累计买入克数：${grams}${s.missingGramsCount?'（'+s.missingGramsCount+'笔未填）':''}</div><div>已知手续费：${fee}${s.knownFeeCount?'（已含在金额中）':''}${s.missingFeeCount?' · '+s.missingFeeCount+'笔未填':''}</div>${compact?'':'<div style="color:#888">仅汇总已录入的买入记录；取用、归还及初始投入不推算克数。</div>'}</div>`;
+}
+function F_goldRecordMetaHtml(item,r){
+  if(item.group!=='gold')return'';
+  const parts=[typeof r.grams==='number'&&Number.isFinite(r.grams)&&r.grams>0?r.grams.toFixed(4)+' g':'克数未录入',typeof r.fee==='number'&&Number.isFinite(r.fee)&&r.fee>=0?'手续费 '+F_fmtY(r.fee)+'（已含）':'手续费未录入'];
+  if(F_validGoldMonth(r.allocationMonth)&&r.allocationMonth!==String(r.date).slice(0,7))parts.push('归属 '+r.allocationMonth);
+  return'<span style="display:block;margin-top:4px;color:#806515;line-height:1.6;overflow-wrap:anywhere">'+parts.map(escHtml).join(' · ')+'</span>';
+}
+function F_goldFieldsHtml(item,r={},prefix='r-'){
+  if(item.group!=='gold')return'';
+  return`<div class="f-field-row"><span class="f-field-label">克数（可选）</span><input id="${prefix}grams" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="未录入" value="${escHtml(r.grams??'')}"><span class="f-field-note">g</span></div>
+    <div class="f-field-row"><span class="f-field-label">手续费（可选）</span><input id="${prefix}fee" type="number" inputmode="decimal" min="0" step="0.01" placeholder="未知留空" value="${escHtml(r.fee??'')}"></div>
+    <div class="f-field-row"><span class="f-field-label">归属月份</span><input id="${prefix}month" type="month" value="${escHtml(r.allocationMonth??'')}"></div>
+    <div style="font-size:11px;color:#888;line-height:1.6;margin:4px 0 12px">手续费已含在记录金额内，不重复计入。归属月份留空时按交易月份；交易日期保持不变。</div>`;
+}
+function F_readGoldFields(prefix,amount){
+  const values={};
+  const grams=String(document.getElementById(prefix+'grams')?.value??'').trim();
+  const fee=String(document.getElementById(prefix+'fee')?.value??'').trim();
+  const month=String(document.getElementById(prefix+'month')?.value??'').trim();
+  if(grams!==''){values.grams=Number(grams);if(!Number.isFinite(values.grams)||values.grams<=0)throw new Error('克数必须是大于 0 的有效数字；未知时请留空。');}
+  if(fee!==''){values.fee=Number(fee);if(!Number.isFinite(values.fee)||values.fee<0||values.fee>amount)throw new Error('手续费须为非负有效数字，且不能超过记录金额；未知时请留空。');}
+  if(month!==''){if(!F_validGoldMonth(month))throw new Error('请填写有效的归属月份。');values.allocationMonth=month;}
+  return values;
+}
 
 function F_renderMain(){
   const nonStock=F_ITEMS.filter(i=>i.group!=='stock');
@@ -3111,6 +3159,7 @@ function F_renderMain(){
           </div>
           <span class="f-inv-card-badge ${badgeClass}">${badgeText}</span>
         </div>
+        ${F_goldSummaryHtml(item,true)}
         <div class="f-inv-card-bar-bg"><div class="f-inv-card-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
         <div class="f-inv-card-footer">
           <span class="f-inv-card-pct ${done?'done':''}">${pct}%</span>
@@ -3376,6 +3425,7 @@ function F_renderSellAddModal(){
       </span>
       <span style="flex:1;color:${isW?'#e65100':isA?'#7c3aed':'#aaa'};font-size:11px;margin-left:8px">
         ${isW?'🔴 取用':isA?'🤖 自动定投':'🟢 存入'}${escHtml(!isA&&r.note?' · '+r.note:'')}${isW&&isR?' (已归还)':''}
+        ${F_goldRecordMetaHtml(item,r)}
       </span>
       ${isW&&!isR?`<button onclick="F_markReturned(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
       <button onclick="F_openEditInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
@@ -3393,6 +3443,7 @@ function F_renderSellAddModal(){
       <div class="f-account-stat"><div class="f-account-stat-l">目标</div><div class="f-account-stat-v">${F_fmtY(item.target)}</div></div>
       <div class="f-account-stat"><div class="f-account-stat-l">${withdrawn>0?'待归还':'状态'}</div><div class="f-account-stat-v" style="color:${withdrawn>0?'#e65100':done?'#2e7d32':'#1a1a1a'}">${withdrawn>0?F_fmtY(withdrawn):done?'✓ 达标':'进行中'}</div></div>
     </div>
+    ${F_goldSummaryHtml(item)}
     <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;margin-bottom:4px;">
       <div style="height:100%;border-radius:3px;background:${done?'#e53935':item.group==='gold'?'#FFD700':item.group==='saving'?'#1a5fd4':'#ff9800'};width:${pct}%;transition:width .5s;"></div>
     </div>
@@ -3539,6 +3590,7 @@ function F_renderDataModal(){
       <button class="data-btn export" onclick="F_exportData()">📤 导出财务总览</button>
       <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份（全部账本）</button>
       <button class="data-btn" onclick="CR_openRepair()">补回历史股票记录</button>
+      <button class="data-btn" onclick="GR_openRepair()">核对黄金明细</button>
       <button class="data-btn import" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
@@ -3832,6 +3884,7 @@ function F_renderInvActionModal(){
     <div class="f-sheet-sub">当前余额 ${F_fmtY(inv)} / 目标 ${F_fmtY(item.target)}</div>
     <div class="f-field-row"><span class="f-field-label">金额</span><input id="r-amt" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div>
     <div class="f-field-row"><span class="f-field-label">日期</span><input id="r-date" type="date" value="${todayStr()}"></div>
+    ${F_goldFieldsHtml(item)}
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="r-note" placeholder="可选"></div>
     <button class="f-btn-primary" style="background:${isDeposit?'#1a5fd4':'#e65100'};margin-top:8px;" onclick="F_submitInvAction(${jsAttr(item.id)},${jsAttr(type)})">确认${isDeposit?'存入':'取用'}</button>
     <button class="f-btn-secondary" onclick="F_modal='item-detail';F_renderMain()">取消</button>
@@ -3839,14 +3892,20 @@ function F_renderInvActionModal(){
   document.getElementById('panel-finance').appendChild(ov);
 }
 function F_submitInvAction(itemId,type){
-  const amt=parseFloat(document.getElementById('r-amt')?.value);
+  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
+  const item=F_ITEMS[idx];
+  const amt=item.group==='gold'?Number(document.getElementById('r-amt')?.value):parseFloat(document.getElementById('r-amt')?.value);
   const date=document.getElementById('r-date')?.value||todayStr();
   const note=document.getElementById('r-note')?.value.trim()||'';
   if(!Number.isFinite(amt)||amt<=0){alert('请填写金额');return;}
-  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
+  let goldFields={};
+  if(item.group==='gold'){
+    if(!F_validTradeDate(date)){alert('请填写有效的交易日期');return;}
+    try{goldFields=F_readGoldFields('r-',amt);}catch(e){alert(e.message);return;}
+  }
   if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
   const isWithdraw=type==='withdraw';
-  F_ITEMS[idx].records.push({date,amount:amt,note,type:isWithdraw?'withdraw':'deposit',returned:false});
+  F_ITEMS[idx].records.push({date,amount:amt,note,type:isWithdraw?'withdraw':'deposit',returned:false,...goldFields});
   F_saveData();
   showToast_f(isWithdraw?'✓ 取用已记录':'✓ 存入已记录');
   F_modal='item-detail';F_renderMain();
@@ -3884,6 +3943,7 @@ function F_renderEditInvRecordModal(){
     <div class="f-sheet-sub">${escHtml(item.name)} · ${typeLabel}</div>
     <div class="f-field-row"><span class="f-field-label">日期</span><input id="F_ei_date" type="date" value="${escHtml(r.date)}"></div>
     <div class="f-field-row"><span class="f-field-label">金额</span><input id="F_ei_amt" type="number" inputmode="decimal" step="0.01" value="${escHtml(r.amount)}"></div>
+    ${F_goldFieldsHtml(item,r,'F_ei_')}
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_ei_note" value="${escHtml(r.note||'')}"></div>
     ${isW?`<div class="f-field-row" onclick="F_ei_toggleReturned()" style="cursor:pointer"><span class="f-field-label">已归还</span><span id="F_ei_ret_lbl" style="flex:1;color:${r.returned?'#2e7d32':'#aaa'};font-size:13px">${r.returned?'✓ 已归还':'未归还（点击切换）'}</span></div>`:''}
     <button class="f-btn-primary" onclick="F_submitEditInvRecord(${jsAttr(item.id)},${idx})">保存</button>
@@ -3895,10 +3955,17 @@ function F_submitEditInvRecord(itemId,recIdx){
   const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
   const rec=F_ITEMS[idx].records[recIdx];if(!rec)return;
   const date=document.getElementById('F_ei_date')?.value||rec.date;
-  const amt=parseFloat(document.getElementById('F_ei_amt')?.value);
+  const isGold=F_ITEMS[idx].group==='gold';
+  const amt=isGold?Number(document.getElementById('F_ei_amt')?.value):parseFloat(document.getElementById('F_ei_amt')?.value);
   const note=document.getElementById('F_ei_note')?.value.trim()||'';
   if(!Number.isFinite(amt)||amt<=0){alert('请填写金额');return;}
+  let goldFields={};
+  if(isGold){
+    if(!F_validTradeDate(date)){alert('请填写有效的交易日期');return;}
+    try{goldFields=F_readGoldFields('F_ei_',amt);}catch(e){alert(e.message);return;}
+  }
   const upd={...rec,date,amount:amt,note};
+  if(isGold){['grams','fee','allocationMonth'].forEach(k=>{delete upd[k]});Object.assign(upd,goldFields);}
   if(rec.type==='withdraw')upd.returned=!!window._F_ei_returned;
   F_ITEMS[idx].records[recIdx]=upd;
   F_saveData();
@@ -4485,6 +4552,7 @@ const CR_REPAIR_PATH='repairs/pending-stock.json';
 const CR_REPAIR_TARGET='yuanshan4512-netizen/Fin-backups';
 const CR_MAX_BYTES=64*1024;
 let CR_pending=null,CR_openPromise=null,CR_applyPromise=null,CR_generation=0;
+function CR_repairBusy(){return !!(CB_uploadPromise||(typeof GR_isBusy==='function'&&GR_isBusy()));}
 function CR_error(code){const e=new Error(code);e.stockRepairCode=code;return e;}
 function CR_message(code){
   const messages={AUTH:'请先在 GitHub 云备份中保存本机专用授权码。',TARGET:'补回记录只支持已配置的指定私有备份仓库。',BUSY:'正在进行云备份或补回操作，请完成后再试。',PACKAGE:'云端补回记录的格式或买卖记录不符合要求，原账本未改动。',SIZE:'补回文件超过 64 KB，原账本未改动。',EMPTY:'本机尚无可用的财务账本，请先确认打开的是原来记账的浏览器。',LOCAL:'本机财务账本无法完整校验，原账本未改动。',CONFLICT:'本机已有同名、同代码或同编号的不同股票记录。为避免重复，本次没有修改，请先核对记录。',CANCELLED:'授权、预览或设置已变更，请重新打开补回预览。',STORAGE:'无法完成本机保存。请保留当前页面，检查存储空间；可在数据中使用“撤销上次导入”恢复保存前的财务数据。',NETWORK:'无法读取私有补回文件，请检查网络、专用授权码和仓库权限。',UNKNOWN:'补回未完成，原账本未改动，请重新打开预览。'};
@@ -4586,7 +4654,7 @@ function CR_openRepair(){
   const generation=++CR_generation;CR_pending=null;CR_mount();
   const run=async()=>{
     try{
-      if(CB_uploadPromise)throw CR_error('BUSY');
+      if(CR_repairBusy())throw CR_error('BUSY');
       const c=CB_readConfig(),revision=CB_revision;
       if(c.consent!==true||!CB_validToken(c.token)||!CB_validTarget(c.owner,c.repo))throw CR_error('AUTH');
       if(CB_target(c).toLowerCase()!==CR_REPAIR_TARGET.toLowerCase())throw CR_error('TARGET');
@@ -4595,7 +4663,7 @@ function CR_openRepair(){
       const metadata=await CB_request(base,c,revision);
       const branch=CB_checkRepository(metadata,c);
       if(generation!==CR_generation)throw CR_error('CANCELLED');
-      if(CB_uploadPromise)throw CR_error('BUSY');
+      if(CR_repairBusy())throw CR_error('BUSY');
       const file=await CB_request(base+'/contents/'+CR_REPAIR_PATH+'?ref='+encodeURIComponent(branch),c,revision);
       if(generation!==CR_generation)throw CR_error('CANCELLED');
       CB_ensureCurrent(c,revision);
@@ -4613,7 +4681,7 @@ function CR_applyRepair(){
   const pending=CR_pending;
   const commit=()=>{
     if(!pending||pending.generation!==CR_generation||CR_pending!==pending)throw CR_error('CANCELLED');
-    if(CB_uploadPromise)throw CR_error('BUSY');
+    if(CR_repairBusy())throw CR_error('BUSY');
     CB_ensureCurrent(pending.c,pending.revision);
     // Re-read immediately before the synchronous transaction. Never save stale finance globals.
     const result=CR_prepareAppend(pending.pkg,pending.sha);
@@ -4625,7 +4693,7 @@ function CR_applyRepair(){
     let committed=false;
     try{
       CR_status('正在保存本机财务恢复副本并补回记录…');
-      const result=typeof navigator!=='undefined'&&navigator.locks&&typeof navigator.locks.request==='function'?await navigator.locks.request('fin-stock-repair-write',commit):commit();
+      const result=typeof navigator!=='undefined'&&navigator.locks&&typeof navigator.locks.request==='function'?await navigator.locks.request('fin-finance-repair-write',commit):commit();
       if(result.alreadyApplied){if(CR_pending===pending)pending.alreadyApplied=true;CR_status('本机已有完全相同的股票记录，无需重复补回。');return{ok:true,alreadyApplied:true};}
       committed=true;if(CR_pending===pending)pending.alreadyApplied=true;
       let displayOk=true;try{F_loadData();F_renderMain();}catch(e){displayOk=false;}
@@ -4641,6 +4709,132 @@ function CR_applyRepair(){
   return CR_applyPromise;
 }
 
+// Targeted gold reconciliation. Personal ledger data is read only from the private repository.
+const GR_REPAIR_PATH='repairs/pending-gold.json';
+let GR_pending=null,GR_openPromise=null,GR_applyPromise=null,GR_generation=0;
+function GR_error(code){const e=new Error(code);e.goldRepairCode=code;return e;}
+function GR_code(e){return e&&e.goldRepairCode||e&&e.stockRepairCode||CR_code(e);}
+function GR_message(code){
+  const messages={PACKAGE:'云端黄金明细格式不正确，本机数据未修改。',CONFLICT:'本机黄金记录与准备汇总时不同。为保留你的新修改，本次没有覆盖，请先完成一次云备份后再核对。',EMPTY:'本机没有找到对应黄金项目，请使用平时记账的手机浏览器。',BUSY:'正在进行云备份或记录整理，请完成后再试。',SIZE:'黄金明细文件过大，本机数据未修改。'};
+  return messages[code]||CR_message(code);
+}
+function GR_validatePackage(raw){
+  try{
+    backupSafeTree(raw);
+    if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).sort().join(',')!=='after,app,before,id,kind,schema'||raw.app!=='财务管家'||raw.schema!==1||raw.kind!=='reconcile-gold-item'||typeof raw.id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(raw.id))throw 0;
+    const a=raw.after,b=raw.before;
+    if(!a||!b||a.group!=='gold'||b.group!=='gold'||!a.id||a.id!==b.id||a.name!==b.name||!Array.isArray(a.records)||!a.records.length||a.records.length>500||a.invested!==0)throw 0;
+    validateFinanceBackup({items:[b],stockAccount:{initialCapital:0,deposits:[],stocks:[]}});
+    validateFinanceBackup({items:[a],stockAccount:{initialCapital:0,deposits:[],stocks:[]}});
+    // The package can reconcile cost/history only, never change a plan or project identity.
+    const settings=x=>Object.fromEntries(Object.entries(x).filter(([k])=>k!=='invested'&&k!=='records'));
+    if(CR_canonical(settings(a))!==CR_canonical(settings(b)))throw 0;
+    a.records.forEach(r=>{
+      if(r.type!=='deposit'||r.returned!==false||typeof r.grams!=='number'||!Number.isFinite(r.grams)||r.grams<=0||!Number.isFinite(r.amount)||r.amount<=0)throw 0;
+      if(Object.prototype.hasOwnProperty.call(r,'fee')&&(typeof r.fee!=='number'||!Number.isFinite(r.fee)||r.fee<0||r.fee>r.amount))throw 0;
+      if(Object.prototype.hasOwnProperty.call(r,'allocationMonth')&&(typeof r.allocationMonth!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(r.allocationMonth)))throw 0;
+    });
+    const sum=a.records.reduce((n,r)=>n+r.amount,0),grams=a.records.reduce((n,r)=>n+r.grams,0);
+    if(!Number.isFinite(sum)||!Number.isFinite(grams))throw 0;
+    return raw;
+  }catch(e){throw GR_error('PACKAGE');}
+}
+function GR_prepareReplacement(pkg,sourceSha=''){
+  GR_validatePackage(pkg);
+  const current=CR_readFinance(),f=current.finance;
+  const matches=f.items.map((item,index)=>({item,index})).filter(x=>x.item.id===pkg.before.id);
+  if(!matches.length)throw GR_error('EMPTY');
+  if(matches.length!==1)throw GR_error('CONFLICT');
+  const {item,index}=matches[0];
+  const oldTotal=F_getTotalInvested(item),newTotal=F_getTotalInvested(pkg.after);
+  const grams=pkg.after.records.reduce((n,r)=>n+r.grams,0);
+  if(CR_canonical(item)===CR_canonical(pkg.after))return{alreadyApplied:true,next:f,oldTotal,newTotal,grams};
+  if(CR_canonical(item)!==CR_canonical(pkg.before))throw GR_error('CONFLICT');
+  const items=f.items.slice();items[index]=JSON.parse(JSON.stringify(pkg.after));
+  const next={...f,items,repairReceipts:[...(f.repairReceipts||[]),{id:pkg.id,itemId:item.id,appliedAt:new Date().toISOString(),sourceSha}]};
+  try{backupSafeTree(next);validateFinanceBackup(next);}catch(e){throw GR_error('LOCAL');}
+  return{alreadyApplied:false,next,oldTotal,newTotal,grams};
+}
+function GR_decodeFile(file){
+  if(!file||file.type!=='file'||file.path!==GR_REPAIR_PATH||file.encoding!=='base64'||!Number.isInteger(file.size)||file.size<1||file.size>CR_MAX_BYTES||typeof file.content!=='string'||file.content.length>Math.ceil(CR_MAX_BYTES/3)*4+4096||typeof file.sha!=='string'||!/^[a-f0-9]{40,64}$/i.test(file.sha))throw GR_error(file&&file.size>CR_MAX_BYTES?'SIZE':'PACKAGE');
+  try{
+    const base64=file.content.replace(/[\r\n]/g,'');
+    if(!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64))throw 0;
+    const binary=atob(base64);if(binary.length!==file.size||binary.length>CR_MAX_BYTES)throw 0;
+    return GR_validatePackage(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(binary,c=>c.charCodeAt(0)))));
+  }catch(e){throw GR_error('PACKAGE');}
+}
+function GR_status(text){const el=document.getElementById('gr-status');if(el)el.textContent=text;}
+function GR_buttonState(){const b=document.getElementById('gr-apply');if(b)b.disabled=!GR_pending||GR_pending.alreadyApplied||!!GR_applyPromise;}
+function GR_closeRepair(){GR_generation++;GR_pending=null;const el=document.getElementById('gr-overlay');if(el)el.remove();}
+function GR_mount(){
+  const old=document.getElementById('gr-overlay');if(old)old.remove();
+  const overlay=document.createElement('div');overlay.id='gr-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box';
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="gr-title" style="background:#fff;color:#243142;border-radius:16px;padding:20px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-sizing:border-box"><h2 id="gr-title" style="font-size:20px;margin:0 0 12px">核对黄金明细</h2><p style="font-size:13px;line-height:1.7">将初始已投金额展开为实际买入记录，合并已有明细。每次买入单独保留，金额已包含已知手续费。</p><div id="gr-status" role="status" style="font-size:14px;line-height:1.7;margin:10px 0">正在读取私有备份仓库中的黄金明细…</div><div id="gr-preview"></div><p style="font-size:12px;color:#64748b;line-height:1.7">保存前会保留本机财务恢复副本。如需撤销，可在数据中选择“撤销上次导入”；这会恢复整个财务模块，随后新增的财务记录也会撤销。</p><div style="display:flex;gap:10px;margin-top:16px"><button id="gr-apply" type="button" disabled style="flex:1;min-height:44px;border:0;border-radius:9px;background:#b67b13;color:white;padding:10px">更新手机黄金记录</button><button id="gr-close" type="button" style="min-height:44px;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:10px 16px">关闭</button></div></section>';
+  document.body.appendChild(overlay);document.getElementById('gr-close').onclick=GR_closeRepair;document.getElementById('gr-apply').onclick=GR_applyRepair;
+}
+function GR_renderPreview(pkg,result){
+  const host=document.getElementById('gr-preview');if(!host)return;host.textContent='';
+  const add=(text,bold=false)=>{const e=document.createElement(bold?'h3':'p');e.textContent=text;e.style.cssText='font-size:14px;line-height:1.7;margin:8px 0;overflow-wrap:anywhere';host.appendChild(e);};
+  add(pkg.after.name,true);add(pkg.after.records.length+' 笔买入 · '+result.grams.toFixed(4)+' 克 · 合计 ¥'+result.newTotal.toFixed(2),true);
+  const delta=result.newTotal-result.oldTotal;
+  add('当前累计 ¥'+result.oldTotal.toFixed(2)+' → 核对后 ¥'+result.newTotal.toFixed(2)+'（'+(delta<0?'减少 ':delta>0?'增加 ':'变化 ')+Math.abs(delta).toFixed(2)+' 元）');
+  pkg.after.records.forEach(r=>add(r.date+' · '+r.grams.toFixed(4)+' 克 · ¥'+r.amount.toFixed(2)+(r.allocationMonth&&r.allocationMonth!==r.date.slice(0,7)?' · 归属 '+r.allocationMonth:'')+(r.fee>0?' · 含手续费 ¥'+r.fee.toFixed(2):'')));
+  add('更新后可在“财务 → 黄金”中查看完整明细及累计买入克数。');
+}
+function GR_isBusy(){return !!(GR_openPromise||GR_applyPromise);}
+function GR_busy(){return !!(CB_uploadPromise||CR_openPromise||CR_applyPromise);}
+function GR_openRepair(){
+  if(GR_openPromise)return GR_openPromise;if(GR_applyPromise)return Promise.resolve({ok:false,code:'BUSY'});
+  const generation=++GR_generation;GR_pending=null;GR_mount();
+  const run=async()=>{
+    try{
+      if(GR_busy())throw GR_error('BUSY');
+      const c=CB_readConfig(),revision=CB_revision;
+      if(c.consent!==true||!CB_validToken(c.token)||!CB_validTarget(c.owner,c.repo))throw GR_error('AUTH');
+      if(CB_target(c).toLowerCase()!==CR_REPAIR_TARGET.toLowerCase())throw GR_error('TARGET');
+      CB_ensureCurrent(c,revision);
+      const base='https://api.github.com/repos/'+encodeURIComponent(c.owner)+'/'+encodeURIComponent(c.repo);
+      const metadata=await CB_request(base,c,revision),branch=CB_checkRepository(metadata,c);
+      if(generation!==GR_generation)throw GR_error('CANCELLED');if(GR_busy())throw GR_error('BUSY');
+      const file=await CB_request(base+'/contents/'+GR_REPAIR_PATH+'?ref='+encodeURIComponent(branch),c,revision);
+      if(generation!==GR_generation)throw GR_error('CANCELLED');CB_ensureCurrent(c,revision);
+      const pkg=GR_decodeFile(file),result=GR_prepareReplacement(pkg,file.sha);
+      GR_pending={pkg,sha:file.sha,c,revision,generation,alreadyApplied:result.alreadyApplied};
+      GR_renderPreview(pkg,result);GR_status(result.alreadyApplied?'本机黄金明细已更新，无需重复操作。':'核对下列明细后，点击“更新手机黄金记录”。');GR_buttonState();
+      return{ok:true,alreadyApplied:result.alreadyApplied};
+    }catch(e){const code=GR_code(e);if(generation===GR_generation){GR_pending=null;GR_status(GR_message(code));GR_buttonState();}return{ok:false,code};}
+  };
+  GR_openPromise=Promise.resolve().then(run).finally(()=>{GR_openPromise=null;});return GR_openPromise;
+}
+function GR_applyRepair(){
+  if(GR_applyPromise)return GR_applyPromise;const pending=GR_pending;
+  const commit=()=>{
+    if(!pending||pending.generation!==GR_generation||GR_pending!==pending)throw GR_error('CANCELLED');if(GR_busy())throw GR_error('BUSY');
+    CB_ensureCurrent(pending.c,pending.revision);
+    const result=GR_prepareReplacement(pending.pkg,pending.sha);
+    if(result.alreadyApplied)return{alreadyApplied:true};
+    try{writeAppStorageTransaction({finance_v1:JSON.stringify(result.next)});}catch(e){throw GR_error('STORAGE');}
+    return{alreadyApplied:false};
+  };
+  const run=async()=>{
+    let committed=false;
+    try{
+      GR_status('正在保存恢复副本并更新黄金明细…');
+      const result=typeof navigator!=='undefined'&&navigator.locks&&typeof navigator.locks.request==='function'?await navigator.locks.request('fin-finance-repair-write',commit):commit();
+      if(result.alreadyApplied){if(GR_pending===pending)pending.alreadyApplied=true;GR_status('本机黄金明细已更新，无需重复操作。');return{ok:true,alreadyApplied:true};}
+      committed=true;if(GR_pending===pending)pending.alreadyApplied=true;
+      let displayOk=true;try{F_loadData();F_renderMain();}catch(e){displayOk=false;}
+      GR_status('黄金明细已保存，正在创建新的完整云备份…');
+      let backup;try{CB_ensureCurrent(pending.c,pending.revision);backup=await CB_uploadBackup({automatic:false});}catch(e){backup={ok:false};}
+      const message=backup&&backup.ok?'黄金明细已更新，并已完成新的完整云备份。':'本机黄金明细已更新；云备份尚未成功，请到 GitHub 云备份中点击“立即备份”。';
+      GR_status(message+(displayOk?'':' 请重新打开财务页查看。'));CB_showToast(message);
+      return{ok:true,alreadyApplied:false,backup:backup||{ok:false},displayOk};
+    }catch(e){const code=GR_code(e);GR_status(committed?'黄金明细已保存，请重新打开财务页并检查云备份状态。':GR_message(code));return{ok:committed,code};}
+  };
+  GR_applyPromise=Promise.resolve().then(run).finally(()=>{GR_applyPromise=null;GR_buttonState();});GR_buttonState();return GR_applyPromise;
+}
 
 // ─── 启动 ───
 (function(){
@@ -4664,6 +4858,7 @@ function CR_applyRepair(){
   const openLinkedPanel=()=>{
     if(window.location.hash==='#cloud-backup')CB_openSettings();
     if(window.location.hash==='#restore-stock')CR_openRepair();
+    if(window.location.hash==='#restore-gold')GR_openRepair();
   };
   window.addEventListener('hashchange',openLinkedPanel);
   setTimeout(openLinkedPanel,400);
