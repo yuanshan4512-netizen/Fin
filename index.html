@@ -676,6 +676,20 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
+// User text must never become HTML or inline JavaScript.
+function escHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function jsAttr(value){return escHtml(JSON.stringify(value)??'null');}
+function safeColor(value){return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)?value:'#f0f0f5';}
+
+// A queued render may reach the same canvas more than once. Replace its chart synchronously.
+function replaceChart(canvas,config){
+  window.Chart.getChart(canvas)?.destroy();
+  return new window.Chart(canvas,config);
+}
+function destroyCanvasCharts(root){
+  if(!window.Chart)return;
+  for(const canvas of root?.querySelectorAll('canvas')||[])window.Chart.getChart(canvas)?.destroy();
+}
 // ─── Tab 切换（最先定义）───
 let _currentTab='diary';
 let _tabInited={'diary':false,'monthly':false,'finance':false};
@@ -698,7 +712,7 @@ function switchTab(tab){
 
 const SK='bav7';
 const PIE_COLORS=['#378ADD','#43a047','#D85A30','#7E57C2','#e53935','#F9A825','#5F5E5A','#00ACC1','#EC407A'];
-const INCOME_KW=['收入','赚','兼职','打工','工资','红包','到账','卖','副业','奖金','返现','报销收','利息','提成','外快','接单','发工资','售出','出售'];
+const INCOME_KW=['小金库','收入','赚','兼职','打工','工资','红包','到账','卖','副业','奖金','返现','报销收','利息','提成','外快','接单','发工资','售出','出售'];
 const ECATS=[
   {k:'餐饮',i:'🍜',bg:'#FFF3E0',tc:'#E65100'},
   {k:'交通',i:'🚌',bg:'#E3F2FD',tc:'#1565C0'},
@@ -710,6 +724,7 @@ const ECATS=[
   {k:'服饰',i:'👕',bg:'#FCE4EC',tc:'#AD1457'},
   {k:'护肤',i:'🧴',bg:'#F8BBD0',tc:'#880E4F'},
   {k:'运动',i:'🏃',bg:'#E1F5FE',tc:'#0277BD'},
+  {k:'水电',i:'💡',bg:'#E1F5FE',tc:'#0277BD'},
   {k:'订阅',i:'📱',bg:'#E8EAF6',tc:'#283593'},
   {k:'礼金',i:'🎁',bg:'#FCE4EC',tc:'#C62828'},
   {k:'零花',i:'🎯',bg:'#FFF8E1',tc:'#F57F17'},
@@ -722,12 +737,13 @@ const ICATS=[
   {k:'卡片',i:'🃏',bg:'#FFF8E1',tc:'#F57F17'},
   {k:'投资',i:'📈',bg:'#E8F5E9',tc:'#2E7D32'},
   {k:'红包',i:'🧧',bg:'#FCE4EC',tc:'#880E4F'},
+  {k:'小金库',i:'🏦',bg:'#FFF8E1',tc:'#9A6700'},
   {k:'退款',i:'↩️',bg:'#E3F2FD',tc:'#1565C0'},
   {k:'转账',i:'🔄',bg:'#E8EAF6',tc:'#283593'},
   {k:'其他',i:'📥',bg:'#EDE7F6',tc:'#4527A0'}
 ];
 const RCATS=[{k:'餐饮',i:'🍜',bg:'#FFF3E0',tc:'#E65100'},{k:'交通',i:'🚌',bg:'#E3F2FD',tc:'#1565C0'},{k:'住宿',i:'🏨',bg:'#EDE7F6',tc:'#4527A0'},{k:'办公',i:'💻',bg:'#E8F5E9',tc:'#1B5E20'},{k:'其他',i:'📋',bg:'#F5F5F5',tc:'#424242'}];
-const CKWS={餐饮:['早餐','午餐','晚餐','宵夜','奶茶','咖啡','外卖','零食','饭','吃','喝','菜','面','汤','蛋糕','火锅','炒'],交通:['打车','地铁','公交','滴滴','出租','油','加油','停车','高铁','火车','机票','骑行'],购物:['买','超市','网购','淘宝','京东','衣服','鞋','包','化妆','护肤'],娱乐:['电影','ktv','唱歌','演唱会','门票','景点','旅游','玩'],医疗:['药','医院','看病','诊所'],学习:['书','课','培训','学费','文具','笔'],零花:['零花','零用','杂费'],游戏:['游戏','steam','手游','网游','充值','王者','原神'],运动:['运动','健身','跑步','羽毛球','篮球','游泳','瑜伽','健身房'],兼职:['兼职','打工','接单','外快','副业','卖'],工资:['工资','薪资','底薪'],红包:['红包','压岁','打赏'],转账:['转账','还款','还钱'],住宿:['酒店','宾馆','住宿','民宿','房费']};
+const CKWS={水电:['水电','电费','水费','燃气费','煤气费'],小金库:['小金库'],餐饮:['早餐','午餐','晚餐','宵夜','奶茶','咖啡','外卖','零食','饭','吃','喝','菜','面','汤','蛋糕','火锅','炒'],交通:['打车','地铁','公交','滴滴','出租','油','加油','停车','高铁','火车','机票','骑行'],购物:['买','超市','网购','淘宝','京东','衣服','鞋','包','化妆','护肤'],娱乐:['电影','ktv','唱歌','演唱会','门票','景点','旅游','玩'],医疗:['药','医院','看病','诊所'],学习:['书','课','培训','学费','文具','笔'],零花:['零花','零用','杂费'],游戏:['游戏','steam','手游','网游','充值','王者','原神'],运动:['运动','健身','跑步','羽毛球','篮球','游泳','瑜伽','健身房'],兼职:['兼职','打工','接单','外快','副业','卖'],工资:['工资','薪资','底薪'],红包:['红包','压岁','打赏'],转账:['转账','还款','还钱'],住宿:['酒店','宾馆','住宿','民宿','房费']};
 
 function ld(){try{return JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){return{}}}
 function sv(d){localStorage.setItem(SK,JSON.stringify(d))}
@@ -741,17 +757,19 @@ function fmtRaw(n){const d=ST?.decimals==='2'?2:0;return Number(Math.abs(n)).toF
 // ─── 预算环形卡（替代月度概览，纯展示）───
 function budgetRingData(){
   const recs=Array.isArray(RC)?RC:[];
-  const now=new Date();
-  const mk=now.getFullYear()+'-'+pad2(now.getMonth()+1);
-  const dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  const today=now.getDate();
-  const dailyBudget=parseFloat(ST?.budget)||0;
-  const pocket=(ST?.hasExtra)?(parseFloat(ST.extraAmount)||0):0;
-  const inMonth=r=>r.date&&r.date.startsWith(mk);
-  const income=recs.filter(r=>r.type==='income'&&inMonth(r)).reduce((a,r)=>a+(r.amount||0),0);
-  const spent=recs.filter(r=>r.type==='expense'&&inMonth(r)).reduce((a,r)=>a+(r.amount||0),0);
-  // 上月结余：直接调用 autoCarryOver，使用历史设置+正确周期逻辑
-  const prevCarry=autoCarryOver(mk+'-01');
+  const asOf=todayStr();
+  const period=periodBounds(asOf);
+  const mk=period.start.slice(0,7);
+  const dim=daysBetween(period.start,period.end);
+  const today=daysBetween(period.start,asOf);
+  const settings=getSettingsForPeriod(period.start);
+  const dailyBudget=settings.daily;
+  const pocket=settings.extra;
+  const inPeriod=r=>r.date>=period.start&&r.date<=asOf;
+  const earned=recs.filter(r=>r.type==='income'&&inPeriod(r)).reduce((a,r)=>a+(r.amount||0),0);
+  const income=ST.income_merge==='yes'?earned:0;
+  const spent=recs.filter(r=>r.type==='expense'&&inPeriod(r)).reduce((a,r)=>a+(r.amount||0),0);
+  const prevCarry=autoCarryOver(period.start);
   const totalBudget=dailyBudget*dim+pocket+income+prevCarry;
   const remain=totalBudget-spent;
   const daysPassed=Math.max(1,today);
@@ -759,7 +777,7 @@ function budgetRingData(){
   const avgSpent=spent/daysPassed;
   const avgRemain=daysLeft>0?remain/daysLeft:0;
   const pct=totalBudget>0?Math.round(spent/totalBudget*100):0;
-  return{mk,dim,today,income,spent,dailyBudget,pocket,prevCarry,totalBudget,remain,daysPassed,daysLeft,avgSpent,avgRemain,pct};
+  return{mk,dim,today,income,spent,dailyBudget,pocket,prevCarry,totalBudget,remain,daysPassed,daysLeft,avgSpent,avgRemain,pct,periodStart:period.start,periodEnd:period.end,settleDay:period.settleDay};
 }
 function fmtSigned(n){return(n<0?'-':'')+fmtN(n)}
 function budgetRingCard(){
@@ -771,7 +789,7 @@ function budgetRingCard(){
   const mon=parseInt(r.mk.split('-')[1],10);
   return `<div class="bring-card">
     <div class="bring-top">
-      <span class="bring-top-l">${mon}月预算</span>
+      <span class="bring-top-l">${r.settleDay===1?mon+'月预算':'本周期预算 · '+r.periodStart.slice(5)+'～'+r.periodEnd.slice(5)}</span>
       <span class="bring-top-v">${fmtSigned(r.totalBudget)}</span>
     </div>
     <div class="bring-mid">
@@ -799,14 +817,15 @@ function budgetRingHelp(){
   alert(`总预算 ${fmtSigned(r.totalBudget)} 的构成：\n\n`+
     `日预算 ${fmtN(r.dailyBudget)} × ${r.dim}天 = ${fmtN(r.dailyBudget*r.dim)}\n`+
     `＋ 零花 ${fmtN(r.pocket)}\n`+
-    `＋ 本月收入 ${fmtN(r.income)}\n`+
-    `＋ 上月结余 ${fmtSigned(r.prevCarry)}（超支则为负）\n\n`+
+    `＋ 本周期并入收入 ${fmtN(r.income)}\n`+
+    `＋ 上期结余 ${fmtSigned(r.prevCarry)}\n`+
+    `周期 ${r.periodStart} 至 ${r.periodEnd}\n\n`+
     `已消费 ${fmtN(r.spent)}\n`+
     `剩余额度 ${fmtSigned(r.remain)}\n`+
     `已过 ${r.daysPassed} 天 / 剩余 ${r.daysLeft} 天`);
 }
-function autoType(t){return INCOME_KW.some(k=>t.includes(k))?'income':'expense'}
-function autoCat(t,type){const cats=type==='income'?ICATS:type==='reimbursement'?RCATS:ECATS;for(const c of cats){const kws=CKWS[c.k]||[];if(kws.some(k=>t.includes(k)))return c.k;}return cats[0].k}
+function autoType(t){if(t.includes('小金库')&&/(支出|花了|花费|交水电|交电费|交水费|缴费)/.test(t))return 'expense';return INCOME_KW.some(k=>t.includes(k))?'income':'expense'}
+function autoCat(t,type){if(type==='expense'&&CKWS.水电.some(k=>t.includes(k)))return '水电';if(type==='income'&&t.includes('小金库'))return '小金库';const cats=type==='income'?ICATS:type==='reimbursement'?RCATS:ECATS;for(const c of cats){const kws=CKWS[c.k]||[];if(kws.some(k=>t.includes(k)))return c.k;}return cats[0].k}
 function getCatMeta(k,type){const cats=type==='income'?ICATS:type==='reimbursement'?RCATS:ECATS;return cats.find(c=>c.k===k)||cats[0]}
 function daysLeft(dl){if(!dl)return null;return Math.ceil((new Date(dl)-new Date())/(86400000))}
 function uniqueTs(base){let ts=base;while(RC.some(r=>r.ts===ts)||RM.some(r=>r.ts===ts))ts++;return ts}
@@ -876,8 +895,8 @@ let tmpR={hasInvoice:false,invoiceStatus:'未开',reimbursed:false,deadline:'',c
 let charts={};
 let viewMonth=null;
 function getViewMonth(){if(!viewMonth){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1);}return viewMonth;}
-function prevMonth(mk){const[y,m]=mk.split('-').map(Number);return m===1?`${y-1}-12`:`${y}-${pad2(m-1)}`}
-function nextMonth(mk){const[y,m]=mk.split('-').map(Number);return m===12?`${y+1}-01`:`${y}-${pad2(m+1)}`}
+function prevMonth(mk){const[y,m]=mk.split('-').map(Number);return m===1?`${y-1}-12`:`${escHtml(y)}-${pad2(m-1)}`}
+function nextMonth(mk){const[y,m]=mk.split('-').map(Number);return m===12?`${y+1}-01`:`${escHtml(y)}-${pad2(m+1)}`}
 function isCurrentMonth(mk){const d=new Date();return mk===d.getFullYear()+'-'+pad2(d.getMonth()+1)}
 
 const STEPS=[
@@ -965,79 +984,283 @@ function finishQ(){
 }
 
 function saveState(){const s=ld();s.records=RC;s.reimbs=RM;sv(s)}
-function fullState(){
-  // 统一备份：包含记账日记 + 本月账单 + 财务总览
-  const s=ld();
-  let monthly={};let finance={};
-  try{monthly=JSON.parse(localStorage.getItem('monthly_v1')||'{}')}catch(e){}
-  try{finance=JSON.parse(localStorage.getItem('finance_v1')||'{}')}catch(e){}
-  return{
-    app:'财务管家',schema:3,exportedAt:new Date().toISOString(),
-    diary:{settings:ST||s.settings||{},records:RC||s.records||[],reimbs:RM||s.reimbs||[]},
-    monthly,finance
-  };
+// Backups contain complete module state; missing modules remain untouched.
+const APP_STORAGE_KEYS=['bav7','monthly_v1','finance_v1'];
+const RECOVERY_STORAGE_KEY='finance_recovery_v1';
+function backupOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k)}
+function backupError(path){throw new Error('备份字段无效：'+path)}
+function backupObject(v,path){if(!v||typeof v!=='object'||Array.isArray(v))backupError(path);return v}
+function backupArray(v,path){if(!Array.isArray(v))backupError(path);return v}
+function backupNumber(v,path,min=-Number.MAX_VALUE,max=Number.MAX_VALUE,integer=false){
+  if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max||(integer&&!Number.isSafeInteger(v)))backupError(path);
+  return v;
 }
-function applyImportedState(raw){
-  const data=raw?.data||raw;
-  // 支持旧版格式（只有记账数据）和新版统一格式
-  if(data?.diary){
-    // 新版统一格式
-    const d=data.diary;
-    if(!d||(!Array.isArray(d.records)&&!Array.isArray(d.reimbs)))throw new Error('bad backup');
-    const next=ld();next.setupDone=true;next.settings=d.settings||next.settings||ST||{};
-    next.records=Array.isArray(d.records)?d.records:[];next.reimbs=Array.isArray(d.reimbs)?d.reimbs:[];
-    sv(next);ST=next.settings;RC=next.records;RM=next.reimbs;
-    // 恢复本月账单
-    if(data.monthly&&Object.keys(data.monthly).length){
-      localStorage.setItem('monthly_v1',JSON.stringify(data.monthly));
+function backupString(v,path){if(typeof v!=='string')backupError(path);return v}
+function backupBool(v,path){if(typeof v!=='boolean')backupError(path)}
+function backupEnum(v,values,path){if(!values.includes(v))backupError(path)}
+function backupId(v,path){if(typeof v!=='string'||!/^[A-Za-z0-9_-]+$/.test(v)||['__proto__','prototype','constructor'].includes(v))backupError(path)}
+function backupDate(v,path,allowEmpty=false){
+  if(allowEmpty&&v==='')return;
+  if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))backupError(path);
+  const d=new Date(v+'T00:00:00Z');
+  if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==v)backupError(path);
+}
+function backupFields(o,path,numbers=[],strings=[],booleans=[]){
+  numbers.forEach(k=>{if(backupOwn(o,k))backupNumber(o[k],path+'.'+k)});
+  strings.forEach(k=>{if(backupOwn(o,k))backupString(o[k],path+'.'+k)});
+  booleans.forEach(k=>{if(backupOwn(o,k))backupBool(o[k],path+'.'+k)});
+}
+function backupUnique(rows,key,path){
+  const seen=new Set();rows.forEach(r=>{if(backupOwn(r,key)){if(seen.has(r[key]))backupError(path+'.'+key+'重复');seen.add(r[key]);}});
+}
+function backupSafeTree(value,path='备份',depth=0){
+  if(depth>40)backupError(path+'层级过深');
+  if(typeof value==='number'&&!Number.isFinite(value))backupError(path);
+  if(value&&typeof value==='object')Object.keys(value).forEach(k=>{
+    if(['__proto__','prototype','constructor'].includes(k))backupError(path+'.'+k);
+    backupSafeTree(value[k],path+'.'+k,depth+1);
+  });
+}
+function validateDiaryBackup(raw,legacy=false){
+  backupObject(raw,'diary');
+  const existing=legacy?ld():{};
+  const d={...raw};
+  const defaults={purpose:'budget',budget:50,settleDay:1,carryover:'yes',hasPrevBalance:false,prevBalance:0,income_merge:'yes',hasExtra:false,extraAmount:0,show_reimb:'no',decimals:'2'};
+  if(backupOwn(d,'settings'))backupObject(d.settings,'diary.settings');
+  d.settings={...defaults,...(backupOwn(d,'settings')?d.settings:(legacy?existing.settings:{}))};
+  const settings=d.settings;
+  backupFields(settings,'diary.settings',['budget','prevBalance','extraAmount'],['purpose'],['hasPrevBalance','hasExtra']);
+  backupNumber(settings.budget,'diary.settings.budget',0);
+  backupNumber(settings.extraAmount,'diary.settings.extraAmount',0);
+  backupNumber(settings.settleDay,'diary.settings.settleDay',1,31,true);
+  ['carryover','income_merge','show_reimb'].forEach(k=>backupEnum(settings[k],['yes','no'],'diary.settings.'+k));
+  backupEnum(settings.decimals,['0','2'],'diary.settings.decimals');
+  for(const kind of ['records','reimbs']){
+    d[kind]=backupOwn(d,kind)?d[kind]:(legacy&&Array.isArray(existing[kind])?existing[kind]:[]);
+    backupArray(d[kind],'diary.'+kind).forEach((r,i)=>{
+      const p='diary.'+kind+'['+i+']';backupObject(r,p);
+      backupNumber(r.amount,p+'.amount',0);backupDate(r.date,p+'.date');
+      backupNumber(r.ts,p+'.ts',0,Number.MAX_SAFE_INTEGER,true);
+      backupFields(r,p,[],['label','name','cat','time','invoiceStatus'],['hasInvoice','reimbursed']);
+      if(backupOwn(r,'time')&&r.time!==''&&!/^([01]?\d|2[0-3]):[0-5]\d$/.test(r.time))backupError(p+'.time');
+      if(backupOwn(r,'deadline'))backupDate(r.deadline,p+'.deadline',true);
+      if(kind==='records')backupEnum(r.type,['income','expense'],p+'.type');
+    });
+    backupUnique(d[kind],'ts','diary.'+kind);
+  }
+  // Old backups did not export history. Never reuse another ledger's history.
+  d.budgetHistory=backupOwn(d,'budgetHistory')?d.budgetHistory:[];
+  backupArray(d.budgetHistory,'diary.budgetHistory').forEach((h,i)=>{
+    const p='diary.budgetHistory['+i+']';backupObject(h,p);backupDate(h.from,p+'.from');
+    backupNumber(h.daily,p+'.daily',0);backupNumber(h.extra,p+'.extra',0);
+  });
+  backupUnique(d.budgetHistory,'from','diary.budgetHistory');
+  if(backupOwn(d,'lastBackupAt'))backupString(d.lastBackupAt,'diary.lastBackupAt');
+  d.setupDone=true;return d;
+}
+function validateMonthlyBackup(raw){
+  backupObject(raw,'monthly');
+  if(!Object.keys(raw).length)return {};
+  const m={...raw};
+  if(backupOwn(m,'utilityInDiary'))backupBool(m.utilityInDiary,'monthly.utilityInDiary');
+  for(const key of ['bills','budgets',...(backupOwn(m,'archivedUtilityBills')?['archivedUtilityBills']:[])]){
+    if(!backupOwn(m,key))m[key]=[];
+    backupArray(m[key],'monthly.'+key).forEach((b,i)=>{
+      const p='monthly.'+key+'['+i+']';backupObject(b,p);backupId(b.id,p+'.id');
+      backupFields(b,p,[],['name','icon','iconBg','diaryCategory'],['dynDays']);backupNumber(b.amount,p+'.amount',0);
+      if(key!=='budgets')backupNumber(b.dueDay,p+'.dueDay',1,31,true);
+      if(backupOwn(b,'iconBg')&&!/^#[a-f\d]{3}(?:[a-f\d]{3})?(?:[a-f\d]{2})?$/i.test(b.iconBg))backupError(p+'.iconBg');
+    });backupUnique(m[key],'id','monthly.'+key);
+  }
+  if(backupOwn(m,'utility')){
+    backupObject(m.utility,'monthly.utility');backupFields(m.utility,'monthly.utility',['monthlyAvg','balance'],['note']);
+    if(backupOwn(m.utility,'monthlyAvg'))backupNumber(m.utility.monthlyAvg,'monthly.utility.monthlyAvg',0);
+    if(backupOwn(m.utility,'lastUpdate'))backupDate(m.utility.lastUpdate,'monthly.utility.lastUpdate',true);
+  }
+  if(backupOwn(m,'dailyLife'))backupNumber(m.dailyLife,'monthly.dailyLife',0);
+  if(backupOwn(m,'settleDay'))backupNumber(m.settleDay,'monthly.settleDay',1,31,true);
+  if(backupOwn(m,'alertDays'))backupNumber(m.alertDays,'monthly.alertDays',0,31,true);
+  if(backupOwn(m,'billsStatus')){
+    backupObject(m.billsStatus,'monthly.billsStatus');
+    Object.entries(m.billsStatus).forEach(([month,rows])=>{
+      const p='monthly.billsStatus.'+month;if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))backupError(p);
+      backupObject(rows,p);Object.entries(rows).forEach(([id,b])=>{
+        backupId(id,p+'.id');backupObject(b,p+'.'+id);backupFields(b,p+'.'+id,[],[],['paid']);
+        if(backupOwn(b,'paidDate'))backupDate(b.paidDate,p+'.'+id+'.paidDate',true);
+        if(backupOwn(b,'actualAmount')&&b.actualAmount!==null)backupNumber(b.actualAmount,p+'.'+id+'.actualAmount',0);
+      });
+    });
+  }
+  return m;
+}
+function validateFinanceBackup(raw){
+  backupObject(raw,'finance');
+  if(!Object.keys(raw).length)return {};
+  const f={...raw};
+  if(!backupOwn(f,'items'))f.items=[];
+  backupArray(f.items,'finance.items').forEach((item,i)=>{
+    const p='finance.items['+i+']';backupObject(item,p);backupId(item.id,p+'.id');
+    backupEnum(item.group,['fund','gold','saving','stock'],p+'.group');
+    backupString(item.name,p+'.name');backupNumber(item.target,p+'.target',0);
+    backupFields(item,p,[],['platform','note'],['autoInvest']);
+    if(backupOwn(item,'autoInvestSince')&&item.autoInvestSince!==null)backupDate(item.autoInvestSince,p+'.autoInvestSince');
+    if(backupOwn(item,'autoInvestCheckedMonth')&&item.autoInvestCheckedMonth!==null){
+      if(typeof item.autoInvestCheckedMonth!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(item.autoInvestCheckedMonth))backupError(p+'.autoInvestCheckedMonth');
     }
-    // 恢复财务总览
-    if(data.finance&&Object.keys(data.finance).length){
-      localStorage.setItem('finance_v1',JSON.stringify(data.finance));
+    ['invested','monthly'].forEach(k=>{if(backupOwn(item,k))backupNumber(item[k],p+'.'+k,0)});
+    if(backupOwn(item,'investDay'))backupNumber(item.investDay,p+'.investDay',1,31,true);
+    if(backupOwn(item,'records'))backupArray(item.records,p+'.records').forEach((r,j)=>{
+      const rp=p+'.records['+j+']';backupObject(r,rp);backupDate(r.date,rp+'.date');backupNumber(r.amount,rp+'.amount',0);
+      backupFields(r,rp,[],['note'],['returned']);
+      if(backupOwn(r,'type'))backupEnum(r.type,['deposit','withdraw','auto','note'],rp+'.type');
+    });
+  });backupUnique(f.items,'id','finance.items');
+  if(!backupOwn(f,'stockAccount'))f.stockAccount={initialCapital:10000,deposits:[],stocks:[]};
+  const a=backupObject(f.stockAccount,'finance.stockAccount');
+  backupNumber(a.initialCapital,'finance.stockAccount.initialCapital',0);
+  backupArray(a.deposits,'finance.stockAccount.deposits').forEach((d,i)=>{
+    const p='finance.stockAccount.deposits['+i+']';backupObject(d,p);backupDate(d.date,p+'.date');backupNumber(d.amount,p+'.amount',0);backupFields(d,p,[],['note']);
+  });
+  backupArray(a.stocks,'finance.stockAccount.stocks').forEach((st,i)=>{
+    const p='finance.stockAccount.stocks['+i+']';backupObject(st,p);backupId(st.id,p+'.id');backupString(st.name,p+'.name');
+    backupFields(st,p,['tpPct','slPct'],['code','note'],['hidden']);
+    for(const key of ['buyRecords','sellRecords','tpPlans']){
+      backupArray(st[key],p+'.'+key).forEach((r,j)=>{
+        const rp=p+'.'+key+'['+j+']';backupObject(r,rp);
+        if(backupOwn(r,'id'))backupId(r.id,rp+'.id');
+        if(backupOwn(r,'planId')&&r.planId!=='')backupId(r.planId,rp+'.planId');
+        if(backupOwn(r,'order'))backupNumber(r.order,rp+'.order',0,Number.MAX_SAFE_INTEGER,true);
+        backupNumber(r.price,rp+'.price',0);backupNumber(r.qty,rp+'.qty',0,Number.MAX_SAFE_INTEGER,true);
+        backupFields(r,rp,['profit'],['note'],['done']);
+        if(key!=='tpPlans'){backupDate(r.date,rp+'.date');backupNumber(r.amount,rp+'.amount',0);}
+        if(backupOwn(r,'type'))backupEnum(r.type,['tp','sl'],rp+'.type');
+      });backupUnique(st[key],'id',p+'.'+key);
     }
-  }else if(data?.records||data?.reimbs){
-    // 旧版格式（只有记账数据）
-    if(!data||(!Array.isArray(data.records)&&!Array.isArray(data.reimbs)))throw new Error('bad backup');
-    const next=ld();next.setupDone=true;next.settings=data.settings||next.settings||ST||{};
-    next.records=Array.isArray(data.records)?data.records:[];next.reimbs=Array.isArray(data.reimbs)?data.reimbs:[];
-    sv(next);ST=next.settings;RC=next.records;RM=next.reimbs;
-  }else{
-    throw new Error('bad backup');
+  });backupUnique(a.stocks,'id','finance.stockAccount.stocks');
+  if(backupOwn(f,'portfolioMarket')){
+    const m=backupObject(f.portfolioMarket,'finance.portfolioMarket');
+    ['stock','fund','gold','cash'].forEach(k=>{if(backupOwn(m,k)&&m[k]!==null)backupNumber(m[k],'finance.portfolioMarket.'+k,0)});
+    backupFields(m,'finance.portfolioMarket',[],['updatedAt']);
+  }
+  return f;
+}
+function prepareImportedState(raw,scope='all'){
+  backupObject(raw,'备份');backupSafeTree(raw);
+  const data=backupOwn(raw,'data')?backupObject(raw.data,'data'):raw;
+  const wrapped=['diary','monthly','finance'].some(k=>backupOwn(data,k));
+  if(backupOwn(data,'schema'))backupNumber(data.schema,'schema',1,4,true);
+  const updates={};
+  if(wrapped){
+    // Validate the entire file before selecting the requested modules.
+    const checked={};
+    if(backupOwn(data,'diary'))checked.diary=validateDiaryBackup(data.diary);
+    if(backupOwn(data,'monthly'))checked.monthly=validateMonthlyBackup(data.monthly);
+    if(backupOwn(data,'finance'))checked.finance=validateFinanceBackup(data.finance);
+    if(scope==='finance'){
+      if(!backupOwn(checked,'finance'))backupError('finance 缺失');updates.finance_v1=checked.finance;
+    }else{
+      if(backupOwn(checked,'diary'))updates.bav7=checked.diary;
+      if(backupOwn(checked,'monthly'))updates.monthly_v1=checked.monthly;
+      if(backupOwn(checked,'finance'))updates.finance_v1=checked.finance;
+    }
+  }else if(backupOwn(data,'items')||backupOwn(data,'stockAccount')||(scope==='finance'&&!Object.keys(data).length)){
+    updates.finance_v1=validateFinanceBackup(data);
+  }else if(scope!=='finance'&&(backupOwn(data,'records')||backupOwn(data,'reimbs'))){
+    updates.bav7=validateDiaryBackup(data,true);
+  }else{backupError('文件格式');}
+  if(!Object.keys(updates).length)backupError('没有可恢复的数据');
+  return updates;
+}
+function writeAppStorageTransaction(serialized,saveRecovery=true){
+  const keys=Object.keys(serialized);
+  if(!keys.length||keys.some(k=>!APP_STORAGE_KEYS.includes(k)))throw new Error('恢复范围无效');
+  const before={};keys.forEach(k=>{before[k]=localStorage.getItem(k)});
+  if(saveRecovery){
+    // If the recovery copy cannot fit, abort before replacing any app data.
+    try{localStorage.setItem(RECOVERY_STORAGE_KEY,JSON.stringify({savedAt:new Date().toISOString(),values:before}));}
+    catch(e){throw new Error('无法保存导入前备份，原数据未改动；请先导出备份并检查浏览器存储空间');}
+  }
+  try{keys.forEach(k=>{if(serialized[k]===null)localStorage.removeItem(k);else localStorage.setItem(k,serialized[k]);});}
+  catch(e){
+    let restored=true;
+    keys.forEach(k=>{try{if(before[k]===null)localStorage.removeItem(k);else localStorage.setItem(k,before[k]);}catch(err){restored=false;}});
+    throw new Error(restored?'写入失败，已保留原数据；请检查浏览器存储空间':'写入失败；导入前备份仍保留，请使用“撤销上次导入”恢复');
   }
 }
+function fullState(){
+  const diary=ld();
+  return{
+    app:'财务管家',schema:4,exportedAt:new Date().toISOString(),
+    diary:{...diary,settings:ST||diary.settings||{},records:RC||diary.records||[],reimbs:RM||diary.reimbs||[],budgetHistory:diary.budgetHistory||[]},
+    monthly:JSON.parse(localStorage.getItem('monthly_v1')||'{}'),
+    finance:JSON.parse(localStorage.getItem('finance_v1')||'{}')
+  };
+}
+function applyImportedState(raw,scope='all'){
+  const updates=prepareImportedState(raw,scope);
+  const serialized={};Object.keys(updates).forEach(k=>{serialized[k]=JSON.stringify(updates[k]);});
+  writeAppStorageTransaction(serialized);
+  if(backupOwn(updates,'bav7')){ST=updates.bav7.settings;RC=updates.bav7.records;RM=updates.bav7.reimbs;}
+  return Object.keys(updates);
+}
+function undoLastImport(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(RECOVERY_STORAGE_KEY)||'null');
+    if(!saved||!saved.values)throw new Error('没有可撤销的导入');
+    backupObject(saved.values,'恢复副本');
+    Object.values(saved.values).forEach(v=>{if(v!==null&&typeof v!=='string')throw new Error('恢复副本无效');});
+    if(!confirm('恢复到上次导入前的数据？导入后在相关模块新增或修改的记录也会被覆盖，请先导出当前备份。'))return;
+    writeAppStorageTransaction(saved.values,false);
+    localStorage.removeItem(RECOVERY_STORAGE_KEY);
+    window.location.reload();
+  }catch(e){showToast(e.message||'恢复失败');}
+}
 function clearCacheAndReload(){
-  if(!confirm('⚠️ 确认清除所有缓存？\n\n请确保已导出备份，清除后数据不可恢复！'))return;
-  localStorage.clear();
-  if('caches' in window){caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));}
-  showToast('缓存已清除，正在重载...');
-  setTimeout(()=>window.location.reload(true),1200);
+  if(!confirm('确认清除本财务管家的本地数据？\n\n请确保已导出备份；清除后账本和导入恢复副本不可恢复。'))return;
+  try{
+    [...APP_STORAGE_KEYS,RECOVERY_STORAGE_KEY].forEach(k=>localStorage.removeItem(k));
+    showToast('本应用数据已清除，正在重载...');
+    setTimeout(()=>window.location.reload(),1200);
+  }catch(e){showToast('清除失败，请检查浏览器存储权限');}
 }
 function exportData(){
-  const state=fullState();
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`财务管家_${new Date().getMonth()+1}月${new Date().getDate()}日${new Date().getFullYear()}.json`;
-  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);
-  const s=ld();s.lastBackupAt=new Date().toISOString();sv(s);
-  showToast('全部数据备份已下载');
+  try{
+    const state=fullState();
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`财务管家_全部_${new Date().getMonth()+1}月${new Date().getDate()}日${new Date().getFullYear()}.json`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    const s=ld();s.lastBackupAt=new Date().toISOString();sv(s);
+    showToast('全部数据备份已下载');
+  }catch(e){showToast('备份失败，请检查本地数据或浏览器存储权限');}
 }
 function triggerImport(){document.getElementById('backup-file')?.click()}
+function refreshAfterImport(){
+  modal=null;F_modal=null;M_modal=null;
+  const state=ld();
+  if(state.setupDone){ST=state.settings;RC=state.records||[];RM=state.reimbs||[];}
+  else{ST=null;RC=[];RM=[];}
+  // Refresh every module's memory before rendering: rendering can write budget
+  // history or fail, and must not leave an old finance model able to save over
+  // the newly imported ledger when the user changes tabs.
+  const errors=[];
+  for(const load of [F_loadData,M_loadData]){try{load();}catch(e){errors.push(e);}}
+  for(const render of [state.setupDone?showApp:showQuiz,M_renderMain,F_renderMain]){try{render();}catch(e){errors.push(e);}}
+  if(errors.length)throw new Error('数据已恢复，部分页面暂时无法显示；请重载或撤销本次导入');
+}
 function importDataFile(input){
   const file=input.files?.[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=()=>{
-    try{
-      applyImportedState(JSON.parse(reader.result));
-      modal=null;showApp();showToast('数据已恢复');
-      // 通知账单和财务模块重新加载
-      setTimeout(()=>{
-        try{M_loadData();M_renderMain();}catch(e){}
-        try{F_loadData();F_renderMain();}catch(e){}
-      },300);
-    }catch(e){showToast('备份文件无法识别');}
+    try{applyImportedState(JSON.parse(reader.result));}
+    catch(e){showToast(e.message||'备份文件无法识别');return;}
+    try{refreshAfterImport();showToast('数据已恢复，可在数据页撤销本次导入');}
+    catch(e){showToast('数据已恢复，显示异常；可在数据页撤销本次导入');}
   };
+  reader.onerror=()=>showToast('读取文件失败，原数据未改动');
   reader.readAsText(file);input.value='';
 }
+
 function dataCounts(){
   let monthlyCount=0;let financeCount=0;
   try{const m=JSON.parse(localStorage.getItem('monthly_v1')||'{}');monthlyCount=Object.keys(m).length>0?1:0;}catch(e){}
@@ -1051,7 +1274,7 @@ function periodBounds(asOf=todayStr()){
   const d=new Date(asOf+'T00:00:00');const sd=settleDay();
   let start=settleDate(d.getFullYear(),d.getMonth(),sd);
   if(d<start)start=settleDate(d.getFullYear(),d.getMonth()-1,sd);
-  const next=new Date(start);next.setMonth(next.getMonth()+1);
+  const next=settleDate(start.getFullYear(),start.getMonth()+1,sd);
   const end=new Date(next);end.setDate(end.getDate()-1);
   return{start:dateStr(start),end:dateStr(end),settleDay:sd};
 }
@@ -1144,7 +1367,8 @@ function budgetState(asOf=todayStr()){
   const daysRemain=Math.max(0,daysBetween(asOf,p.end)-1);
   return{periodStart:p.start,periodEnd:p.end,settleDay:p.settleDay,calcStart:start,daily,extra,previous,spent,earned,todaySpent,dailyRemaining,days,accrued,added,balance,periodDays,daysRemain,periodTotal:daily*periodDays};
 }
-function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}}
+let chartRenderVersion=0;
+function destroyCharts(){chartRenderVersion++;Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}}
 function currentEntryDate(){return detailView==='cal'?detailSel:selDate}
 function normalizeTime(v){const m=String(v||'').match(/([01]?\d|2[0-3])[:：点](\d{1,2})?/);return m?pad2(m[1])+':'+pad2(m[2]||0):nowStr()}
 function showToast(msg){const shell=document.getElementById('panel-diary');if(!shell)return;const old=shell.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;shell.appendChild(t);setTimeout(()=>t.remove(),1600)}
@@ -1258,10 +1482,10 @@ function getAllMonths(){
 }
 
 function quickInputHtml(id='qi'){
-  return`<div class="input-hint" id="${id}-hint"></div><div class="input-bar"><input class="qinput" id="${id}" placeholder="午餐25 奶茶18 · 昨天打车32 · 卖卡29 ..." onkeydown="if(event.key==='Enter')quickAdd('${id}')" oninput="updateInputHint('${id}')"><button class="addbtn" onclick="openAdd()">+</button></div>`;
+  return`<div class="input-hint" id="${id}-hint"></div><div class="input-bar"><input class="qinput" id="${id}" placeholder="午餐25 奶茶18 · 昨天打车32 · 卖卡29 ..." onkeydown="if(event.key==='Enter')quickAdd(${jsAttr(id)})" oninput="updateInputHint(${jsAttr(id)})"><button class="addbtn" onclick="openAdd()">+</button></div>`;
 }
 function reimbQuickInputHtml(id='ri'){
-  return`<div class="input-bar"><input class="qinput" id="${id}" placeholder="吃饭150没发票 · 打车80没开发票 · 酒店600已开票" onkeydown="if(event.key==='Enter')quickAddReimb('${id}')"><button class="addbtn" onclick="openReimbAdd()">+</button></div>`;
+  return`<div class="input-bar"><input class="qinput" id="${id}" placeholder="吃饭150没发票 · 打车80没开发票 · 酒店600已开票" onkeydown="if(event.key==='Enter')quickAddReimb(${jsAttr(id)})"><button class="addbtn" onclick="openReimbAdd()">+</button></div>`;
 }
 function updateInputHint(inputId){
   const inp=document.getElementById(inputId);const hint=document.getElementById(inputId+'-hint');
@@ -1335,13 +1559,14 @@ function calCellsHtml(prefix,clickFn,selD,mk){
     if(isToday){bg='#378ADD';txt='#fff';}
     else if(dm){const net=dm.in-dm.out;if(Math.abs(net)>=0.5){const c=cellColor(net,budget);bg=c.bg;txt=c.txt;netTxt=`<span class="${prefix}cn" style="color:${txt};opacity:.9">${net<0?'-':'+'}${Math.round(Math.abs(net))}</span>`;}}
     const selStyle=isSel&&!isToday?'outline:2px solid #378ADD;outline-offset:-1px;':'';
-    html+=`<div class="${prefix}cc" style="background:${bg};${selStyle}" onclick="${clickFn}('${ds}')"><span class="${prefix}cd" style="color:${txt}">${d}</span>${netTxt}</div>`;
+    html+=`<div class="${prefix}cc" style="background:${bg};${selStyle}" onclick="${clickFn}(${jsAttr(ds)})"><span class="${prefix}cd" style="color:${txt}">${d}</span>${netTxt}</div>`;
   }
   return html;
 }
 
 function renderApp(){
   destroyCharts();
+  const renderVersion=chartRenderVersion;
   const bs=budgetState();
   const todaySpent=bs?bs.todaySpent:RC.filter(r=>r.type==='expense'&&r.date===todayStr()).reduce((a,r)=>a+r.amount,0);
   const budget=bs?bs.daily:(parseFloat(ST.budget)||0);
@@ -1393,7 +1618,7 @@ function renderApp(){
     dr.sort((a,b)=>b.ts-a.ts).forEach(r=>{
       const isR=r.type==='reimbursement';const m=getCatMeta(r.cat||'其他',r.type);
       const ac=r.type==='income'?'in':isR?'reimb':'out';const pfx=r.type==='income'?'+':isR?'':'- ';
-      feedHtml+=`<div class="feed-entry" onclick="${isR?`openReimbEdit(${r.ts})`:`openEdit(${r.ts})`}"><div class="ficon" style="background:${m.bg}">${m.i}</div><div class="fbody"><div class="fname${isR&&r.reimbursed?' rdone':''}">${r.label||r.name||'记录'}</div><div class="fmeta"><span class="ftag" style="background:${m.bg};color:${m.tc}">${isR?'报销':r.cat}</span><span class="ftime">${r.time||''}</span></div></div><div class="famt ${ac}">${isR?'':pfx}${fmtN(r.amount)}</div>${isR&&r.reimbursed?`<span class="fdone-lbl">已报销</span>`:''}</div>`;
+      feedHtml+=`<div class="feed-entry" onclick="${isR?`openReimbEdit(${jsAttr(r.ts)})`:`openEdit(${jsAttr(r.ts)})`}"><div class="ficon" style="background:${m.bg}">${m.i}</div><div class="fbody"><div class="fname${isR&&r.reimbursed?' rdone':''}">${escHtml(r.label||r.name||'记录')}</div><div class="fmeta"><span class="ftag" style="background:${m.bg};color:${m.tc}">${escHtml(isR?'报销':r.cat)}</span><span class="ftime">${escHtml(r.time||'')}</span></div></div><div class="famt ${ac}">${isR?'':pfx}${fmtN(r.amount)}</div>${isR&&r.reimbursed?`<span class="fdone-lbl">已报销</span>`:''}</div>`;
     });
     feedHtml+='</div>';
   });
@@ -1424,7 +1649,7 @@ function renderApp(){
   const reimbFooter=pendR.length===0
     ?`<div class="reimb-footer ok">✓ 本月暂无待报销</div>`
     :nextReimb?.deadline
-      ?`<div class="reimb-footer">最近截止：${nextReimb.name} ${nextReimb.deadline}</div>`
+      ?`<div class="reimb-footer">最近截止：${escHtml(nextReimb.name)} ${escHtml(nextReimb.deadline)}</div>`
       :`<div class="reimb-footer">共 ${pendR.length} 笔待报销</div>`;
 
   // 周报趋势条
@@ -1467,7 +1692,7 @@ function renderApp(){
             <div class="rs-item"><div class="rs-v" style="color:#185FA5">${fmtN(pendAmt)}</div><div class="rs-l">待报销</div></div>
             <div class="rs-item"><div class="rs-v" style="color:${urgentReimb.length>0?'#e65100':'#aaa'}">${urgentReimb.length>0?urgentReimb.length+'笔急':'无截止'}</div><div class="rs-l">即将到期</div></div>
           </div>
-          ${urgentReimb.length?urgentReimb.slice(0,2).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${r.name}</span><span class="rmr-amt">${fmtN(r.amount)}</span><span class="rmr-dl">${daysLeft(r.deadline)}天</span></div>`).join(''):pendR.slice(0,3).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${r.name}</span><span class="rmr-amt">${fmtN(r.amount)}</span></div>`).join('')}
+          ${urgentReimb.length?urgentReimb.slice(0,2).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span><span class="rmr-dl">${daysLeft(r.deadline)}天</span></div>`).join(''):pendR.slice(0,3).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span></div>`).join('')}
           ${reimbFooter}
         </div>
         <div class="card" onclick="openDetail('pie')">
@@ -1481,11 +1706,12 @@ function renderApp(){
     ${quickInputHtml('qi-app')}`;
 
   setTimeout(()=>{
+    if(renderVersion!==chartRenderVersion||_currentTab!=='diary')return;
     const rc=document.getElementById('ring-c');
     if(rc&&window.Chart){
       const rem=Math.max(0,budget-todaySpent);
       const overSpent=todaySpent>budget?todaySpent-budget:0;
-      charts.ring=new Chart(rc,{type:'doughnut',data:{datasets:[{data:budget>0?overSpent>0?[budget,overSpent]:[todaySpent,rem]:[0,1],backgroundColor:budget>0?overSpent>0?['#e53935','#ff8a80']:['#e53935','#C8E6C9']:['#e0e0e0','#e0e0e0'],borderWidth:0}]},options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}}});
+      charts.ring=replaceChart(rc,{type:'doughnut',data:{datasets:[{data:budget>0?overSpent>0?[budget,overSpent]:[todaySpent,rem]:[0,1],backgroundColor:budget>0?overSpent>0?['#e53935','#ff8a80']:['#e53935','#C8E6C9']:['#e0e0e0','#e0e0e0'],borderWidth:0}]},options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}}});
     }
     const pc=document.getElementById('pie-c');
     if(pc&&window.Chart){
@@ -1524,7 +1750,7 @@ function renderApp(){
           });
           ctx.restore();
         }};
-        charts.pie=new Chart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:20,bottom:20,left:20,right:20}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}},plugins:[cardPiePlugin]});
+        charts.pie=replaceChart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:20,bottom:20,left:20,right:20}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}},plugins:[cardPiePlugin]});
       }else{
         const lg=document.getElementById('pie-leg');
         if(lg)lg.innerHTML=`<div style="font-size:10px;color:#bbb;text-align:center;padding:6px 0">暂无支出</div>`;
@@ -1549,7 +1775,7 @@ function switchMonth(dir){
   const vm=getViewMonth();
   const[y,m]=vm.split('-').map(Number);
   if(isCurrentMonth(vm)){selDate=todayStr();detailSel=todayStr();}
-  else{const d=`${y}-${String(m).padStart(2,'0')}-01`;selDate=d;detailSel=d;}
+  else{const d=`${escHtml(y)}-${String(m).padStart(2,'0')}-01`;selDate=d;detailSel=d;}
   // 关键修复：在详情页时停留在详情页，不跳回主页
   if(detailView)renderDetail();
   else showApp();
@@ -1561,7 +1787,7 @@ function openDetail(view){
   const vm=getViewMonth();
   if(view==='cal'&&(!detailSel||!detailSel.startsWith(vm))){
     if(isCurrentMonth(vm))detailSel=todayStr();
-    else{const[y,m]=vm.split('-').map(Number);detailSel=`${y}-${String(m).padStart(2,'0')}-01`;}
+    else{const[y,m]=vm.split('-').map(Number);detailSel=`${escHtml(y)}-${String(m).padStart(2,'0')}-01`;}
   }
   // 进入报销时自动选最有意义的tab
   if(view==='reimb')openReimbDetail();
@@ -1571,6 +1797,7 @@ function openDetail(view){
 }
 function renderDetail(){
   destroyCharts();
+  const renderVersion=chartRenderVersion;
   const ds=document.getElementById('detail-screen');
   const wds=['日','一','二','三','四','五','六'];
   let title='',body='',inputHtml=quickInputHtml('qi-detail');
@@ -1587,7 +1814,7 @@ function renderDetail(){
     const hasNextM=!isCurrentMonth(vm2);
     let dayFeed='';
     if(!selRecs.length)dayFeed=`<div style="font-size:12px;color:#bbb;text-align:center;padding:16px 0">这天还没有记录</div>`;
-    else selRecs.forEach(r=>{const m=getCatMeta(r.cat,r.type);const pfx=r.type==='income'?'+':'-';const ac=r.type==='income'?'in':'out';dayFeed+=`<div class="big-entry" onclick="openEdit(${r.ts})"><div class="ficon" style="background:${m.bg}">${m.i}</div><div class="fbody"><div class="fname">${r.label}</div><div class="fmeta"><span class="ftag" style="background:${m.bg};color:${m.tc}">${r.cat}</span><span class="ftime">${r.time||''}</span></div></div><div class="famt ${ac}">${pfx}${fmtN(r.amount)}</div></div>`;});
+    else selRecs.forEach(r=>{const m=getCatMeta(r.cat,r.type);const pfx=r.type==='income'?'+':'-';const ac=r.type==='income'?'in':'out';dayFeed+=`<div class="big-entry" onclick="openEdit(${jsAttr(r.ts)})"><div class="ficon" style="background:${m.bg}">${m.i}</div><div class="fbody"><div class="fname">${escHtml(r.label)}</div><div class="fmeta"><span class="ftag" style="background:${m.bg};color:${m.tc}">${escHtml(r.cat)}</span><span class="ftime">${escHtml(r.time||'')}</span></div></div><div class="famt ${ac}">${pfx}${fmtN(r.amount)}</div></div>`;});
     body=`
       <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#fff;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
         <button onclick="detailSwitchMonth('prev')" style="background:none;border:none;font-size:20px;color:${hasPrevM?'#378ADD':'#ddd'};cursor:${hasPrevM?'pointer':'default'};padding:2px 8px">‹</button>
@@ -1678,18 +1905,18 @@ function renderDetail(){
         const expandable=hasSubCats(c.cat);const isOpen=window._pieExpand[c.cat];
         const subs=isOpen?getSubStats(vmP,c.cat,pmode):[];
         return `<div class="d-cat-block">
-          <div class="d-cat-head" onclick="${expandable?`togglePieExpand('${c.cat}')`:`openSubDetail('${c.cat}','__all__')`}">
+          <div class="d-cat-head" onclick="${expandable?`togglePieExpand(${jsAttr(c.cat)})`:`openSubDetail(${jsAttr(c.cat)},'__all__')`}">
             <div class="d-cat-icon" style="background:${meta.bg}">${meta.i}</div>
-            <span class="d-cat-name">${c.cat}</span>
+            <span class="d-cat-name">${escHtml(c.cat)}</span>
             <span class="d-cat-meta">(${pct.toFixed(2)}%, ${c.count}笔)</span>
             <span class="d-cat-amt">${fmtN(c.total)}</span>
             ${expandable?`<span class="d-cat-arrow${isOpen?' open':''}">⌄</span>`:`<span class="d-cat-arrow" style="color:#ddd">›</span>`}
           </div>
           <div class="d-cat-barbg"><div class="d-cat-bar" style="width:${pct}%;background:${color}"></div></div>
           ${isOpen?`<div class="d-sub-list" style="border-left-color:${color}">${subs.map(s=>`
-            <div class="d-sub-row" onclick="openSubDetail('${c.cat}','${s.sub}')">
+            <div class="d-sub-row" onclick="openSubDetail(${jsAttr(c.cat)},${jsAttr(s.sub)})">
               <span class="d-sub-dot" style="background:${color}"></span>
-              <span class="d-sub-name">${s.sub}</span>
+              <span class="d-sub-name">${escHtml(s.sub)}</span>
               <span class="d-sub-amt">${fmtN(s.total)}</span>
               <span class="d-sub-meta">[${s.count}笔, ${s.pct.toFixed(2)}%]</span>
             </div>`).join('')}</div>`:''}
@@ -1709,15 +1936,15 @@ function renderDetail(){
     const groups={};recs.forEach(r=>{(groups[r.date]=groups[r.date]||[]).push(r)});
     const dates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
     const sgn=mode==='income'?'+':'-';const amtCls=mode==='income'?'in':'out';
-    body=`<div class="d-txn-head"><span>${tagTxt}</span><span class="d-txn-sum">共${recs.length}笔 · ${fmtN(sumAmt)}</span></div>
+    body=`<div class="d-txn-head"><span>${escHtml(tagTxt)}</span><span class="d-txn-sum">共${recs.length}笔 · ${fmtN(sumAmt)}</span></div>
       ${dates.map(d=>{const[y,mo,dd]=d.split('-');
-        return `<div class="d-txn-date">${y}年${Number(mo)}月${Number(dd)}日</div>
-          ${groups[d].map(r=>`<div class="d-txn-row" onclick="openEdit(${r.ts})">
-            <span class="d-txn-time">${r.time||''}</span>
+        return `<div class="d-txn-date">${escHtml(y)}年${Number(mo)}月${Number(dd)}日</div>
+          ${groups[d].map(r=>`<div class="d-txn-row" onclick="openEdit(${jsAttr(r.ts)})">
+            <span class="d-txn-time">${escHtml(r.time||'')}</span>
             <div class="d-txn-icon" style="background:${meta.bg}">${meta.i}</div>
             <div class="d-txn-mid">
-              <div class="d-txn-tag">${cat}-${getSubCat(r)||'其他'} ›</div>
-              <div class="d-txn-note">${r.label||''}</div>
+              <div class="d-txn-tag">${escHtml(cat)}-${escHtml(getSubCat(r)||'其他')} ›</div>
+              <div class="d-txn-note">${escHtml(r.label||'')}</div>
             </div>
             <span class="d-txn-amt ${amtCls}">${sgn}${fmtN(r.amount)}</span>
           </div>`).join('')}`;
@@ -1739,9 +1966,9 @@ function renderDetail(){
       <div class="d-stat"><div class="d-stat-v" style="color:#2e7d32">${fmtN(done.reduce((a,r)=>a+r.amount,0))}</div><div class="d-stat-l">已报销</div></div>
       <div class="d-stat"><div class="d-stat-v">${fmtN(RM.reduce((a,r)=>a+r.amount,0))}</div><div class="d-stat-l">总计</div></div>
     </div>
-    <div class="filter-row">${tabs.map(f=>`<button class="filter-chip${reimbFilter===f[0]?' sel':''}" onclick="setReimbFilter('${f[0]}')" style="display:flex;flex-direction:column;align-items:center;gap:1px"><span>${f[1]}${f[2]>0?' '+f[2]:''}</span>${f[3]>0?'<span style="font-size:10px;opacity:0.75">'+fmtRaw(f[3])+'</span>':''}</button>`).join('')}</div>
-    ${alerts.map(r=>`<div class="reimb-alert">⚠️ <b>${r.name}</b> 还有 ${daysLeft(r.deadline)} 天截止</div>`).join('')}
-    <div class="reimb-list">${shown.map(r=>`<div class="reimb-item" onclick="openReimbEdit(${r.ts})"><div class="ri-top"><span class="ri-name${r.reimbursed?' done':''}">${r.name}</span><span class="ri-amt">${fmtN(r.amount)}</span></div><div class="ri-bot">${r.hasInvoice?`<span class="rbadge inv">有发票·${r.invoiceStatus||'未开'}</span>`:`<span class="rbadge noinv">无发票</span>`}${r.reimbursed?`<span class="rbadge done">已报销</span>`:''}${r.deadline?`<span class="ri-dl">截止 ${r.deadline}${daysLeft(r.deadline)!=null?' ('+daysLeft(r.deadline)+'天)':''}</span>`:''}</div></div>`).join('')}${!shown.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:24px">${reimbFilter==='done'?'还没有已报销记录':'这个分类下还没有记录'}</div>`:''}</div>`;
+    <div class="filter-row">${tabs.map(f=>`<button class="filter-chip${reimbFilter===f[0]?' sel':''}" onclick="setReimbFilter(${jsAttr(f[0])})" style="display:flex;flex-direction:column;align-items:center;gap:1px"><span>${f[1]}${f[2]>0?' '+f[2]:''}</span>${f[3]>0?'<span style="font-size:10px;opacity:0.75">'+fmtRaw(f[3])+'</span>':''}</button>`).join('')}</div>
+    ${alerts.map(r=>`<div class="reimb-alert">⚠️ <b>${escHtml(r.name)}</b> 还有 ${daysLeft(r.deadline)} 天截止</div>`).join('')}
+    <div class="reimb-list">${shown.map(r=>`<div class="reimb-item" onclick="openReimbEdit(${jsAttr(r.ts)})"><div class="ri-top"><span class="ri-name${r.reimbursed?' done':''}">${escHtml(r.name)}</span><span class="ri-amt">${fmtN(r.amount)}</span></div><div class="ri-bot">${r.hasInvoice?`<span class="rbadge inv">有发票·${escHtml(r.invoiceStatus||'未开')}</span>`:`<span class="rbadge noinv">无发票</span>`}${r.reimbursed?`<span class="rbadge done">已报销</span>`:''}${r.deadline?`<span class="ri-dl">截止 ${escHtml(r.deadline)}${daysLeft(r.deadline)!=null?' ('+daysLeft(r.deadline)+'天)':''}</span>`:''}</div></div>`).join('')}${!shown.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:24px">${reimbFilter==='done'?'还没有已报销记录':'这个分类下还没有记录'}</div>`:''}</div>`;
   } else if(detailView==='report'){
     title='统计报告';inputHtml='';
     // 月报
@@ -1786,7 +2013,7 @@ function renderDetail(){
       return`<div class="trend-bar-wrap"><div style="height:${h}px;width:100%;background:${isToday?'#378ADD':'#BBDEFB'};border-radius:3px 3px 0 0"></div><div style="font-size:9px;color:#aaa;margin-top:2px">${d.label}</div><div style="font-size:8px;color:#bbb">${d.spent>0?Math.round(d.spent):'—'}</div></div>`;
     }).join('');
     // 月份选择器
-    const mkOpts=allMs.map(m=>{const[y,mo]=m.split('-').map(Number);return`<option value="${m}" ${m===rMk?'selected':''}>${y}年${mo}月</option>`}).join('');
+    const mkOpts=allMs.map(m=>{const[y,mo]=m.split('-').map(Number);return`<option value="${escHtml(m)}" ${m===rMk?'selected':''}>${escHtml(y)}年${mo}月</option>`}).join('');
     {
       body=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <select onchange="window._reportMk=this.value;renderDetail()" style="flex:1;height:36px;border-radius:10px;border:1px solid #e8e8e8;background:#fff;font-size:13px;color:#1a1a1a;padding:0 10px;outline:none">${mkOpts}</select>
@@ -1806,7 +2033,7 @@ function renderDetail(){
           ${rPrevCarry>0?`<div style="display:flex;justify-content:space-between;align-items:center;border-top:.5px solid #f0f0f0;padding-top:8px;margin-top:2px"><span style="font-size:12px;color:#888">上月结余带入</span><span style="font-size:14px;font-weight:700;color:#c62828">+${fmtN(rPrevCarry)}</span></div>`:''}
           ${rMk!==_nowMk&&rMonthBalance!==null?`<div style="display:flex;justify-content:space-between;align-items:center;border-top:.5px solid #f0f0f0;padding-top:8px;margin-top:2px"><span style="font-size:12px;color:#888">${rM}月结余</span><span style="font-size:14px;font-weight:700;color:${rMonthBalance>=0?'#c62828':'#2e7d32'}">${rMonthBalance>=0?'+':''}${fmtN(rMonthBalance)}</span></div>`:''}
           ${msP.totalSpent>0?`<div style="margin-top:8px;text-align:center"><span class="rc-compare ${diffSpent>0?'up':'down'}">${diffSpent>0?'↑':'↓'} 比上月${diffSpent>0?'多':'少'} ${fmtN(Math.abs(diffSpent))}</span></div>`:''}
-          ${msR.maxDay?`<div style="font-size:11px;color:#aaa;text-align:center;margin-top:6px">消费最多：${msR.maxDay[0].slice(5)} 花了 ${fmtN(msR.maxDay[1])}</div>`:''}
+          ${msR.maxDay?`<div style="font-size:11px;color:#aaa;text-align:center;margin-top:6px">消费最多：${escHtml(msR.maxDay[0].slice(5))} 花了 ${fmtN(msR.maxDay[1])}</div>`:''}
         </div>
         <div class="report-card">
           <div class="rc-title">支出分类</div>
@@ -1814,7 +2041,7 @@ function renderDetail(){
             const m=getCatMeta(cv.cat,'expense');
             return`<div class="top-cat-row">
               <span class="top-cat-icon">${m.i}</span>
-              <span class="top-cat-name">${cv.cat}</span>
+              <span class="top-cat-name">${escHtml(cv.cat)}</span>
               <div class="top-cat-bar-bg"><div class="top-cat-bar" style="width:${totalR>0?Math.round(cv.total/totalR*100):0}%;background:${PIE_COLORS[i%9]}"></div></div>
               <span class="top-cat-amt">${fmtN(cv.total)}</span>
             </div>`;
@@ -1832,10 +2059,11 @@ function renderDetail(){
     }
   }
 
-  ds.innerHTML=`<div class="detail-bar"><button class="back-btn" onclick="detailBack()">←</button><div class="detail-title">${title}</div></div><div class="detail-body">${body}</div>${inputHtml}`;
+  ds.innerHTML=`<div class="detail-bar"><button class="back-btn" onclick="detailBack()">←</button><div class="detail-title">${escHtml(title)}</div></div><div class="detail-body">${body}</div>${inputHtml}`;
 
   if(detailView==='pie'){
     setTimeout(()=>{
+    if(renderVersion!==chartRenderVersion||_currentTab!=='diary')return;
       const vmPie=getViewMonth();
       const pm=window._pieMode||'expense';
       const catSpend={};RC.filter(r=>r.type===pm&&r.date&&r.date.startsWith(vmPie)).forEach(r=>{catSpend[r.cat]=(catSpend[r.cat]||0)+r.amount});
@@ -1882,7 +2110,7 @@ function renderDetail(){
         });
         ctx.restore();
       }};
-      if(pc&&entries.length&&window.Chart)charts.dpie=new Chart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:18,bottom:18,left:70,right:70}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[leaderLabels]});
+      if(pc&&entries.length&&window.Chart)charts.dpie=replaceChart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:18,bottom:18,left:70,right:70}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[leaderLabels]});
     },30);
   }
   checkModal();
@@ -1921,8 +2149,8 @@ function renderSettingsPanel(){
   const curExtra=ST.hasExtra?(parseFloat(ST.extraAmount)||0):0;
   const histRows=hist.slice().reverse().slice(0,5).map(h=>`
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid #e8e8e8;font-size:12px">
-      <span style="color:#888">${h.from} 起</span>
-      <span style="color:#1a1a1a">日预算 ¥${h.daily} · 零花 ¥${h.extra}</span>
+      <span style="color:#888">${escHtml(h.from)} 起</span>
+      <span style="color:#1a1a1a">日预算 ¥${escHtml(h.daily)} · 零花 ¥${escHtml(h.extra)}</span>
     </div>`).join('');
   const p=periodBounds(todayStr());
   ov.innerHTML=`<div class="modal-sheet">
@@ -1941,7 +2169,7 @@ function renderSettingsPanel(){
     ${hist.length?`<div class="msec-title" style="font-size:12px;font-weight:600;color:#aaa;margin-bottom:6px">历史预算记录</div><div>${histRows}</div>`:''}
     <div class="msec-title" style="font-size:12px;font-weight:600;color:#aaa;margin:12px 0 8px">其他设置</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">结算日</span><input id="s-settle" type="number" inputmode="numeric" min="1" max="31" value="${ST.settleDay||1}"><span style="font-size:11px;color:#aaa;margin-left:4px">号</span></div>
+      <div class="mfield"><span class="mflbl">结算日</span><input id="s-settle" type="number" inputmode="numeric" min="1" max="31" value="${escHtml(ST.settleDay||1)}"><span style="font-size:11px;color:#aaa;margin-left:4px">号</span></div>
       <div class="mfield"><span class="mflbl">结余继承</span>
         <select id="s-carry">
           <option value="yes" ${ST.carryover==='yes'?'selected':''}>继承到下个周期</option>
@@ -1974,8 +2202,9 @@ function renderSettingsPanel(){
 function saveSettingsPanel(){
   // 下个周期生效
   const p=periodBounds(todayStr());
-  const daily=parseFloat(document.getElementById('s-daily')?.value)||50;
-  const extra=parseFloat(document.getElementById('s-extra')?.value)||0;
+  const daily=Number(document.getElementById('s-daily')?.value);
+  const extra=Number(document.getElementById('s-extra')?.value);
+  if(!Number.isFinite(daily)||daily<=0||!Number.isFinite(extra)||extra<0){showToast('请输入有效日预算和非负零花钱');return;}
   // 找下个周期开始日
   const nextStart=new Date(p.end+'T00:00:00');nextStart.setDate(nextStart.getDate()+1);
   applyBudgetChange(daily,extra,dateStr(nextStart));
@@ -1984,13 +2213,16 @@ function saveSettingsPanel(){
 function saveSettingsPanelNow(){
   // 立即生效（当前周期）
   const p=periodBounds(todayStr());
-  const daily=parseFloat(document.getElementById('s-daily')?.value)||50;
-  const extra=parseFloat(document.getElementById('s-extra')?.value)||0;
+  const daily=Number(document.getElementById('s-daily')?.value);
+  const extra=Number(document.getElementById('s-extra')?.value);
+  if(!Number.isFinite(daily)||daily<=0||!Number.isFinite(extra)||extra<0){showToast('请输入有效日预算和非负零花钱');return;}
   applyBudgetChange(daily,extra,p.start);
   modal=null;showToast('已立即生效');detailView?renderDetail():showApp();
 }
 function saveOtherSettings(){
-  ST.settleDay=parseInt(document.getElementById('s-settle')?.value)||1;
+  const day=Number(document.getElementById('s-settle')?.value);
+  if(!Number.isInteger(day)||day<1||day>31){showToast('结算日请输入1至31的整数');return;}
+  ST.settleDay=day;
   ST.carryover=document.getElementById('s-carry')?.value||'yes';
   ST.income_merge=document.getElementById('s-income')?.value||'yes';
   ST.show_reimb=document.getElementById('s-reimb')?.value||'no';
@@ -1998,6 +2230,7 @@ function saveOtherSettings(){
   const s=ld();s.settings=ST;sv(s);
   modal=null;showToast('设置已保存');detailView?renderDetail():showApp();
 }
+
 function renderExtraEditModal(){
   const ov=mkOverlay();
   const cur=ST.hasExtra?(parseFloat(ST.extraAmount)||0):0;
@@ -2012,15 +2245,18 @@ function renderExtraEditModal(){
   document.getElementById('panel-diary').appendChild(ov);
 }
 function saveExtraEdit(){
-  const v=parseFloat(document.getElementById('extra-val')?.value)||0;
-  if(v>0){ST.hasExtra=true;ST.extraAmount=v;}
-  else{ST.hasExtra=false;ST.extraAmount=0;}
-  const s=ld();s.settings=ST;sv(s);
+  const raw=document.getElementById('extra-val')?.value;
+  const extra=Number(raw);
+  if(raw==null||raw.trim()===''||!Number.isFinite(extra)||extra<0){showToast('请输入有效的非负零花钱金额');return;}
+  const period=periodBounds(todayStr());
+  const current=getSettingsForPeriod(period.start);
+  applyBudgetChange(current.daily,extra,period.start);
   modal=null;showToast('零花钱已更新');detailView?renderDetail():showApp();
 }
+
 function mkOverlay(){const ov=document.createElement('div');ov.className='modal-overlay';ov.addEventListener('click',e=>{if(e.target===ov){modal=null;detailView?renderDetail():showApp()}});return ov;}
 function mTypeBtns(){return`<button class="mtbtn${mType==='expense'?' so':''}" onclick="setMType('expense')">− 支出</button><button class="mtbtn${mType==='income'?' si':''}" onclick="setMType('income')">+ 收入</button>`}
-function mCatsHtml(){const cats=mType==='income'?ICATS:ECATS;return cats.map(c=>`<div class="mcat${mCat===c.k?' sel':''}" onclick="setMCat('${c.k}')">${c.i} ${c.k}</div>`).join('')}
+function mCatsHtml(){const cats=mType==='income'?ICATS:ECATS;return cats.map(c=>`<div class="mcat${mCat===c.k?' sel':''}" onclick="setMCat(${jsAttr(c.k)})">${c.i} ${c.k}</div>`).join('')}
 function openAdd(){selDate=currentEntryDate();modal='add';mType='expense';mCat='餐饮';mTs=null;detailView?renderDetail():showApp()}
 function openEdit(ts){mTs=ts;modal='edit';const r=RC.find(r=>r.ts===ts);if(!r)return;mType=r.type;mCat=r.cat;detailView?renderDetail():showApp()}
 function openReimbAdd(){modal='reimb-add';mTs=null;tmpR={hasInvoice:false,invoiceStatus:'未开',reimbursed:false,deadline:'',cat:'其他'};detailView?renderDetail():showApp()}
@@ -2030,16 +2266,17 @@ function openSettings(){modal='settings-panel';detailView?renderDetail():showApp
 function renderDataModal(){
   const c=dataCounts();const ov=mkOverlay();
   ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">数据备份与恢复</div>
-    <div class="data-note">一次导出包含全部数据：<b>记账日记</b>（${c.records}条）+ <b>报销</b>（${c.reimbs}条）+ <b>本月账单</b> + <b>财务总览</b>（${c.financeCount}个项目）<br>导入时一次恢复全部，换设备也能用。</div>
+    <div class="data-note">一次导出包含全部数据：<b>记账日记</b>（${c.records}条）+ <b>报销</b>（${c.reimbs}条）+ <b>本月账单</b> + <b>财务总览</b>（${c.financeCount}个项目）<br>完整备份恢复全部模块；旧版或部分备份只恢复包含的数据。</div>
     <div class="data-actions">
       <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
       <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
-      <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除缓存并重载</button>
+      <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
+      <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除本应用数据并重载</button>
     </div>
-    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px;line-height:1.6">清除缓存会清空所有本地数据，请先导出备份</div>
+    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px;line-height:1.6">清除本应用的账本和恢复副本，请先导出备份</div>
     <input id="backup-file" type="file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
     <div class="sumcard">
-      <div class="sumrow"><span class="sumk">最后备份</span><span class="sumv">${c.lastBackup?c.lastBackup.slice(0,10):'未备份'}</span></div>
+      <div class="sumrow"><span class="sumk">最后备份</span><span class="sumv">${escHtml(c.lastBackup?c.lastBackup.slice(0,10):'未备份')}</span></div>
       <div class="sumrow"><span class="sumk">记账流水</span><span class="sumv">${c.records} 条</span></div>
       <div class="sumrow"><span class="sumk">报销记录</span><span class="sumv">${c.reimbs} 条</span></div>
       <div class="sumrow"><span class="sumk">财务总览</span><span class="sumv">${c.financeCount} 个投资项目</span></div>
@@ -2050,25 +2287,25 @@ function renderDataModal(){
 }
 function renderAddModal(){
   const ov=mkOverlay();
-  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">新增记录</div><div class="mtype-row">${mTypeBtns()}</div><div class="mcats" id="mc">${mCatsHtml()}</div><div class="mfields"><div class="mfield"><span class="mflbl">备注</span><input id="mn" inputmode="text" placeholder="发生了什么..."></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ma" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"></div><div class="mfield"><span class="mflbl">日期</span><input id="md" type="date" value="${currentEntryDate()}"></div><div class="mfield"><span class="mflbl">时间</span><input id="mt" type="time" value="${nowStr()}"></div></div><button class="msub" onclick="submitAdd()">记录</button></div>`;
+  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">新增记录</div><div class="mtype-row">${mTypeBtns()}</div><div class="mcats" id="mc">${mCatsHtml()}</div><div class="mfields"><div class="mfield"><span class="mflbl">备注</span><input id="mn" inputmode="text" placeholder="发生了什么..."></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ma" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"></div><div class="mfield"><span class="mflbl">日期</span><input id="md" type="date" value="${escHtml(currentEntryDate())}"></div><div class="mfield"><span class="mflbl">时间</span><input id="mt" type="time" value="${nowStr()}"></div></div><button class="msub" onclick="submitAdd()">记录</button></div>`;
   document.getElementById('panel-diary').appendChild(ov);
 }
 function renderEditModal(){
   const r=RC.find(r=>r.ts===mTs);if(!r)return;
   const ov=mkOverlay();
-  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">编辑记录</div><div class="mtype-row">${mTypeBtns()}</div><div class="mcats" id="mc">${mCatsHtml()}</div><div class="mfields"><div class="mfield"><span class="mflbl">备注</span><input id="mn" value="${r.label}"></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ma" type="number" inputmode="decimal" min="0" step="0.01" value="${r.amount}"></div><div class="mfield"><span class="mflbl">日期</span><input id="md" type="date" value="${r.date||selDate}"></div><div class="mfield"><span class="mflbl">时间</span><input id="mt" type="time" value="${normalizeTime(r.time||nowStr())}"></div></div><button class="msub" onclick="submitEdit()">保存修改</button><button class="mdel" onclick="delRec(${r.ts})">删除这条记录</button></div>`;
+  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">编辑记录</div><div class="mtype-row">${mTypeBtns()}</div><div class="mcats" id="mc">${mCatsHtml()}</div><div class="mfields"><div class="mfield"><span class="mflbl">备注</span><input id="mn" value="${escHtml(r.label)}"></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ma" type="number" inputmode="decimal" min="0" step="0.01" value="${escHtml(r.amount)}"></div><div class="mfield"><span class="mflbl">日期</span><input id="md" type="date" value="${escHtml(r.date||selDate)}"></div><div class="mfield"><span class="mflbl">时间</span><input id="mt" type="time" value="${escHtml(normalizeTime(r.time||nowStr()))}"></div></div><button class="msub" onclick="submitEdit()">保存修改</button><button class="mdel" onclick="delRec(${jsAttr(r.ts)})">删除这条记录</button></div>`;
   document.getElementById('panel-diary').appendChild(ov);
 }
 function invOpts(cur){return['未开','已开','已拿到'].map(s=>`<div class="mreimb-opt${cur===s?' sel':''}" onclick="setInvSt('${s}')">${s}</div>`).join('')}
 function renderReimbAddModal(){
   const ov=mkOverlay();
-  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">新增报销</div><div class="mcats" id="mc-r">${RCATS.map(c=>`<div class="mcat${tmpR.cat===c.k?' sel':''}" onclick="setRC('${c.k}')">${c.i} ${c.k}</div>`).join('')}</div><div class="mfields"><div class="mfield"><span class="mflbl">名称</span><input id="rn" inputmode="text" placeholder="报销事由..."></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ra" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"></div><div class="mfield"><span class="mflbl">日期</span><input id="rdate" type="date" value="${currentEntryDate()}"></div><div class="mfield"><span class="mflbl">截止日</span><input id="rd" type="date" value="${tmpR.deadline}"></div></div><div class="mreimb-sec"><div class="mreimb-sec-title">发票状态</div><div class="mreimb-row"><span class="mreimb-lbl">有发票</span><div class="mreimb-opts"><div class="mreimb-opt${!tmpR.hasInvoice?' sel':''}" onclick="setHasInv(false)">没有</div><div class="mreimb-opt${tmpR.hasInvoice?' sel':''}" onclick="setHasInv(true)">有</div></div></div><div class="mreimb-row" id="inv-row" style="${tmpR.hasInvoice?'':'display:none'}"><span class="mreimb-lbl">开票进度</span><div class="mreimb-opts" id="inv-opts">${invOpts(tmpR.invoiceStatus)}</div></div></div><button class="msub" onclick="submitReimbAdd()">记录报销</button></div>`;
+  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">新增报销</div><div class="mcats" id="mc-r">${RCATS.map(c=>`<div class="mcat${tmpR.cat===c.k?' sel':''}" onclick="setRC(${jsAttr(c.k)})">${c.i} ${c.k}</div>`).join('')}</div><div class="mfields"><div class="mfield"><span class="mflbl">名称</span><input id="rn" inputmode="text" placeholder="报销事由..."></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ra" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"></div><div class="mfield"><span class="mflbl">日期</span><input id="rdate" type="date" value="${escHtml(currentEntryDate())}"></div><div class="mfield"><span class="mflbl">截止日</span><input id="rd" type="date" value="${escHtml(tmpR.deadline)}"></div></div><div class="mreimb-sec"><div class="mreimb-sec-title">发票状态</div><div class="mreimb-row"><span class="mreimb-lbl">有发票</span><div class="mreimb-opts"><div class="mreimb-opt${!tmpR.hasInvoice?' sel':''}" onclick="setHasInv(false)">没有</div><div class="mreimb-opt${tmpR.hasInvoice?' sel':''}" onclick="setHasInv(true)">有</div></div></div><div class="mreimb-row" id="inv-row" style="${tmpR.hasInvoice?'':'display:none'}"><span class="mreimb-lbl">开票进度</span><div class="mreimb-opts" id="inv-opts">${invOpts(tmpR.invoiceStatus)}</div></div></div><button class="msub" onclick="submitReimbAdd()">记录报销</button></div>`;
   document.getElementById('panel-diary').appendChild(ov);
 }
 function renderReimbEditModal(){
   const r=RM.find(r=>r.ts===mTs);if(!r)return;
   const ov=mkOverlay();
-  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">编辑报销</div><div class="mcats" id="mc-r">${RCATS.map(c=>`<div class="mcat${tmpR.cat===c.k?' sel':''}" onclick="setRC('${c.k}')">${c.i} ${c.k}</div>`).join('')}</div><div class="mfields"><div class="mfield"><span class="mflbl">名称</span><input id="rn" value="${r.name}"></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ra" type="number" inputmode="decimal" min="0" step="0.01" value="${r.amount}"></div><div class="mfield"><span class="mflbl">日期</span><input id="rdate" type="date" value="${r.date||selDate}"></div><div class="mfield"><span class="mflbl">截止日</span><input id="rd" type="date" value="${r.deadline||''}"></div></div><div class="mreimb-sec"><div class="mreimb-sec-title">发票状态</div><div class="mreimb-row"><span class="mreimb-lbl">有发票</span><div class="mreimb-opts"><div class="mreimb-opt${!tmpR.hasInvoice?' sel':''}" onclick="setHasInv(false)">没有</div><div class="mreimb-opt${tmpR.hasInvoice?' sel':''}" onclick="setHasInv(true)">有</div></div></div><div class="mreimb-row" id="inv-row" style="${tmpR.hasInvoice?'':'display:none'}"><span class="mreimb-lbl">开票进度</span><div class="mreimb-opts" id="inv-opts">${invOpts(tmpR.invoiceStatus)}</div></div></div><button class="mark-reimb-btn${r.reimbursed?' done':''}" onclick="toggleReimbDone(${r.ts})">${r.reimbursed?'✓ 已报销（点击撤销）':'标记为已报销'}</button><button class="msub" onclick="submitReimbEdit()">保存修改</button><button class="mdel" onclick="delReimb(${r.ts})">删除</button></div>`;
+  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">编辑报销</div><div class="mcats" id="mc-r">${RCATS.map(c=>`<div class="mcat${tmpR.cat===c.k?' sel':''}" onclick="setRC(${jsAttr(c.k)})">${c.i} ${c.k}</div>`).join('')}</div><div class="mfields"><div class="mfield"><span class="mflbl">名称</span><input id="rn" value="${escHtml(r.name)}"></div><div class="mfield"><span class="mflbl">¥ 金额</span><input id="ra" type="number" inputmode="decimal" min="0" step="0.01" value="${escHtml(r.amount)}"></div><div class="mfield"><span class="mflbl">日期</span><input id="rdate" type="date" value="${escHtml(r.date||selDate)}"></div><div class="mfield"><span class="mflbl">截止日</span><input id="rd" type="date" value="${escHtml(r.deadline||'')}"></div></div><div class="mreimb-sec"><div class="mreimb-sec-title">发票状态</div><div class="mreimb-row"><span class="mreimb-lbl">有发票</span><div class="mreimb-opts"><div class="mreimb-opt${!tmpR.hasInvoice?' sel':''}" onclick="setHasInv(false)">没有</div><div class="mreimb-opt${tmpR.hasInvoice?' sel':''}" onclick="setHasInv(true)">有</div></div></div><div class="mreimb-row" id="inv-row" style="${tmpR.hasInvoice?'':'display:none'}"><span class="mreimb-lbl">开票进度</span><div class="mreimb-opts" id="inv-opts">${invOpts(tmpR.invoiceStatus)}</div></div></div><button class="mark-reimb-btn${r.reimbursed?' done':''}" onclick="toggleReimbDone(${jsAttr(r.ts)})">${r.reimbursed?'✓ 已报销（点击撤销）':'标记为已报销'}</button><button class="msub" onclick="submitReimbEdit()">保存修改</button><button class="mdel" onclick="delReimb(${jsAttr(r.ts)})">删除</button></div>`;
   document.getElementById('panel-diary').appendChild(ov);
 }
 function setMType(t){mType=t;mCat=(t==='income'?ICATS:ECATS)[0].k;document.getElementById('mc').innerHTML=mCatsHtml();document.querySelectorAll('.mtbtn').forEach((b,i)=>{b.className='mtbtn'+(i===0&&t==='expense'?' so':i===1&&t==='income'?' si':'')})}
@@ -2079,14 +2316,14 @@ function setInvSt(s){tmpR.invoiceStatus=s;document.getElementById('inv-opts')?.q
 function submitAdd(){
   const note=document.getElementById('mn')?.value.trim()||'记录';const amt=parseFloat(document.getElementById('ma')?.value);
   const date=document.getElementById('md')?.value||currentEntryDate();const time=normalizeTime(document.getElementById('mt')?.value||nowStr());
-  if(!amt||amt<=0){showToast('请输入有效金额');return;}
+  if(!Number.isFinite(amt)||amt<=0){showToast('请输入有效金额');return;}
   RC.push({type:mType,amount:amt,label:note,cat:mCat,date,time,ts:makeTs(date,time)});
   selDate=date;detailSel=date;saveState();modal=null;detailView?renderDetail():showApp();
 }
 function submitEdit(){
   const note=document.getElementById('mn')?.value.trim()||'记录';const amt=parseFloat(document.getElementById('ma')?.value);
   const date=document.getElementById('md')?.value||selDate;const time=normalizeTime(document.getElementById('mt')?.value||nowStr());
-  if(!amt||amt<=0){showToast('请输入有效金额');return;}
+  if(!Number.isFinite(amt)||amt<=0){showToast('请输入有效金额');return;}
   const idx=RC.findIndex(r=>r.ts===mTs);
   if(idx>=0)RC[idx]={...RC[idx],type:mType,amount:amt,label:note,cat:mCat,date,time,ts:makeTs(date,time)};
   selDate=date;detailSel=date;saveState();modal=null;detailView?renderDetail():showApp();
@@ -2095,14 +2332,14 @@ function delRec(ts){RC=RC.filter(r=>r.ts!==ts);saveState();modal=null;detailView
 function submitReimbAdd(){
   const name=document.getElementById('rn')?.value.trim()||'报销';const amt=parseFloat(document.getElementById('ra')?.value);
   const date=document.getElementById('rdate')?.value||currentEntryDate();const deadline=document.getElementById('rd')?.value||'';const time=nowStr();
-  if(!amt||amt<=0){showToast('请输入有效金额');return;}
+  if(!Number.isFinite(amt)||amt<=0){showToast('请输入有效金额');return;}
   RM.push({name,amount:amt,date,time,ts:makeTs(date,time),hasInvoice:tmpR.hasInvoice,invoiceStatus:tmpR.invoiceStatus,reimbursed:false,deadline,cat:tmpR.cat});
   selDate=date;detailSel=date;saveState();modal=null;detailView?renderDetail():showApp();
 }
 function submitReimbEdit(){
   const name=document.getElementById('rn')?.value.trim()||'报销';const amt=parseFloat(document.getElementById('ra')?.value);
   const date=document.getElementById('rdate')?.value||selDate;const deadline=document.getElementById('rd')?.value||'';
-  if(!amt||amt<=0){showToast('请输入有效金额');return;}
+  if(!Number.isFinite(amt)||amt<=0){showToast('请输入有效金额');return;}
   const idx=RM.findIndex(r=>r.ts===mTs);
   if(idx>=0)Object.assign(RM[idx],{name,amount:amt,date,deadline,hasInvoice:tmpR.hasInvoice,invoiceStatus:tmpR.invoiceStatus,cat:tmpR.cat,ts:makeTs(date,RM[idx].time||nowStr())});
   selDate=date;detailSel=date;saveState();modal=null;detailView?renderDetail():showApp();
@@ -2190,8 +2427,22 @@ let M_BILLS_STATUS={};
 let M_modal=null;
 let M_editTarget=null;
 
+// Water/electricity is now recorded as actual diary expense. Keep old information in backups.
+function M_migrateUtilityToDiary(s){
+  if(s.utilityInDiary===true)return s;
+  const next={...s,utilityInDiary:true};
+  if(Array.isArray(s.bills)){
+    const isUtility=b=>/^(水电|水电费|水费|电费|水电燃气费)$/.test(String(b.name||'').trim())||b.id==='utility';
+    const removed=s.bills.filter(isUtility);
+    next.bills=s.bills.filter(b=>!isUtility(b));
+    if(removed.length)next.archivedUtilityBills=[...(Array.isArray(s.archivedUtilityBills)?s.archivedUtilityBills:[]),...removed];
+  }
+  // Existing utility balance and historical bill payments remain available in exports.
+  try{M_sv(next);}catch(e){showToast('水电设置暂未保存，原账单已保留；请检查浏览器存储空间后重试');return s;}
+  return next;
+}
 function M_loadData(){
-  const s=M_ld(M_SK);
+  const s=M_migrateUtilityToDiary(M_ld(M_SK));
   M_CFG={
     bills:s.bills||DEFAULT_SETTINGS.bills,
     utility:Object.assign({},DEFAULT_SETTINGS.utility,s.utility||{}),
@@ -2234,16 +2485,10 @@ function M_getAlerts(){
     const status=M_getBillStatus(bill.id);
     if(!status.paid){
       const daysUntil=bill.dueDay-today;
-      if(daysUntil>=0&&daysUntil<=alertDays)alerts.push(`${bill.name} ¥${bill.amount} 还有 ${daysUntil===0?'今天':daysUntil+'天'} 到期`);
-      else if(daysUntil<0)alerts.push(`${bill.name} ¥${bill.amount} 已逾期 ${Math.abs(daysUntil)} 天`);
+      if(daysUntil>=0&&daysUntil<=alertDays)alerts.push(`${bill.name} ¥${escHtml(bill.amount)} 还有 ${daysUntil===0?'今天':daysUntil+'天'} 到期`);
+      else if(daysUntil<0)alerts.push(`${bill.name} ¥${escHtml(bill.amount)} 已逾期 ${Math.abs(daysUntil)} 天`);
     }
   });
-  // 水电余额预警
-  const util=M_CFG.utility;
-  if(util.balance>0&&util.monthlyAvg>0){
-    const dLeft=Math.floor(util.balance/(util.monthlyAvg/30));
-    if(dLeft<=10)alerts.push(`水电余额仅剩 ${M_fmt(util.balance)} 预计还能用 ${dLeft} 天`);
-  }
   return alerts;
 }
 
@@ -2273,7 +2518,7 @@ function M_renderMain(){
   const d=new Date();
   document.getElementById('M_month_label').textContent=`${d.getMonth()+1}月`;
 
-  let alertHtml=alerts.map(a=>`<div class="alert-banner">⚠️ ${a}</div>`).join('');
+  let alertHtml=alerts.map(a=>`<div class="alert-banner">⚠️ ${escHtml(a)}</div>`).join('');
 
   const heroHtml=`
     <div class="hero-card">
@@ -2300,54 +2545,17 @@ function M_renderMain(){
     const st=M_getBillStatus(bill.id);
     const amt=st.actualAmount!=null?st.actualAmount:bill.amount;
     const daysUntil=bill.dueDay-today;
-    const dueStr=st.paid?`已付 ${st.paidDate||''}`:daysUntil<0?`逾期 ${Math.abs(daysUntil)} 天`:daysUntil===0?'今天到期！':`${bill.dueDay}号付 · 还有${daysUntil}天`;
+    const dueStr=st.paid?`已付 ${st.paidDate||''}`:daysUntil<0?`逾期 ${Math.abs(daysUntil)} 天`:daysUntil===0?'今天到期！':`${escHtml(bill.dueDay)}号付 · 还有${daysUntil}天`;
     const dueClass=(!st.paid&&daysUntil<=3)?'urgent':'';
-    return`<div class="bill-item" onclick="M_openBillEdit('${bill.id}')">
-      <div class="bill-icon" style="background:${bill.iconBg||'#f0f0f5'}">${bill.icon||'💰'}</div>
-      <div class="bill-body"><div class="bill-name">${bill.name}</div><div class="bill-due ${dueClass}">${dueStr}</div></div>
+    return`<div class="bill-item" onclick="M_openBillEdit(${jsAttr(bill.id)})">
+      <div class="bill-icon" style="background:${safeColor(bill.iconBg)}">${escHtml(bill.icon||'💰')}</div>
+      <div class="bill-body"><div class="bill-name">${escHtml(bill.name)}</div><div class="bill-due ${dueClass}">${escHtml(dueStr)}</div></div>
       <div class="bill-right">
         <div class="bill-amt">${M_fmt(amt)}</div>
-        <div class="bill-status ${st.paid?'paid':'unpaid'}" onclick="event.stopPropagation();M_toggleBillPaid('${bill.id}')">${st.paid?'✓ 已付':'待付'}</div>
+        <div class="bill-status ${st.paid?'paid':'unpaid'}" onclick="event.stopPropagation();M_toggleBillPaid(${jsAttr(bill.id)})">${st.paid?'✓ 已付':'待付'}</div>
       </div>
     </div>`;
   }).join('');
-
-  // 水电追踪卡片
-  // 进度条：当前余额相对于"安全储备量"（3个月消耗）
-  const safeReserve=util.monthlyAvg*3;
-  const barPct=safeReserve>0?Math.min(100,Math.round(util.balance/safeReserve*100)):100;
-  const barColor=barPct>60?'#43a047':barPct>30?'#EF9F27':'#e53935';
-  const utilHtml=`
-    <div class="utility-card" onclick="M_openUtilityEdit()">
-      <div class="uc-top">
-        <div class="uc-left">
-          <div class="uc-icon">💡</div>
-          <div class="uc-info">
-            <div class="uc-name">水电账户余额</div>
-            <div class="uc-sub">月均消耗 ${M_fmt(util.monthlyAvg)}${util.lastUpdate?' · 更新'+util.lastUpdate:''}</div>
-          </div>
-        </div>
-        <div class="uc-balance ${utilStatus}">${M_fmt(util.balance)}</div>
-      </div>
-      <div class="uc-bar-wrap">
-        <div class="uc-bar-bg"><div class="uc-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
-      </div>
-      <div class="uc-stats">
-        <div class="uc-stat">
-          <div class="uc-sl">预计可用</div>
-          <div class="uc-sv ${utilStatus==='low'?'warn':''}">${daysLeftUtil>999?'充足':daysLeftUtil+'天'}</div>
-        </div>
-        <div class="uc-stat">
-          <div class="uc-sl">本月预计消耗</div>
-          <div class="uc-sv">${M_fmt(thisMonthConsume)}</div>
-        </div>
-        <div class="uc-stat">
-          <div class="uc-sl">月底预计余额</div>
-          <div class="uc-sv" style="color:${afterThisMonth>=0?'#2e7d32':'#e65100'}">${afterThisMonth>=0?'':'-'}${M_fmt(Math.abs(afterThisMonth))}</div>
-        </div>
-      </div>
-      ${afterThisMonth>0?`<div class="uc-note">💰 月底预计剩余 ${M_fmt(afterThisMonth)}，可转入现金安全垫</div>`:''}
-    </div>`;
 
   // 浮动预算
 
@@ -2355,9 +2563,8 @@ function M_renderMain(){
     ${alertHtml}
     ${heroHtml}
     <div class="section-hdr"><span class="section-title">固定账单</span><button class="section-btn" onclick="M_openAddBill()">+ 新增</button></div>
-    <div class="bill-card">${billsHtml}</div>
-    <div class="section-hdr"><span class="section-title">水电追踪</span></div>
-    ${utilHtml}`;
+    <div class="bill-card">${billsHtml||'<div style="padding:16px;color:#888">暂无固定账单</div>'}</div>
+    <div style="padding:10px 4px;font-size:12px;color:#888">水电缴费请在记账中选择「支出 → 水电」，按实际缴费金额记录。</div>`;
   M_checkModal();
 }
 
@@ -2390,25 +2597,25 @@ function M_renderBillEditModal(){
   const st=M_getBillStatus(bill.id);const ov=M_mkOverlay();
   ov.innerHTML=`<div class="modal-sheet">
     <div class="mhandle"></div>
-    <div class="mtitle">${bill.name}</div>
+    <div class="mtitle">${escHtml(bill.name)}</div>
     <div class="msec-title">付款状态</div>
     <div class="mpaid-row">
-      <button class="mpaid-btn ${!st.paid?'sel-unpaid':''}" onclick="M_setBillPaid('${bill.id}',false)">待付</button>
-      <button class="mpaid-btn ${st.paid?'sel-paid':''}" onclick="M_setBillPaid('${bill.id}',true)">✓ 已付</button>
+      <button class="mpaid-btn ${!st.paid?'sel-unpaid':''}" onclick="M_setBillPaid(${jsAttr(bill.id)},false)">待付</button>
+      <button class="mpaid-btn ${st.paid?'sel-paid':''}" onclick="M_setBillPaid(${jsAttr(bill.id)},true)">✓ 已付</button>
     </div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">本月金额</span><input id="b-amt" type="number" inputmode="decimal" min="0" step="0.01" value="${st.actualAmount!=null?st.actualAmount:bill.amount}"></div>
-      <div class="mfield"><span class="mflbl">付款日期</span><input id="b-date" type="date" value="${st.paidDate||todayStr()}"></div>
+      <div class="mfield"><span class="mflbl">本月金额</span><input id="b-amt" type="number" inputmode="decimal" min="0" step="0.01" value="${escHtml(st.actualAmount!=null?st.actualAmount:bill.amount)}"></div>
+      <div class="mfield"><span class="mflbl">付款日期</span><input id="b-date" type="date" value="${escHtml(st.paidDate||todayStr())}"></div>
     </div>
-    <button class="msub" onclick="M_saveBillEdit('${bill.id}')">保存</button>
+    <button class="msub" onclick="M_saveBillEdit(${jsAttr(bill.id)})">保存</button>
     <div class="msec-title">账单设置</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">账单名称</span><input id="b-name" value="${bill.name}"></div>
-      <div class="mfield"><span class="mflbl">默认金额</span><input id="b-default" type="number" inputmode="decimal" min="0" step="0.01" value="${bill.amount}"></div>
-      <div class="mfield"><span class="mflbl">付款日</span><input id="b-due" type="number" inputmode="numeric" min="1" max="31" value="${bill.dueDay}"><span style="font-size:12px;color:#aaa;margin-left:4px">号</span></div>
+      <div class="mfield"><span class="mflbl">账单名称</span><input id="b-name" value="${escHtml(bill.name)}"></div>
+      <div class="mfield"><span class="mflbl">默认金额</span><input id="b-default" type="number" inputmode="decimal" min="0" step="0.01" value="${escHtml(bill.amount)}"></div>
+      <div class="mfield"><span class="mflbl">付款日</span><input id="b-due" type="number" inputmode="numeric" min="1" max="31" value="${escHtml(bill.dueDay)}"><span style="font-size:12px;color:#aaa;margin-left:4px">号</span></div>
     </div>
-    <button class="msub" style="background:#888" onclick="M_saveBillConfig('${bill.id}')">保存账单设置</button>
-    <button class="mdel" onclick="M_deleteBill('${bill.id}')">删除此账单</button>
+    <button class="msub" style="background:#888" onclick="M_saveBillConfig(${jsAttr(bill.id)})">保存账单设置</button>
+    <button class="mdel" onclick="M_deleteBill(${jsAttr(bill.id)})">删除此账单</button>
   </div>`;
   document.getElementById('panel-monthly').appendChild(ov);
 }
@@ -2418,19 +2625,25 @@ function M_setBillPaid(billId,paid){
   document.querySelectorAll('.mpaid-btn').forEach((b,i)=>{b.className='mpaid-btn '+(i===0&&!paid?'sel-unpaid':i===1&&paid?'sel-paid':'')});
 }
 function M_saveBillEdit(billId){
-  const amt=parseFloat(document.getElementById('F_b_amt')?.value);
+  const raw=document.getElementById('b-amt')?.value;
+  const amt=Number(raw);
+  if(raw==null||raw.trim()===''||!Number.isFinite(amt)||amt<0){alert('请输入有效的非负金额');return;}
   const date=document.getElementById('b-date')?.value||'';
   const st=M_getBillStatus(billId);
-  M_setBillStatus(billId,{...st,actualAmount:amt||null,paidDate:date});
+  M_setBillStatus(billId,{...st,actualAmount:amt,paidDate:date});
   M_modal=null;M_editTarget=null;M_renderMain();
 }
 function M_saveBillConfig(billId){
   const idx=M_CFG.bills.findIndex(b=>b.id===billId);if(idx<0)return;
-  M_CFG.bills[idx].name=document.getElementById('b-name')?.value.trim()||M_CFG.bills[idx].name;
-  M_CFG.bills[idx].amount=parseFloat(document.getElementById('b-default')?.value)||M_CFG.bills[idx].amount;
-  M_CFG.bills[idx].dueDay=parseInt(document.getElementById('b-due')?.value)||M_CFG.bills[idx].dueDay;
+  const name=document.getElementById('b-name')?.value.trim()||'';
+  const rawAmount=document.getElementById('b-default')?.value;
+  const amount=Number(rawAmount);
+  const dueDay=Number(document.getElementById('b-due')?.value);
+  if(!name||rawAmount==null||rawAmount.trim()===''||!Number.isFinite(amount)||amount<0||!Number.isInteger(dueDay)||dueDay<1||dueDay>31){alert('请填写名称、有效的非负金额和1至31号付款日');return;}
+  M_CFG.bills[idx]={...M_CFG.bills[idx],name,amount,dueDay};
   M_saveData();M_modal=null;M_editTarget=null;M_renderMain();
 }
+
 function M_deleteBill(billId){
   if(!window.confirm('确认删除这个账单？'))return;
   M_CFG.bills=M_CFG.bills.filter(b=>b.id!==billId);
@@ -2453,12 +2666,15 @@ function M_renderBillAddModal(){
   document.getElementById('panel-monthly').appendChild(ov);
 }
 function M_submitAddBill(){
-  const name=document.getElementById('nb-name')?.value.trim();
-  const amt=parseFloat(document.getElementById('nb-amt')?.value);
-  const due=parseInt(document.getElementById('nb-due')?.value)||15;
+  const name=document.getElementById('nb-name')?.value.trim()||'';
+  const rawAmount=document.getElementById('nb-amt')?.value;
+  const amount=Number(rawAmount);
+  const dueDay=Number(document.getElementById('nb-due')?.value);
   const icon=document.getElementById('nb-icon')?.value||'💰';
-  if(!name||!amt||amt<=0){alert('请填写名称和金额');return;}
-  M_CFG.bills.push({id:'bill_'+Date.now(),name,amount:amt,dueDay:due,icon,iconBg:'#F5F5F5'});
+  if(!name||rawAmount==null||rawAmount.trim()===''||!Number.isFinite(amount)||amount<0||!Number.isInteger(dueDay)||dueDay<1||dueDay>31){alert('请填写名称、有效的非负金额和1至31号付款日');return;}
+  const baseId='bill_'+Date.now();let id=baseId;let suffix=1;
+  while(M_CFG.bills.some(b=>b.id===id))id=baseId+'_'+suffix++;
+  M_CFG.bills.push({id,name,amount,dueDay,icon,iconBg:'#F5F5F5'});
   M_saveData();M_modal=null;M_renderMain();
 }
 
@@ -2469,8 +2685,8 @@ function M_renderUtilityModal(){
     <div class="mtitle">更新水电余额</div>
     <div class="minfo-box">充值后在这里更新余额，系统自动重新计算可用天数和月底预计剩余</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">当前余额</span><input id="u-bal" type="number" inputmode="decimal" min="0" step="0.01" value="${util.balance}" placeholder="账户余额"></div>
-      <div class="mfield"><span class="mflbl">月均消耗</span><input id="u-avg" type="number" inputmode="decimal" min="0" step="1" value="${util.monthlyAvg}" placeholder="300"></div>
+      <div class="mfield"><span class="mflbl">当前余额</span><input id="u-bal" type="number" inputmode="decimal" min="0" step="0.01" value="${escHtml(util.balance)}" placeholder="账户余额"></div>
+      <div class="mfield"><span class="mflbl">月均消耗</span><input id="u-avg" type="number" inputmode="decimal" min="0" step="1" value="${escHtml(util.monthlyAvg)}" placeholder="300"></div>
     </div>
     <button class="msub green" onclick="M_submitUtility()">更新</button>
   </div>`;
@@ -2493,7 +2709,7 @@ function M_renderSettingsModal(){
     <div class="mtitle">设置</div>
     <div class="msec-title">生活费</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">日单价</span><input id="s-daily" type="number" inputmode="decimal" min="0" step="1" value="${M_CFG.dailyLife||50}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/天（自动×当月天数）</span></div>
+      <div class="mfield"><span class="mflbl">日单价</span><input id="s-daily" type="number" inputmode="decimal" min="0" step="1" value="${escHtml(M_CFG.dailyLife||50)}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/天（自动×当月天数）</span></div>
     </div>
     <div class="msec-title">零花钱</div>
     <div class="mfields">
@@ -2501,7 +2717,7 @@ function M_renderSettingsModal(){
     </div>
     <div class="msec-title">提醒设置</div>
     <div class="mfields">
-      <div class="mfield"><span class="mflbl">提前提醒</span><input id="s-alert" type="number" inputmode="numeric" min="1" max="14" value="${M_CFG.alertDays}"><span style="font-size:12px;color:#aaa;margin-left:4px">天</span></div>
+      <div class="mfield"><span class="mflbl">提前提醒</span><input id="s-alert" type="number" inputmode="numeric" min="1" max="14" value="${escHtml(M_CFG.alertDays)}"><span style="font-size:12px;color:#aaa;margin-left:4px">天</span></div>
     </div>
     <button class="msub" onclick="M_saveSettings()">保存</button>
   </div>`;
@@ -2559,38 +2775,108 @@ function F_saveData(){
 }
 
 // ── 股票计算 ──
+function F_stockRecords(st,key){return Array.isArray(st[key])?st[key]:[]}
+function F_validTradeDate(value){
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+  const time=Date.parse(value+'T00:00:00Z');
+  return Number.isFinite(time)&&new Date(time).toISOString().slice(0,10)===value;
+}
+function F_tradeTime(r){
+  // New trades store an explicit order; older generated IDs embed their creation time.
+  if(Number.isSafeInteger(r.order)&&r.order>=0)return r.order;
+  const id=typeof r.id==='string'?r.id:'';
+  if(/^i[a-z0-9]{10,15}$/.test(id)){
+    const time=parseInt(id.slice(1,-3),36);
+    if(time>=946684800000&&time<=4102444800000)return time;
+  }
+  return 0;
+}
+function F_nextTradeOrder(st){let order=Date.now();for(const key of ['buyRecords','sellRecords'])for(const r of F_stockRecords(st,key))order=Math.max(order,F_tradeTime(r||{})+1);return order}
 function F_calcStock(st){
-  const totalBought=st.buyRecords.reduce((s,r)=>s+r.qty,0);
-  const totalSold=st.sellRecords.reduce((s,r)=>s+r.qty,0);
+  const errors=[],issues=[],events=[],sellProfits=[];
+  let totalBought=0,totalSold=0,totalCost=0,totalSoldAmt=0;
+  for(const [key,type,label] of [['buyRecords','buy','买入'],['sellRecords','sell','卖出']]){
+    if(!Array.isArray(st[key])){errors.push(label+'记录格式异常，请从备份修正后导入');issues.push(key+':shape');}
+    F_stockRecords(st,key).forEach((raw,index)=>{
+      const r=raw&&typeof raw==='object'?raw:{};
+      const qty=Number(r.qty),price=Number(r.price),amount=Number(r.amount);
+      const prefix='第'+(index+1)+'笔'+label;
+      const issue=(code,message)=>{issues.push(type+':'+(r.id||index)+':'+code);errors.push(prefix+message)};
+      const before=errors.length;
+      if(!F_validTradeDate(r.date))issue('date','日期无效，请编辑日期');
+      if(!Number.isFinite(price)||price<=0)issue('price','价格必须大于 0');
+      if(!Number.isSafeInteger(qty)||qty<=0)issue('qty','股数必须为正整数');
+      if(!Number.isFinite(amount)||amount<=0||amount>Number.MAX_SAFE_INTEGER/100)issue('amount','金额必须为有效正数');
+      // Keep finite recorded cash flows visible even if a legacy history needs repair.
+      if(Number.isFinite(qty)){if(type==='buy')totalBought+=qty;else totalSold+=qty;}
+      if(Number.isFinite(amount)){if(type==='buy')totalCost+=amount;else totalSoldAmt+=amount;}
+      if(errors.length===before)events.push({r,index,type,qty,amount,time:F_tradeTime(r)});
+    });
+  }
+  // Legacy records without a creation time use buys-first ordering within their date.
+  events.sort((a,b)=>a.r.date.localeCompare(b.r.date)||
+    (a.time||(a.type==='buy'?0:Number.MAX_SAFE_INTEGER))-(b.time||(b.type==='buy'?0:Number.MAX_SAFE_INTEGER))||
+    (a.type===b.type?a.index-b.index:a.type==='buy'?-1:1));
+  let remainingQty=0,remainingCost=0,totalProfit=0;
+  for(const e of events){
+    if(e.type==='buy'){remainingQty+=e.qty;remainingCost+=e.amount;continue;}
+    if(e.qty>remainingQty){
+      issues.push('sell:'+(e.r.id||e.index)+':oversold');
+      errors.push('第'+(e.index+1)+'笔卖出超过当时持仓（可卖 '+remainingQty+' 股），请修正日期、股数或补齐买入记录');
+      continue;
+    }
+    const cost=remainingCost/remainingQty*e.qty;
+    const profit=e.amount-cost;
+    sellProfits[e.index]=Math.abs(profit)<1e-8?0:profit;
+    totalProfit+=sellProfits[e.index];
+    remainingQty-=e.qty;remainingCost-=cost;
+    if(remainingQty===0)remainingCost=0;
+  }
+  const valid=errors.length===0;
   const holdQty=totalBought-totalSold;
-  const totalCost=st.buyRecords.reduce((s,r)=>s+r.amount,0);
-  const totalSoldAmt=st.sellRecords.reduce((s,r)=>s+r.amount,0);
-  const totalProfit=st.sellRecords.reduce((s,r)=>s+r.profit,0);
-  // 当前持仓成本（按比例）
-  const avgCost=totalBought>0?totalCost/totalBought:0;
-  const holdCost=avgCost*holdQty;
-  // 止盈止损价格
-  const tpPrice=avgCost>0?avgCost*(1+(st.tpPct||20)/100):0;
-  const slPrice=avgCost>0?avgCost*(1+(st.slPct||-15)/100):0;
-  return{holdQty,totalBought,totalSold,totalCost,totalSoldAmt,totalProfit,avgCost,holdCost,tpPrice,slPrice};
+  const holdCost=remainingCost;
+  const avgCost=remainingQty>0?remainingCost/remainingQty:0;
+  const tpPct=Number.isFinite(Number(st.tpPct))?Number(st.tpPct):20;
+  const slPct=Number.isFinite(Number(st.slPct))?Number(st.slPct):-15;
+  const tpPrice=avgCost>0?avgCost*(1+tpPct/100):0;
+  const slPrice=avgCost>0?avgCost*(1+slPct/100):0;
+  return{holdQty,totalBought,totalSold,totalCost,totalSoldAmt,totalProfit,avgCost,holdCost,tpPrice,slPrice,sellProfits,valid,errors,issues};
+}
+function F_stockIssueHtml(cal){return cal.valid?'':`<div class="f-info-box" role="alert" style="background:#fff3e0;color:#a44700">记录待核对：${escHtml(cal.errors.join('；'))}。相关盈亏暂不显示，原记录已保留。</div>`}
+function F_planPnl(cal,price,qty){return!cal.valid?'待核对':cal.holdQty<=0?'无持仓':F_fmtPnl((price-cal.avgCost)*qty)}
+function F_planPnlClass(cal,price,qty){return cal.valid&&cal.holdQty>0?F_pnlClass((price-cal.avgCost)*qty):'zero'}
+function F_applyStockTrades(st,candidate,allowRepair=false){
+  const next=F_calcStock(candidate),before=F_calcStock(st);
+  // A damaged legacy history can be repaired one record at a time, without adding new issues.
+  const improves=allowRepair&&!before.valid&&next.issues.length<before.issues.length&&next.issues.every(issue=>before.issues.includes(issue));
+  if(!next.valid&&!improves){alert('无法保存：'+next.errors.join('；'));return false;}
+  st.buyRecords=candidate.buyRecords;
+  st.sellRecords=candidate.sellRecords.map((r,i)=>next.valid?{...r,profit:next.sellProfits[i]}:r);
+  return true;
+}
+function F_readTrade(prefix,withAmount=false){
+  const price=Number(document.getElementById(prefix+'price')?.value);
+  const qty=Number(document.getElementById(prefix+'qty')?.value);
+  const rawAmount=withAmount?document.getElementById(prefix+'amt')?.value:'';
+  return{date:document.getElementById(prefix+'date')?.value||todayStr(),price,qty,
+    amount:rawAmount!=null&&String(rawAmount).trim()!==''?Number(rawAmount):price*qty,
+    note:document.getElementById(prefix+'note')?.value.trim()||''};
 }
 
 // ── 账户资金 ──
 function F_calcAccount(){
-  const initial=F_STOCK_ACCOUNT.initialCapital||10000;
-  const deposited=F_STOCK_ACCOUNT.deposits.reduce((s,d)=>s+d.amount,0);
+  const initial=Number.isFinite(Number(F_STOCK_ACCOUNT.initialCapital))?Number(F_STOCK_ACCOUNT.initialCapital):0;
+  const deposited=(F_STOCK_ACCOUNT.deposits||[]).reduce((s,d)=>s+(Number.isFinite(Number(d?.amount))?Number(d.amount):0),0);
   const totalIn=initial+deposited;
-  // 买入总花费
-  const totalBought=F_STOCK_ACCOUNT.stocks.reduce((s,st)=>s+st.buyRecords.reduce((a,r)=>a+r.amount,0),0);
-  // 卖出总收回
-  const totalSold=F_STOCK_ACCOUNT.stocks.reduce((s,st)=>s+st.sellRecords.reduce((a,r)=>a+r.amount,0),0);
-  // 总利润
-  const totalProfit=F_STOCK_ACCOUNT.stocks.reduce((s,st)=>s+st.sellRecords.reduce((a,r)=>a+r.profit,0),0);
-  // 当前持仓成本（还在场内的钱）
-  const holdCost=F_STOCK_ACCOUNT.stocks.reduce((s,st)=>{const c=F_calcStock(st);return s+c.holdCost},0);
+  // Hidden stocks remain in every account total.
+  const stocks=F_STOCK_ACCOUNT.stocks.map(F_calcStock);
+  const totalBought=stocks.reduce((s,c)=>s+c.totalCost,0);
+  const totalSold=stocks.reduce((s,c)=>s+c.totalSoldAmt,0);
+  const totalProfit=stocks.reduce((s,c)=>s+c.totalProfit,0);
+  const holdCost=stocks.reduce((s,c)=>s+c.holdCost,0);
   // 可用资金 = 总投入 - 总买入 + 总卖出
   const available=totalIn-totalBought+totalSold;
-  return{initial,deposited,totalIn,totalBought,totalSold,totalProfit,holdCost,available};
+  return{initial,deposited,totalIn,totalBought,totalSold,totalProfit,holdCost,available,valid:stocks.every(c=>c.valid)};
 }
 
 // ── 投资项计算 ──
@@ -2599,7 +2885,7 @@ function F_getTotalInvested(item){
   const recs=item.records||[];
   const net=recs.reduce((s,r)=>{
     if(r.type==='note'||r.amount===0)return s;
-    return s+(r.type==='withdraw'?-r.amount:r.amount);
+    return s+(r.type==='withdraw'?(r.returned?0:-r.amount):r.amount);
   },0);
   return base+net;
 }
@@ -2625,7 +2911,7 @@ function F_renderMain(){
     <div class="f-hero-row">
       <div class="f-hero-stat"><div class="f-hero-stat-l">已投入</div><div class="f-hero-stat-v">¥${F_fmt2(totalInvested)}</div></div>
       <div class="f-hero-stat"><div class="f-hero-stat-l">还差</div><div class="f-hero-stat-v warn">¥${F_fmt2(totalRemain)}</div></div>
-      <div class="f-hero-stat"><div class="f-hero-stat-l">股票盈亏</div><div class="f-hero-stat-v f-pnl ${F_pnlClass(acc.totalProfit)}">${F_fmtPnl(acc.totalProfit)}</div></div>
+      <div class="f-hero-stat"><div class="f-hero-stat-l">股票盈亏</div><div class="f-hero-stat-v f-pnl ${acc.valid?F_pnlClass(acc.totalProfit):'zero'}">${acc.valid?F_fmtPnl(acc.totalProfit):'待核对'}</div></div>
     </div>
     <div class="f-hero-bar-bg"><div class="f-hero-bar-fill" style="width:${overallPct}%"></div></div>
     <div class="f-hero-bar-row"><span>整体完成度 ${overallPct}%</span><span>¥${F_fmt2(totalInvested)} / ¥${F_fmt2(totalTarget)}</span></div>
@@ -2636,60 +2922,64 @@ function F_renderMain(){
     <div class="f-account-top">
       <div>
         <div class="f-account-avail-l">可用资金</div>
-        <div class="f-account-avail" style="color:${acc.available>=0?'#1a1a1a':'#e53935'}">${F_fmtY(acc.available)}</div>
+        <div class="f-account-avail" style="color:${acc.available>=0?'#1a1a1a':'#e53935'}">${acc.valid?F_fmtY(acc.available):'待核对'}</div>
       </div>
       <div>
         <div class="f-account-profit-l">累计盈亏</div>
-        <div class="f-account-profit f-pnl ${F_pnlClass(acc.totalProfit)}">${F_fmtPnl(acc.totalProfit)}</div>
+        <div class="f-account-profit f-pnl ${acc.valid?F_pnlClass(acc.totalProfit):'zero'}">${acc.valid?F_fmtPnl(acc.totalProfit):'待核对'}</div>
       </div>
     </div>
     <div class="f-account-grid">
       <div class="f-account-stat"><div class="f-account-stat-l">初始资金</div><div class="f-account-stat-v">${F_fmtY(acc.initial)}</div></div>
       <div class="f-account-stat"><div class="f-account-stat-l">追加资金</div><div class="f-account-stat-v">${F_fmtY(acc.deposited)}</div></div>
-      <div class="f-account-stat"><div class="f-account-stat-l">当前持仓</div><div class="f-account-stat-v" style="color:#e65100">${F_fmtY(acc.holdCost)}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">当前持仓</div><div class="f-account-stat-v" style="color:#e65100">${acc.valid?F_fmtY(acc.holdCost):'待核对'}</div></div>
     </div>
   </div>`;
 
   // 股票列表
-  const stocksHtml=F_STOCK_ACCOUNT.stocks.length?F_STOCK_ACCOUNT.stocks.map(st=>{
+  const visibleStocks=F_STOCK_ACCOUNT.stocks.filter(st=>!st.hidden);
+  const hiddenStocks=F_STOCK_ACCOUNT.stocks.filter(st=>st.hidden);
+  const stocksHtml=visibleStocks.length?visibleStocks.map(st=>{
     const cal=F_calcStock(st);
-    const doneCount=st.tpPlans.filter(t=>t.done).length;
-    const totalCount=st.tpPlans.length;
-    return`<div class="f-stock" onclick="F_openStockDetail('${st.id}')">
+    const doneCount=F_stockRecords(st,'tpPlans').filter(t=>t.done).length;
+    const totalCount=F_stockRecords(st,'tpPlans').length;
+    return`<div class="f-stock" onclick="F_openStockDetail(${jsAttr(st.id)})">
       <div class="f-stock-top">
         <div>
-          <div class="f-stock-name">📊 ${st.name}</div>
-          <div class="f-stock-meta">均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股 · 成本 ${F_fmtY(cal.holdCost)}</div>
+          <div class="f-stock-name">📊 ${escHtml(st.name)}</div>
+          <div class="f-stock-meta">均价 ${cal.valid?F_fmtY(cal.avgCost):'待核对'} · 持仓 ${cal.holdQty}股 · 成本 ${cal.valid?F_fmtY(cal.holdCost):'待核对'}</div>
         </div>
         <div>
           <div class="f-stock-pnl-l">已实现盈亏</div>
-          <div class="f-stock-pnl f-pnl ${F_pnlClass(cal.totalProfit)}">${F_fmtPnl(cal.totalProfit)}</div>
+          <div class="f-stock-pnl f-pnl ${cal.valid?F_pnlClass(cal.totalProfit):'zero'}">${cal.valid?F_fmtPnl(cal.totalProfit):'待核对'}</div>
         </div>
       </div>
+      ${F_stockIssueHtml(cal)}
       <div class="f-sl-row">
         <div class="f-sl-item f-sl-tp">
-          <div class="f-sl-label">止盈 +${st.tpPct}%</div>
-          <div class="f-sl-price">${F_fmtY(cal.tpPrice)}</div>
+          <div class="f-sl-label">止盈 +${escHtml(st.tpPct)}%</div>
+          <div class="f-sl-price">${cal.valid?F_fmtY(cal.tpPrice):'待核对'}</div>
           <div class="f-sl-hint">均价 ${F_fmtY(cal.avgCost)}</div>
         </div>
         <div class="f-sl-item f-sl-sl">
-          <div class="f-sl-label">止损 ${st.slPct?st.slPct+'%':'未设置'}</div>
-          <div class="f-sl-price">${st.slPct?F_fmtY(cal.slPrice):'—'}</div>
+          <div class="f-sl-label">止损 ${escHtml(st.slPct?st.slPct+'%':'未设置')}</div>
+          <div class="f-sl-price">${!cal.valid?'待核对':st.slPct?F_fmtY(cal.slPrice):'—'}</div>
           <div class="f-sl-hint">${st.slPct?'最大损失 '+F_fmtY(cal.holdCost*Math.abs(st.slPct/100)):'可在编辑中设置'}</div>
         </div>
       </div>
-      <div class="f-tp-list">${st.tpPlans.map((tp,i)=>`
+      <div class="f-tp-list">${F_stockRecords(st,'tpPlans').map((tp,i)=>`
         <div class="f-tp-item">
           <div class="f-tp-num ${tp.done?'done':'active'}">${tp.done?'✓':i+1}</div>
           <div class="f-tp-info">
-            <div class="f-tp-note ${tp.done?'done':''}">${tp.note}</div>
-            <div class="f-tp-detail">${tp.qty}股 @ ${F_fmtY(tp.price)}</div>
+            <div class="f-tp-note ${tp.done?'done':''}">${escHtml(tp.note)}</div>
+            <div class="f-tp-detail">${escHtml(tp.qty)}股 @ ${F_fmtY(tp.price)}</div>
           </div>
-          <div class="f-tp-profit ${tp.done?'done':'active f-pnl '+F_pnlClass((tp.price-cal.avgCost)*tp.qty)}">${tp.done?'已完成':F_fmtPnl((tp.price-cal.avgCost)*tp.qty)}</div>
+          <div class="f-tp-profit ${tp.done?'done':'active f-pnl '+F_planPnlClass(cal,tp.price,tp.qty)}">${tp.done?'已完成':F_planPnl(cal,tp.price,tp.qty)}</div>
         </div>`).join('')}
       </div>
     </div>`;
-  }).join(''):`<div class="f-empty">还没有股票，点「添加股票」开始记录</div>`;
+  }).join(''):`<div class="f-empty">${hiddenStocks.length?'当前股票已全部隐藏，可在下方恢复':'还没有股票，点「添加股票」开始记录'}</div>`;
+  const hiddenHtml=hiddenStocks.length?`<details class="f-account"><summary style="cursor:pointer">已隐藏股票（${hiddenStocks.length}）</summary><div class="f-sheet-sub" style="margin-top:10px">买卖记录、现金和累计盈亏仍计入账户。</div>${hiddenStocks.map(st=>`<div class="f-record-row"><button class="f-btn-secondary" style="flex:1" onclick="F_openStockDetail(${jsAttr(st.id)})">${escHtml(st.name)} · 查看记录</button><button class="f-btn-secondary" style="width:auto;margin-left:8px" onclick="F_restoreStock(${jsAttr(st.id)})">恢复显示</button></div>`).join('')}</details>`:'';
 
   // 投资定投分组
   const GROUP_LABELS={fund:{label:'基金定投',icon:'📈',badge:'fund'},gold:{label:'黄金积存金',icon:'🥇',badge:'gold'},saving:{label:'储蓄目标',icon:'🎯',badge:'saving'}};
@@ -2712,11 +3002,11 @@ function F_renderMain(){
       const barColor=done?'#e53935':g==='gold'?'#FFD700':g==='saving'?'#1a5fd4':'#ff9800';
       const badgeClass=done?'done':gl.badge;
       const badgeText=done?'✓ 达标':gl.label;
-      groupsHtml+=`<div class="f-inv-card ${done?'done':''}" onclick="F_openItemDetail('${item.id}')">
+      groupsHtml+=`<div class="f-inv-card ${done?'done':''}" onclick="F_openItemDetail(${jsAttr(item.id)})">
         <div class="f-inv-card-top">
           <div>
-            <div class="f-inv-card-name">${item.name}</div>
-            <div class="f-inv-card-meta">${item.platform}</div>
+            <div class="f-inv-card-name">${escHtml(item.name)}</div>
+            <div class="f-inv-card-meta">${escHtml(item.platform)}</div>
           </div>
           <span class="f-inv-card-badge ${badgeClass}">${badgeText}</span>
         </div>
@@ -2729,13 +3019,14 @@ function F_renderMain(){
     });
     // 各分组末尾加添加按钮
     const addLabel=g==='fund'?'添加基金':g==='gold'?'添加黄金项目':'添加储蓄目标';
-    groupsHtml+=`<div class="f-inv-add-card" onclick="F_openAddInvGroup('${g}')">
+    groupsHtml+=`<div class="f-inv-add-card" onclick="F_openAddInvGroup(${jsAttr(g)})">
       <div class="f-inv-add-icon">＋</div>
       <div class="f-inv-add-label">${addLabel}</div>
     </div>`;
     groupsHtml+='</div>';
   });
 
+    destroyCanvasCharts(document.getElementById('F_main'));
     document.getElementById('F_main').innerHTML=`
     ${heroHtml}
     ${F_renderPortfolioSection()}
@@ -2743,7 +3034,7 @@ function F_renderMain(){
       <span class="f-group-title">📊 股票账户</span>
       <button class="f-add-btn" onclick="F_openAddStock()">+ 添加股票</button>
     </div>
-    ${accHtml}${stocksHtml}
+    ${accHtml}${acc.valid?'':'<div class="f-info-box" role="alert">存在待核对的股票交易（可能在已隐藏列表中）。请打开股票详情修正，相关合计暂不显示。</div>'}${stocksHtml}${hiddenHtml}
     ${groupsHtml}`;
   F_checkModal();
 }
@@ -2763,6 +3054,7 @@ function F_checkModal(){
   else if(F_modal==='data'||F_modal==='data-f')F_renderDataModal();
   else if(F_modal==='market-update')F_renderMarketUpdateModal();
   else if(F_modal==='edit-buy')F_renderEditBuyModal();
+  else if(F_modal==='edit-sell')F_renderEditSellModal();
   else if(F_modal==='inv-action')F_renderInvActionModal();
   else if(F_modal==='edit-inv-record')F_renderEditInvRecordModal();
 }
@@ -2782,51 +3074,54 @@ function F_renderStockDetailModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
   const ov=mkOv_f();
-  const buyRows=st.buyRecords.map((r,i)=>`
+  const buyRows=F_stockRecords(st,'buyRecords').map((raw,i)=>{const r=raw||{};return`
     <div class="f-record-row">
-      <span class="f-record-date">${r.date}</span>
-      <span class="f-record-qty">${r.qty}股</span>
+      <span class="f-record-date">${escHtml(r.date)}</span>
+      <span class="f-record-qty">${escHtml(r.qty)}股</span>
       <span class="f-record-price">@${F_fmtY(r.price)}</span>
       <span class="f-record-amt" style="color:#e65100;flex:1">-${F_fmtY(r.amount)}</span>
-      <button onclick="F_openEditBuyRecord('${st.id}',${i})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
-    </div>`).join('');
-  const sellRows=st.sellRecords.map(r=>`
+      <button onclick="F_openEditBuyRecord(${jsAttr(st.id)},${i})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
+    </div>`}).join('');
+  const sellRows=F_stockRecords(st,'sellRecords').map((raw,i)=>{const r=raw||{};return`
     <div class="f-record-row">
-      <span class="f-record-date">${r.date}</span>
-      <span class="f-record-qty">${r.qty}股</span>
+      <span class="f-record-date">${escHtml(r.date)}</span>
+      <span class="f-record-qty">${escHtml(r.qty)}股</span>
       <span class="f-record-price">@${F_fmtY(r.price)}</span>
-      <span class="f-record-amt f-pnl ${F_pnlClass(r.profit)}">${F_fmtPnl(r.profit)}</span>
-    </div>`).join('');
+      <span class="f-record-amt f-pnl ${cal.valid?F_pnlClass(cal.sellProfits[i]):'zero'}">${cal.valid?F_fmtPnl(cal.sellProfits[i]):'待核对'}</span>
+      <button onclick="F_openEditSellRecord(${jsAttr(st.id)},${i})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px">编辑</button>
+    </div>`}).join('');
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">${st.name}</div>
-    <div class="f-sheet-sub">${st.note||''}</div>
+    <div class="f-sheet-title">${escHtml(st.name)}</div>
+    <div class="f-sheet-sub">${escHtml(st.note||'')}</div>
+    ${st.hidden?'<div class="f-info-box">这只股票已隐藏，记录和资金仍计入账户。</div>':''}
+    ${F_stockIssueHtml(cal)}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
-      <div class="f-account-stat"><div class="f-account-stat-l">持仓均价</div><div class="f-account-stat-v">${F_fmtY(cal.avgCost)}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">持仓均价</div><div class="f-account-stat-v">${cal.valid?F_fmtY(cal.avgCost):'待核对'}</div></div>
       <div class="f-account-stat"><div class="f-account-stat-l">持仓股数</div><div class="f-account-stat-v">${cal.holdQty}股</div></div>
-      <div class="f-account-stat"><div class="f-account-stat-l">累计盈亏</div><div class="f-account-stat-v f-pnl ${F_pnlClass(cal.totalProfit)}">${F_fmtPnl(cal.totalProfit)}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">累计盈亏</div><div class="f-account-stat-v f-pnl ${cal.valid?F_pnlClass(cal.totalProfit):'zero'}">${cal.valid?F_fmtPnl(cal.totalProfit):'待核对'}</div></div>
     </div>
     <div class="f-sl-row" style="margin-bottom:14px;">
       <div class="f-sl-item f-sl-tp">
-        <div class="f-sl-label">止盈 +${st.tpPct}%</div>
-        <div class="f-sl-price">${F_fmtY(cal.tpPrice)}</div>
-        <div class="f-sl-hint">预期 ${F_fmtPnl((cal.tpPrice-cal.avgCost)*cal.holdQty)}</div>
+        <div class="f-sl-label">止盈 +${escHtml(st.tpPct)}%</div>
+        <div class="f-sl-price">${cal.valid?F_fmtY(cal.tpPrice):'待核对'}</div>
+        <div class="f-sl-hint">预期 ${F_planPnl(cal,cal.tpPrice,cal.holdQty)}</div>
       </div>
       <div class="f-sl-item f-sl-sl">
-        <div class="f-sl-label">止损 ${st.slPct?st.slPct+'%':'未设置'}</div>
-        <div class="f-sl-price">${st.slPct?F_fmtY(cal.slPrice):'—'}</div>
+        <div class="f-sl-label">止损 ${escHtml(st.slPct?st.slPct+'%':'未设置')}</div>
+        <div class="f-sl-price">${!cal.valid?'待核对':st.slPct?F_fmtY(cal.slPrice):'—'}</div>
         <div class="f-sl-hint">${st.slPct?'最大损失 '+F_fmtY(cal.holdCost*Math.abs(st.slPct/100)):'可在编辑中设置'}</div>
       </div>
     </div>
     <div class="f-section">止盈计划</div>
-    ${st.tpPlans.map((tp,i)=>`
+    ${F_stockRecords(st,'tpPlans').map((tp,i)=>`
       <div class="f-tp-item">
         <div class="f-tp-num ${tp.done?'done':'active'}">${tp.done?'✓':i+1}</div>
         <div class="f-tp-info">
-          <div class="f-tp-note ${tp.done?'done':''}">${tp.note}</div>
-          <div class="f-tp-detail">${tp.qty}股 @ ${F_fmtY(tp.price)}</div>
+          <div class="f-tp-note ${tp.done?'done':''}">${escHtml(tp.note)}</div>
+          <div class="f-tp-detail">${escHtml(tp.qty)}股 @ ${F_fmtY(tp.price)}</div>
         </div>
-        <div class="f-tp-profit ${tp.done?'done':'active f-pnl '+F_pnlClass((tp.price-cal.avgCost)*tp.qty)}">${tp.done?'已完成':F_fmtPnl((tp.price-cal.avgCost)*tp.qty)}</div>
+        <div class="f-tp-profit ${tp.done?'done':'active f-pnl '+F_planPnlClass(cal,tp.price,tp.qty)}">${tp.done?'已完成':F_planPnl(cal,tp.price,tp.qty)}</div>
       </div>`).join('')}
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
       <button class="f-btn-primary" style="background:#00897b;" onclick="F_modal='buy-add';F_renderMain()">＋ 记录买入 / 补仓</button>
@@ -2838,7 +3133,7 @@ function F_renderStockDetailModal(){
     ${buyRows||'<div class="f-empty">暂无</div>'}
     <div class="f-section">卖出记录</div>
     ${sellRows||'<div class="f-empty">暂无</div>'}
-    <button class="f-btn-danger" onclick="F_deleteStock('${st.id}')">删除这只股票</button>
+    ${st.hidden?`<button class="f-btn-secondary" onclick="F_restoreStock(${jsAttr(st.id)})">恢复显示这只股票</button>`:`<button class="f-btn-secondary" onclick="F_deleteStock(${jsAttr(st.id)})">隐藏这只股票（保留记录）</button>`}
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -2849,33 +3144,33 @@ function F_renderBuyAddModal(){
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">买入 / 补仓</div>
-    <div class="f-sheet-sub">${st.name} · 当前均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股</div>
-    <div class="f-field-row"><span class="f-field-label">买入日期</span><input id="F_b_date" type="date" value="${todayStr()}"></div>
+    <div class="f-sheet-sub">${escHtml(st.name)} · 当前均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股</div>
+    <div class="f-field-row"><span class="f-field-label">买入日期</span><input id="F_b_date" type="date" value="${todayStr()}" oninput="F_calcBuyAvg()"></div>
     <div class="f-field-row"><span class="f-field-label">买入价格</span><input id="F_b_price" type="number" inputmode="decimal" step="0.001" placeholder="0.000" oninput="F_calcBuyTotal()"></div>
     <div class="f-field-row"><span class="f-field-label">买入股数</span><input id="F_b_qty" type="number" inputmode="numeric" step="100" placeholder="0" oninput="F_calcBuyTotal()"></div>
-    <div class="f-field-row"><span class="f-field-label">实际金额</span><input id="F_b_amt" type="number" inputmode="decimal" step="0.01" placeholder="自动计算" oninput="F_calcBuyAvg()"></div>
+    <div class="f-field-row"><span class="f-field-label">实际金额</span><input id="F_b_amt" type="number" inputmode="decimal" step="0.01" placeholder="自动计算" oninput="this.dataset.manual=this.value.trim()?'1':'';F_calcBuyAvg()"></div>
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_b_note" placeholder="如：补仓跌10%"></div>
     <div class="f-calc-box" id="F_buy_calc" style="display:none">
       <div class="f-calc-row"><span class="f-calc-label">买入后总股数</span><span class="f-calc-val" id="F_bc_qty">—</span></div>
       <div class="f-calc-row"><span class="f-calc-label">新加权均价</span><span class="f-calc-val" id="F_bc_avg">—</span></div>
     </div>
-    <button class="f-btn-primary" onclick="F_submitBuy('${st.id}')">确认买入</button>
+    <button class="f-btn-primary" onclick="F_submitBuy(${jsAttr(st.id)})">确认买入</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
 function F_renderSellAddModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
-  const pendPlans=st.tpPlans.filter(t=>!t.done);
-  const planOpts=pendPlans.map(t=>`<option value="${t.id}">${t.note} · ${t.qty}股 @ ${F_fmtY(t.price)}</option>`).join('');
+  const pendPlans=F_stockRecords(st,'tpPlans').filter(t=>!t.done);
+  const planOpts=pendPlans.map(t=>`<option value="${escHtml(t.id)}">${escHtml(t.note)} · ${escHtml(t.qty)}股 @ ${F_fmtY(t.price)}</option>`).join('');
   const ov=mkOv_f();
   const _sellType=window._F_sellType||'tp';const _isSL=_sellType==='sl';
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title" style="color:${_isSL?'#c62828':'#e65100'}">${_isSL?'↓ 止损卖出':'↑ 止盈卖出'}</div>
-    <div class="f-sheet-sub">${st.name} · 均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股</div>
+    <div class="f-sheet-sub">${escHtml(st.name)} · 均价 ${F_fmtY(cal.avgCost)} · 持仓 ${cal.holdQty}股</div>
     ${pendPlans.length&&!_isSL?`<div class="f-field-row"><span class="f-field-label">对应计划</span><select id="F_s_plan"><option value="">不对应计划</option>${planOpts}</select></div>`:''}
-    <div class="f-field-row"><span class="f-field-label">卖出日期</span><input id="F_s_date" type="date" value="${todayStr()}"></div>
+    <div class="f-field-row"><span class="f-field-label">卖出日期</span><input id="F_s_date" type="date" value="${todayStr()}" oninput="F_calcSellProfit()"></div>
     <div class="f-field-row"><span class="f-field-label">卖出价格</span><input id="F_s_price" type="number" inputmode="decimal" step="0.001" placeholder="0.000" oninput="F_calcSellProfit()"></div>
     <div class="f-field-row"><span class="f-field-label">卖出股数</span><input id="F_s_qty" type="number" inputmode="numeric" step="100" placeholder="0" oninput="F_calcSellProfit()"></div>
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_s_note" placeholder="${_isSL?'如：止损出局':'如：止盈①'}"></div>
@@ -2884,37 +3179,37 @@ function F_renderSellAddModal(){
       <div class="f-calc-row"><span class="f-calc-label">本次盈亏</span><span class="f-calc-val" id="F_sc_profit">—</span></div>
       <div class="f-calc-row"><span class="f-calc-label">卖出后剩余</span><span class="f-calc-val" id="F_sc_remain">—</span></div>
     </div>
-    <button class="f-btn-primary" style="background:${_isSL?'#c62828':'#e53935'};" onclick="F_submitSell('${st.id}','${_sellType}')">确认卖出</button>
+    <button class="f-btn-primary" style="background:${_isSL?'#c62828':'#e53935'};" onclick="F_submitSell(${jsAttr(st.id)},${jsAttr(_sellType)})">确认卖出</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }function F_renderStockEditModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
   F_tmpTpPlans=null;
-  const tpRowsHtml=st.tpPlans.map((tp,i)=>`
+  const tpRowsHtml=F_stockRecords(st,'tpPlans').map((tp,i)=>`
     <div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div style="font-size:11px;color:#aaa;margin-bottom:6px;">${tp.done?'✓ 已完成':'计划'} ${i+1}</div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${tp.price}" placeholder="价格">
-        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${tp.qty}" placeholder="股数">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${tp.note||''}" placeholder="备注">
+        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${escHtml(tp.price)}" placeholder="价格">
+        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${escHtml(tp.qty)}" placeholder="股数">
+        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${escHtml(tp.note||'')}" placeholder="备注">
         <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
       </div>
     </div>`).join('');
   const ov=mkOv_f();
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">编辑 ${st.name}</div>
+    <div class="f-sheet-title">编辑 ${escHtml(st.name)}</div>
     <div class="f-section">基本信息</div>
-    <div class="f-field-row"><span class="f-field-label">名称</span><input id="F_e_name" value="${st.name}"></div>
-    <div class="f-field-row"><span class="f-field-label">代码</span><input id="F_e_code" value="${st.code||''}"></div>
-    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_e_note" value="${st.note||''}"></div>
+    <div class="f-field-row"><span class="f-field-label">名称</span><input id="F_e_name" value="${escHtml(st.name)}"></div>
+    <div class="f-field-row"><span class="f-field-label">代码</span><input id="F_e_code" value="${escHtml(st.code||'')}"></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_e_note" value="${escHtml(st.note||'')}"></div>
     <div class="f-section">止盈止损设置</div>
     <div class="f-info-box">基于当前均价 ${F_fmtY(cal.avgCost)} 实时预览价格</div>
     <div class="f-field-row">
       <span class="f-field-label">止盈线</span>
-      <input id="F_e_tp" type="number" inputmode="decimal" step="1" value="${st.tpPct||20}" oninput="F_previewLines()">
-      <span class="f-field-note">% → <b id="F_e_tp_price" style="color:#2e7d32">${F_fmtY(cal.tpPrice)}</b></span>
+      <input id="F_e_tp" type="number" inputmode="decimal" step="1" value="${escHtml(st.tpPct||20)}" oninput="F_previewLines()">
+      <span class="f-field-note">% → <b id="F_e_tp_price" style="color:#2e7d32">${cal.valid?F_fmtY(cal.tpPrice):'待核对'}</b></span>
     </div>
     <div class="f-field-row">
       <span class="f-field-label">止损线</span>
@@ -2924,16 +3219,16 @@ function F_renderSellAddModal(){
     <div class="f-section">止盈计划</div>
     <div id="F_tp_rows">${tpRowsHtml}</div>
     <button onclick="F_addTpRow()" style="width:100%;height:38px;border-radius:10px;border:1.5px dashed #c8dff5;background:transparent;color:#1a5fd4;font-size:13px;cursor:pointer;margin-bottom:12px;">+ 添加止盈计划</button>
-    <button class="f-btn-primary" onclick="F_submitStockEdit('${st.id}')">保存</button>
+    <button class="f-btn-primary" onclick="F_submitStockEdit(${jsAttr(st.id)})">保存</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }function F_renderAccountEditModal(){
   const acc=F_calcAccount();
   const depRows=F_STOCK_ACCOUNT.deposits.map((d,i)=>`
     <div class="f-record-row">
-      <span class="f-record-date">${d.date}</span>
+      <span class="f-record-date">${escHtml(d.date)}</span>
       <span class="f-record-amt pos">+${F_fmtY(d.amount)}</span>
-      <span style="flex:1;color:#aaa;font-size:11px;margin-left:8px">${d.note||''}</span>
+      <span style="flex:1;color:#aaa;font-size:11px;margin-left:8px">${escHtml(d.note||'')}</span>
       <button onclick="F_deleteDeposit(${i})" class="f-record-del">×</button>
     </div>`).join('');
   const ov=mkOv_f();
@@ -2941,8 +3236,8 @@ function F_renderSellAddModal(){
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">股票账户资金</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
-      <div class="f-account-stat"><div class="f-account-stat-l">可用资金</div><div class="f-account-stat-v" style="font-size:18px">${F_fmtY(acc.available)}</div></div>
-      <div class="f-account-stat"><div class="f-account-stat-l">持仓成本</div><div class="f-account-stat-v" style="color:#e65100">${F_fmtY(acc.holdCost)}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">可用资金</div><div class="f-account-stat-v" style="font-size:18px">${acc.valid?F_fmtY(acc.available):'待核对'}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">持仓成本</div><div class="f-account-stat-v" style="color:#e65100">${acc.valid?F_fmtY(acc.holdCost):'待核对'}</div></div>
     </div>
     <div class="f-section">修改初始资金</div>
     <div class="f-field-row"><span class="f-field-label">初始资金</span><input id="F_a_init" type="number" inputmode="decimal" value="${acc.initial}"></div>
@@ -2969,29 +3264,29 @@ function F_renderSellAddModal(){
     const isN=r.type==='note'||r.amount===0;
     const isR=r.returned;
     if(isN)return`<div class="f-record-row" style="opacity:.7">
-      <span class="f-record-date">${r.date}</span>
-      <span style="flex:1;color:#888;font-size:11px;margin-left:4px">${r.note||'变更记录'}</span>
-      <button onclick="F_deleteInvRecord('${item.id}',${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
+      <span class="f-record-date">${escHtml(r.date)}</span>
+      <span style="flex:1;color:#888;font-size:11px;margin-left:4px">${escHtml(r.note||'变更记录')}</span>
+      <button onclick="F_deleteInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
     </div>`;
     return`<div class="f-record-row">
-      <span class="f-record-date">${r.date}</span>
+      <span class="f-record-date">${escHtml(r.date)}</span>
       <span class="f-record-amt ${isW&&!isR?'neg':isW&&isR?'':'pos'}" style="${isW&&isR?'color:#aaa;text-decoration:line-through':''}">
         ${isW?'-':'+'}${F_fmtY(r.amount)}
       </span>
       <span style="flex:1;color:${isW?'#e65100':isA?'#7c3aed':'#aaa'};font-size:11px;margin-left:8px">
-        ${isW?'🔴 取用':isA?'🤖 自动定投':'🟢 存入'}${!isA&&r.note?' · '+r.note:''}${isW&&isR?' (已归还)':''}
+        ${isW?'🔴 取用':isA?'🤖 自动定投':'🟢 存入'}${escHtml(!isA&&r.note?' · '+r.note:'')}${isW&&isR?' (已归还)':''}
       </span>
-      ${isW&&!isR?`<button onclick="F_markReturned('${item.id}',${(item.records||[]).length-1-ri})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
-      <button onclick="F_openEditInvRecord('${item.id}',${(item.records||[]).length-1-ri})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
-      <button onclick="F_deleteInvRecord('${item.id}',${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
+      ${isW&&!isR?`<button onclick="F_markReturned(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
+      <button onclick="F_openEditInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
+      <button onclick="F_deleteInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
     </div>`;
   }).join(''):`<div class="f-empty">还没有记录</div>`;
 
   const ov=mkOv_f();
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">${item.name}</div>
-    <div class="f-sheet-sub">${item.platform}${item.note?' · '+item.note:''}</div>
+    <div class="f-sheet-title">${escHtml(item.name)}</div>
+    <div class="f-sheet-sub">${escHtml(item.platform)}${escHtml(item.note?' · '+item.note:'')}</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">
       <div class="f-account-stat"><div class="f-account-stat-l">实际余额</div><div class="f-account-stat-v">${F_fmtY(inv)}</div></div>
       <div class="f-account-stat"><div class="f-account-stat-l">目标</div><div class="f-account-stat-v">${F_fmtY(item.target)}</div></div>
@@ -3003,13 +3298,13 @@ function F_renderSellAddModal(){
     <div style="text-align:right;font-size:11px;color:#aaa;margin-bottom:16px;">${pct}% 完成</div>
     ${withdrawn>0?`<div style="background:#fff3e0;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#e65100;">⚠️ 有 ${F_fmtY(withdrawn)} 待归还，记得补回来</div>`:''}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <button onclick="F_openInvAction('${item.id}','deposit')" class="f-btn-primary" style="background:#1a5fd4;height:42px;font-size:14px;">＋ 存入</button>
-      <button onclick="F_openInvAction('${item.id}','withdraw')" class="f-btn-primary" style="background:#e65100;height:42px;font-size:14px;">－ 取用</button>
+      <button onclick="F_openInvAction(${jsAttr(item.id)},'deposit')" class="f-btn-primary" style="background:#1a5fd4;height:42px;font-size:14px;">＋ 存入</button>
+      <button onclick="F_openInvAction(${jsAttr(item.id)},'withdraw')" class="f-btn-primary" style="background:#e65100;height:42px;font-size:14px;">－ 取用</button>
     </div>
     <div class="f-section">流水记录（${(item.records||[]).length}笔）</div>
     ${recsHtml}
     <button class="f-btn-primary" style="margin-top:12px;background:#555;font-size:13px;" onclick="F_modal='item-edit';F_renderMain()">✏️ 编辑基本信息</button>
-    <button class="f-btn-danger" onclick="F_deleteInvItem('${item.id}')">删除此项目</button>
+    <button class="f-btn-danger" onclick="F_deleteInvItem(${jsAttr(item.id)})">删除此项目</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -3026,9 +3321,9 @@ function F_deleteInvItem(id){
   const box=document.createElement('div');
   box.id='F_del_confirm';
   box.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,.15);';
-  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">删除「${item.name}」？</div>
+  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">删除「${escHtml(item.name)}」？</div>
     <div style="font-size:13px;color:#888;margin-bottom:20px;">所有定投记录将一并删除，不可恢复</div>
-    <button onclick="F_confirmDeleteInvItem('${id}')" style="width:100%;height:44px;border-radius:12px;border:none;background:#e53935;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认删除</button>
+    <button onclick="F_confirmDeleteInvItem(${jsAttr(id)})" style="width:100%;height:44px;border-radius:12px;border:none;background:#e53935;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认删除</button>
     <button onclick="document.getElementById('F_del_confirm').remove()" style="width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:14px;cursor:pointer;">取消</button>`;
   document.getElementById('panel-finance').appendChild(box);
 }
@@ -3046,15 +3341,15 @@ function F_renderItemEditModal(){
   const groupOpts=Object.entries(GROUP_INFO).filter(([k])=>k!=='stock').map(([k,v])=>`<option value="${k}" ${item.group===k?'selected':''}>${v.icon} ${v.label}</option>`).join('');
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">编辑 · ${item.name}</div>
+    <div class="f-sheet-title">编辑 · ${escHtml(item.name)}</div>
     <div class="mfields" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <div class="f-field-row"><span class="f-field-label">名称</span><input id="e-name" value="${item.name}"></div>
+      <div class="f-field-row"><span class="f-field-label">名称</span><input id="e-name" value="${escHtml(item.name)}"></div>
       <div class="f-field-row"><span class="f-field-label">分组</span><select id="e-group">${groupOpts}</select></div>
-      <div class="f-field-row"><span class="f-field-label">目标金额</span><input id="e-target" type="number" value="${item.target}"></div>
-      <div class="f-field-row"><span class="f-field-label">初始已投</span><input id="e-invested" type="number" value="${item.invested}"></div>
-      <div class="f-field-row"><span class="f-field-label">月投金额</span><input id="e-monthly" type="number" value="${item.monthly}"></div>
-      <div class="f-field-row"><span class="f-field-label">平台</span><input id="e-platform" value="${item.platform}"></div>
-      <div class="f-field-row"><span class="f-field-label">备注</span><input id="e-note" value="${item.note||''}"></div>
+      <div class="f-field-row"><span class="f-field-label">目标金额</span><input id="e-target" type="number" value="${escHtml(item.target)}"></div>
+      <div class="f-field-row"><span class="f-field-label">初始已投</span><input id="e-invested" type="number" value="${escHtml(item.invested)}"></div>
+      <div class="f-field-row"><span class="f-field-label">月投金额</span><input id="e-monthly" type="number" value="${escHtml(item.monthly)}"></div>
+      <div class="f-field-row"><span class="f-field-label">平台</span><input id="e-platform" value="${escHtml(item.platform)}"></div>
+      <div class="f-field-row"><span class="f-field-label">备注</span><input id="e-note" value="${escHtml(item.note||'')}"></div>
     </div>
     <div class="f-section">自动定投</div>
     <div class="f-field-row">
@@ -3064,9 +3359,9 @@ function F_renderItemEditModal(){
         <option value="0" ${!item.autoInvest?'selected':''}>关闭</option>
       </select>
     </div>
-    <div class="f-field-row"><span class="f-field-label">定投日</span><input id="F_e_invest_day" type="number" inputmode="numeric" min="1" max="31" value="${item.investDay||16}"><span class="f-field-note">号</span></div>
-    <div style="font-size:11px;color:#aaa;margin:4px 0 12px;padding:0 2px">开启后每月定投日自动记录，已达标或月投为0时跳过</div>
-    <button class="f-btn-primary" onclick="F_submitItemEdit('${item.id}')">保存</button>
+    <div class="f-field-row"><span class="f-field-label">定投日</span><input id="F_e_invest_day" type="number" inputmode="numeric" min="1" max="31" value="${escHtml(item.investDay||16)}"><span class="f-field-note">号</span></div>
+    <div style="font-size:11px;color:#aaa;margin:4px 0 12px;padding:0 2px">从启用或修改计划当天起生效；短月份按最后一天记录。再次打开时补记已启用期间漏记的月份，已达标或月投为0时跳过。</div>
+    <button class="f-btn-primary" onclick="F_submitItemEdit(${jsAttr(item.id)})">保存</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -3074,9 +3369,14 @@ function F_submitItemEdit(id){
   const idx=F_ITEMS.findIndex(i=>i.id===id);if(idx<0)return;
   const old=F_ITEMS[idx];
   const newName=document.getElementById('e-name')?.value.trim()||old.name;
-  const newTarget=parseFloat(document.getElementById('e-target')?.value)||old.target;
-  const newInvested=parseFloat(document.getElementById('e-invested')?.value)||0;
-  const newMonthly=parseFloat(document.getElementById('e-monthly')?.value)||0;
+  const newTarget=Number(document.getElementById('e-target')?.value);
+  const newInvested=Number(document.getElementById('e-invested')?.value);
+  const newMonthly=Number(document.getElementById('e-monthly')?.value);
+  const newAutoInvest=document.getElementById('F_e_auto')?.value==='1';
+  const newInvestDay=Number(document.getElementById('F_e_invest_day')?.value);
+  if(!Number.isFinite(newTarget)||newTarget<=0||!Number.isFinite(newInvested)||newInvested<0||!Number.isFinite(newMonthly)||newMonthly<0||!Number.isInteger(newInvestDay)||newInvestDay<1||newInvestDay>31){alert('请输入正数目标金额、非负投入金额和1至31号定投日');return;}
+  // 先按旧计划处理已到期月份，避免新金额改写过去的自动记录。
+  F_autoInvest();
   const newPlatform=document.getElementById('e-platform')?.value.trim()||'';
   const newNote=document.getElementById('e-note')?.value.trim()||'';
   const newGroup=document.getElementById('e-group')?.value||old.group;
@@ -3089,14 +3389,15 @@ function F_submitItemEdit(id){
   if(changes.length){
     F_ITEMS[idx].records.push({date:todayStr(),amount:0,note:'📝 '+changes.join('；'),type:'note',returned:false});
   }
-  const newAutoInvest=document.getElementById('F_e_auto')?.value==='1';
-  const newInvestDay=parseInt(document.getElementById('F_e_invest_day')?.value)||16;
-  F_ITEMS[idx]={...F_ITEMS[idx],name:newName,group:newGroup,target:newTarget,invested:newInvested,monthly:newMonthly,platform:newPlatform,note:newNote,autoInvest:newAutoInvest,investDay:newInvestDay};
+  const scheduleChanged=newAutoInvest!==!!old.autoInvest||newMonthly!==old.monthly||newInvestDay!==(old.investDay||16);
+  const schedule=scheduleChanged?{autoInvestSince:newAutoInvest?todayStr():null,autoInvestCheckedMonth:null}:{};
+  F_ITEMS[idx]={...F_ITEMS[idx],...schedule,name:newName,group:newGroup,target:newTarget,invested:newInvested,monthly:newMonthly,platform:newPlatform,note:newNote,autoInvest:newAutoInvest,investDay:newInvestDay};
+  F_autoInvest();
   F_saveData();showToast_f('✓ 已保存');F_modal=null;F_editId=null;F_renderMain();
 }
 function F_renderItemAddModal(){
   const ov=mkOv_f();
-  const groupOpts=Object.entries(GROUP_INFO).filter(([k])=>k!=='stock').map(([k,v])=>`<option value="${k}">${v.icon} ${v.label}</option>`).join('');
+  const groupOpts=Object.entries(GROUP_INFO).filter(([k])=>k!=='stock').map(([k,v])=>`<option value="${k}" ${k===(window._F_addGroup||'fund')?'selected':''}>${v.icon} ${v.label}</option>`).join('');
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">新增投资项目</div>
@@ -3115,11 +3416,12 @@ function F_renderItemAddModal(){
 }
 function F_submitAddInv(){
   const name=document.getElementById('n-name')?.value.trim();
-  const target=parseFloat(document.getElementById('n-target')?.value);
-  if(!name||!target){alert('请填写名称和目标金额');return;}
+  const target=Number(document.getElementById('n-target')?.value);
+  const invested=Number(document.getElementById('n-invested')?.value);
+  const monthly=Number(document.getElementById('n-monthly')?.value);
+  if(!name||!Number.isFinite(target)||target<=0||!Number.isFinite(invested)||invested<0||!Number.isFinite(monthly)||monthly<0){alert('请填写名称、正数目标金额和非负投入金额');return;}
   F_ITEMS.push({id:F_genId(),group:document.getElementById('n-group')?.value||'fund',name,
-    target,invested:parseFloat(document.getElementById('n-invested')?.value)||0,
-    monthly:parseFloat(document.getElementById('n-monthly')?.value)||0,
+    target,invested,monthly,
     platform:document.getElementById('n-platform')?.value.trim()||'',
     note:document.getElementById('n-note')?.value.trim()||'',records:[]});
   F_saveData();F_modal=null;F_renderMain();
@@ -3131,10 +3433,11 @@ function F_renderDataModal(){
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">数据备份</div>
-    <div class="minfo">导出后保存到微信文件助手或云盘，换设备或清缓存时恢复</div>
+    <div class="minfo">此处仅导出和恢复财务总览；全部模块备份请到记账日记的数据页。完整备份在此导入时只恢复财务总览。</div>
     <div class="data-btns">
-      <button class="data-btn export" onclick="F_exportData()">📤 导出数据</button>
-      <button class="data-btn import" onclick="document.getElementById('imp-file').click()">📥 导入数据</button>
+      <button class="data-btn export" onclick="F_exportData()">📤 导出财务总览</button>
+      <button class="data-btn import" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
+      <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
       <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
       <button class="data-btn danger" onclick="F_resetData()">🗑 恢复默认数据</button>
     </div>
@@ -3142,25 +3445,26 @@ function F_renderDataModal(){
   document.getElementById('panel-finance').appendChild(ov);
 }
 function F_exportData(){
-  const data=F_ld();
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  const d=new Date();
-  a.download=`财务管家_${d.getMonth()+1}月${d.getDate()}日${d.getFullYear()}.json`;
-  a.click();URL.revokeObjectURL(a.href);
+  try{
+    const data={app:'财务管家',schema:4,exportedAt:new Date().toISOString(),finance:F_ld()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    const d=new Date();
+    a.download=`财务管家_财务总览_${d.getMonth()+1}月${d.getDate()}日${d.getFullYear()}.json`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(e){alert('导出失败，请检查本地数据和浏览器存储权限');}
 }
 function F_importData(e){
-  const file=e.target.files[0];if(!file)return;
+  const input=e.target;const file=input.files?.[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
-    try{
-      const data=JSON.parse(ev.target.result);
-      if(!data.items&&!data.stockAccount){alert('文件格式不对');return;}
-      localStorage.setItem(SK,ev.target.result);
-      F_loadData();F_modal=null;F_renderMain();alert('✓ 导入成功');
-    }catch(err){alert('导入失败');}
+    try{applyImportedState(JSON.parse(ev.target.result),'finance');}
+    catch(err){alert(err.message||'导入失败，原数据未改动');return;}
+    try{F_loadData();F_modal=null;F_renderMain();alert('✓ 财务总览已恢复，记账和账单不变；可撤销本次导入');}
+    catch(err){alert('财务数据已恢复，显示异常；可在数据页撤销本次导入');}
   };
-  reader.readAsText(file);
+  reader.onerror=()=>alert('读取文件失败，原数据未改动');
+  reader.readAsText(file);input.value='';
 }
 function F_resetData(){
   if(!confirm('确认恢复默认数据？'))return;
@@ -3170,37 +3474,39 @@ function F_resetData(){
 }
 function F_submitStockEdit(stId){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const c=F_calcStock(st);
+  const tpPct=Number(document.getElementById('F_e_tp')?.value);
+  const slPct=Number(document.getElementById('F_e_sl')?.value);
+  if(!Number.isFinite(tpPct)||tpPct<0||!Number.isFinite(slPct)||slPct<0||slPct>100){alert('止盈比例必须为非负数，止损比例须在 0–100 之间（0 表示未设置）');return;}
+  // 读取止盈计划
+  const plans=F_tmpTpPlans||F_stockRecords(st,'tpPlans');
+  const newPlans=[];
+  for(const [i,tp] of plans.entries()){
+    const price=Number(document.getElementById(`F_tp_price_${i}`)?.value??tp.price);
+    const qty=Number(document.getElementById(`F_tp_qty_${i}`)?.value??tp.qty);
+    const note=document.getElementById(`F_tp_note_${i}`)?.value.trim()||tp.note||'';
+    if(!Number.isFinite(price)||price<=0||!Number.isSafeInteger(qty)||qty<=0){alert('第 '+(i+1)+' 个计划需填写正价格和正整数股数');return;}
+    newPlans.push({...tp,price,qty,note});
+  }
   st.name=document.getElementById('F_e_name')?.value.trim()||st.name;
   st.code=document.getElementById('F_e_code')?.value.trim()||'';
   st.note=document.getElementById('F_e_note')?.value.trim()||'';
-  st.tpPct=parseFloat(document.getElementById('F_e_tp')?.value)||20;
-  st.slPct=-(Math.abs(parseFloat(document.getElementById('F_e_sl')?.value)||15));
-  // 读取止盈计划
-  const plans=F_tmpTpPlans||st.tpPlans;
-  const newPlans=[];
-  plans.forEach((tp,i)=>{
-    const price=parseFloat(document.getElementById(`F_tp_price_${i}`)?.value)||tp.price;
-    const qty=parseFloat(document.getElementById(`F_tp_qty_${i}`)?.value)||tp.qty;
-    const note=document.getElementById(`F_tp_note_${i}`)?.value.trim()||tp.note||'';
-    if(price>0||tp.done)newPlans.push({...tp,price,qty,note});
-  });
+  st.tpPct=tpPct;st.slPct=-slPct;
   st.tpPlans=newPlans;
   F_tmpTpPlans=null;
   F_saveData();F_modal='stock-detail';F_renderMain();
 }
 function F_removeTpRow(i){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
-  if(!F_tmpTpPlans)F_tmpTpPlans=[...st.tpPlans];
+  if(!F_tmpTpPlans)F_tmpTpPlans=[...F_stockRecords(st,'tpPlans')];
   F_tmpTpPlans.splice(i,1);
   const container=document.getElementById('F_tp_rows');
   if(container)container.innerHTML=F_tmpTpPlans.map((tp,i)=>`
     <div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
       <div style="font-size:11px;color:#aaa;margin-bottom:6px;">${tp.done?'✓ 已完成':'计划'} ${i+1}</div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${tp.price}" placeholder="价格">
-        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${tp.qty}" placeholder="股数">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${tp.note||''}" placeholder="备注">
+        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${escHtml(tp.price)}" placeholder="价格">
+        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${escHtml(tp.qty)}" placeholder="股数">
+        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${escHtml(tp.note||'')}" placeholder="备注">
         <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
       </div>
     </div>`).join('');
@@ -3208,7 +3514,7 @@ function F_removeTpRow(i){
 function F_addTpRow(){
   const container=document.getElementById('F_tp_rows');if(!container)return;
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
-  if(!F_tmpTpPlans)F_tmpTpPlans=[...st.tpPlans];
+  if(!F_tmpTpPlans)F_tmpTpPlans=[...F_stockRecords(st,'tpPlans')];
   const i=F_tmpTpPlans.length;
   F_tmpTpPlans.push({id:F_genId(),price:0,qty:0,note:'',done:false});
   container.innerHTML+=`<div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
@@ -3224,93 +3530,86 @@ function F_addTpRow(){
 function F_previewLines(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const c=F_calcStock(st);
-  const tpPct=parseFloat(document.getElementById('e-tp')?.value)||20;
-  const slPct=parseFloat(document.getElementById('e-sl')?.value)||15;
-  const tpEl=document.getElementById('e-tp-price');
-  const slEl=document.getElementById('e-sl-price');
-  if(tpEl)tpEl.textContent=F_fmtY(c.avgCost*(1+tpPct/100));
-  if(slEl)slEl.textContent=F_fmtY(c.avgCost*(1-slPct/100));
+  const tpPct=Number(document.getElementById('F_e_tp')?.value);
+  const slPct=Number(document.getElementById('F_e_sl')?.value);
+  const tpEl=document.getElementById('F_e_tp_price');
+  const slEl=document.getElementById('F_e_sl_price');
+  if(tpEl)tpEl.textContent=Number.isFinite(tpPct)&&tpPct>=0?F_fmtY(c.avgCost*(1+tpPct/100)):'—';
+  if(slEl)slEl.textContent=slPct===0?'未设置':Number.isFinite(slPct)&&slPct>0&&slPct<=100?F_fmtY(c.avgCost*(1-slPct/100)):'—';
 }
 let F_tmpTpPlans=null;
 function F_submitBuy(stId){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const date=document.getElementById('F_b_date')?.value||todayStr();
-  const price=parseFloat(document.getElementById('F_b_price')?.value);
-  const qty=parseFloat(document.getElementById('F_b_qty')?.value);
-  const amt=parseFloat(document.getElementById('F_b_amt')?.value)||(price*qty);
-  const note=document.getElementById('F_b_note')?.value.trim()||'';
-  if(!price||!qty||!amt){alert('请填写价格和股数');return;}
-  st.buyRecords.push({id:F_genId(),date,price,qty,amount:amt,note});
+  const record={id:F_genId(),order:F_nextTradeOrder(st),...F_readTrade('F_b_',true)};
+  const candidate={...st,buyRecords:[...F_stockRecords(st,'buyRecords'),record],sellRecords:F_stockRecords(st,'sellRecords')};
+  if(!F_applyStockTrades(st,candidate,true))return;
   F_saveData();F_modal='stock-detail';F_renderMain();
 }
 
 // ── 止盈/止损卖出 ──
 function F_submitSell(stId,sellType){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const c=F_calcStock(st);
-  const date=document.getElementById('F_s_date')?.value||todayStr();
-  const price=parseFloat(document.getElementById('F_s_price')?.value);
-  const qty=parseFloat(document.getElementById('F_s_qty')?.value);
-  const note=document.getElementById('F_s_note')?.value.trim()||'';
   const planId=document.getElementById('F_s_plan')?.value||'';
-  if(!price||!qty){alert('请填写价格和股数');return;}
-  if(qty>c.holdQty){alert(`持仓只有${c.holdQty}股，无法卖出${qty}股`);return;}
-  const sellAmt=price*qty;
-  const profit=sellAmt-c.avgCost*qty;
-  const type=sellType||window._F_sellType||'tp';
-  st.sellRecords.push({id:F_genId(),date,price,qty,amount:sellAmt,profit,note,type});
+  const type=(sellType||window._F_sellType)==='sl'?'sl':'tp';
+  const record={id:F_genId(),order:F_nextTradeOrder(st),...F_readTrade('F_s_'),type,planId};
+  const candidate={...st,buyRecords:F_stockRecords(st,'buyRecords'),sellRecords:[...F_stockRecords(st,'sellRecords'),record]};
+  if(!F_applyStockTrades(st,candidate))return;
   // 标记对应止盈计划为已完成
-  if(planId&&type==='tp'){const tp=st.tpPlans.find(t=>t.id===planId);if(tp)tp.done=true;}
+  if(planId&&type==='tp'){const tp=F_stockRecords(st,'tpPlans').find(t=>t.id===planId);if(tp)tp.done=true;}
   window._F_sellType=null;
   F_saveData();F_modal='stock-detail';F_renderMain();
 }
 
 // ── 股票编辑 ──
 function F_calcBuyTotal(){
-  const price=parseFloat(document.getElementById('F_b_price')?.value)||0;
-  const qty=parseFloat(document.getElementById('F_b_qty')?.value)||0;
-  if(price>0&&qty>0){
-    const amt=document.getElementById('F_b_amt');
-    if(amt&&!amt.dataset.manual)amt.value=(price*qty).toFixed(2);
+  const price=Number(document.getElementById('F_b_price')?.value);
+  const qty=Number(document.getElementById('F_b_qty')?.value);
+  const amt=document.getElementById('F_b_amt');
+  if(amt&&!amt.dataset.manual){
+    amt.value=Number.isFinite(price)&&price>0&&Number.isFinite(qty)&&qty>0?(price*qty).toFixed(2):'';
   }
   F_calcBuyAvg();
 }
 function F_calcBuyAvg(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
-  const c=F_calcStock(st);
-  const qty=parseFloat(document.getElementById('F_b_qty')?.value)||0;
-  const amt=parseFloat(document.getElementById('F_b_amt')?.value)||0;
-  const price=parseFloat(document.getElementById('F_b_price')?.value)||0;
-  const actualAmt=amt||(price*qty);
-  if(qty>0&&actualAmt>0){
-    const newQty=c.totalBought+qty;
-    const newAvg=(c.totalCost+actualAmt)/newQty;
-    document.getElementById('buy-calc').style.display='';
-    document.getElementById('bc-qty').textContent=(c.holdQty+qty)+'股';
-    document.getElementById('bc-avg').textContent=F_fmtY(newAvg);
+  const qty=Number(document.getElementById('F_b_qty')?.value);
+  const rawAmount=document.getElementById('F_b_amt')?.value;
+  const price=Number(document.getElementById('F_b_price')?.value);
+  const actualAmt=rawAmount!=null&&rawAmount.trim()!==''?Number(rawAmount):price*qty;
+  const box=document.getElementById('F_buy_calc');
+  const qtyEl=document.getElementById('F_bc_qty');
+  const avgEl=document.getElementById('F_bc_avg');
+  if(!box||!qtyEl||!avgEl)return;
+  if(Number.isFinite(qty)&&qty>0&&Number.isFinite(price)&&price>0&&Number.isFinite(actualAmt)&&actualAmt>0){
+    const candidate={id:'preview',order:F_nextTradeOrder(st),date:document.getElementById('F_b_date')?.value||todayStr(),price,qty,amount:actualAmt};
+    const preview=F_calcStock({...st,buyRecords:[...(st.buyRecords||[]),candidate]});
+    box.style.display='';
+    qtyEl.textContent=preview.valid===false?'请检查交易日期':preview.holdQty+'股';
+    avgEl.textContent=preview.valid===false?'—':F_fmtY(preview.avgCost);
+  }else{
+    box.style.display='none';qtyEl.textContent='—';avgEl.textContent='—';
   }
 }
 function F_calcSellProfit(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
-  const c=F_calcStock(st);
-  const price=parseFloat(document.getElementById('F_s_price')?.value)||0;
-  const qty=parseFloat(document.getElementById('F_s_qty')?.value)||0;
-  if(price>0&&qty>0){
-    const sellAmt=price*qty;
-    const costAmt=c.avgCost*qty;
-    const profit=sellAmt-costAmt;
-    document.getElementById('F_sell_calc').style.display='';
-    document.getElementById('F_sc_amt').textContent=F_fmtY(sellAmt);
-    document.getElementById('F_sc_profit').textContent=F_fmtPnl(profit);
-    document.getElementById('F_sc_profit').className='f-calc-val f-pnl '+F_pnlClass(profit);
-    document.getElementById('F_sc_remain').textContent=(c.holdQty-qty)+'股';
-  }else document.getElementById('F_sell_calc').style.display='none';
+  const box=document.getElementById('F_sell_calc');if(!box)return;
+  const record={id:'preview',order:F_nextTradeOrder(st),...F_readTrade('F_s_')};
+  if(!document.getElementById('F_s_price')?.value||!document.getElementById('F_s_qty')?.value){box.style.display='none';return;}
+  const sells=[...F_stockRecords(st,'sellRecords'),record];
+  const cal=F_calcStock({...st,sellRecords:sells});
+  const profit=cal.sellProfits[sells.length-1];
+  box.style.display='';
+  document.getElementById('F_sc_amt').textContent=Number.isFinite(record.amount)?F_fmtY(record.amount):'金额无效';
+  document.getElementById('F_sc_profit').textContent=cal.valid?F_fmtPnl(profit):cal.errors[0];
+  document.getElementById('F_sc_profit').className='f-calc-val f-pnl '+(cal.valid?F_pnlClass(profit):'zero');
+  document.getElementById('F_sc_remain').textContent=cal.valid?cal.holdQty+'股':'待核对';
 }
 function F_submitDeposit(){
-  const amt=parseFloat(document.getElementById('a-dep')?.value);
-  const date=document.getElementById('a-date')?.value||todayStr();
-  const note=document.getElementById('a-note')?.value.trim()||'';
-  if(!amt||amt<=0){alert('请填写追加金额');return;}
+  const amt=Number(document.getElementById('F_a_dep')?.value);
+  const date=document.getElementById('F_a_date')?.value||todayStr();
+  const note=document.getElementById('F_a_note')?.value.trim()||'';
+  if(!Number.isFinite(amt)||amt<=0||amt>Number.MAX_SAFE_INTEGER/100){alert('请填写有效的追加金额');return;}
+  if(!F_validTradeDate(date)){alert('请填写有效日期');return;}
   F_STOCK_ACCOUNT.deposits.push({date,amount:amt,note});
   F_saveData();F_modal='account-edit';F_renderMain();
 }
@@ -3320,8 +3619,10 @@ function F_deleteDeposit(i){
   F_saveData();F_modal='account-edit';F_renderMain();
 }
 function F_saveInitial(){
-  const v=parseFloat(document.getElementById('a-init')?.value);
-  if(v>0)F_STOCK_ACCOUNT.initialCapital=v;
+  const raw=document.getElementById('F_a_init')?.value;
+  const v=Number(raw);
+  if(raw==null||raw.trim()===''||!Number.isFinite(v)||v<0||v>Number.MAX_SAFE_INTEGER/100){alert('初始资金必须为有效的非负金额');return;}
+  F_STOCK_ACCOUNT.initialCapital=v;
   F_saveData();F_modal=null;F_renderMain();
 }
 
@@ -3335,19 +3636,24 @@ function F_deleteStock(stId){
   const box=document.createElement('div');
   box.id='F_del_confirm';
   box.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,.15);';
-  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">删除 ${st.name}？</div>
-    <div style="font-size:13px;color:#888;margin-bottom:20px;">所有买入、卖出、止盈记录将一并删除，不可恢复</div>
-    <button onclick="F_confirmDeleteStock('${stId}')" style="width:100%;height:44px;border-radius:12px;border:none;background:#e53935;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认删除</button>
+  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">隐藏 ${escHtml(st.name)}？</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px;">仅从当前列表隐藏。所有买卖记录、可用资金和累计盈亏均保留，可在「已隐藏股票」中查看或恢复。</div>
+    <button onclick="F_confirmDeleteStock(${jsAttr(stId)})" style="width:100%;height:44px;border-radius:12px;border:none;background:#1a5fd4;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认隐藏</button>
     <button onclick="document.getElementById('F_del_confirm').remove()" style="width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:14px;cursor:pointer;">取消</button>`;
   document.getElementById('panel-finance').appendChild(box);
 }
 function F_confirmDeleteStock(stId){
-  F_STOCK_ACCOUNT.stocks=F_STOCK_ACCOUNT.stocks.filter(s=>s.id!==stId);
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
+  st.hidden=true;
   F_saveData();
   const box=document.getElementById('F_del_confirm');
   if(box)box.remove();
   F_modal=null;F_editId=null;F_renderMain();
-  showToast_f('✓ 已删除');
+  showToast_f('✓ 已隐藏，记录和资金已保留');
+}
+function F_restoreStock(stId){
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
+  st.hidden=false;F_saveData();F_modal=null;F_renderMain();showToast_f('✓ 已恢复显示');
 }
 
 // ── 新增股票 ──
@@ -3382,22 +3688,20 @@ function F_calcNewStockAmt(){
 function F_submitAddStock(){
   const name=document.getElementById('F_n_name')?.value.trim();
   if(!name){alert('请填写名称');return;}
-  const price=parseFloat(document.getElementById('F_n_price')?.value);
-  const qty=parseFloat(document.getElementById('F_n_qty')?.value);
-  const amt=parseFloat(document.getElementById('F_n_amt')?.value)||(price&&qty?price*qty:0);
-  const date=document.getElementById('F_n_date')?.value||todayStr();
+  const tpRaw=document.getElementById('F_n_tp')?.value,slRaw=document.getElementById('F_n_sl')?.value;
+  const tpPct=tpRaw==null||tpRaw.trim()===''?20:Number(tpRaw),slPct=slRaw==null||slRaw.trim()===''?15:Number(slRaw);
+  if(!Number.isFinite(tpPct)||tpPct<0||!Number.isFinite(slPct)||slPct<0||slPct>100){alert('请填写有效的止盈止损比例（止损 0–100）');return;}
+  const record={id:F_genId(),order:Date.now(),...F_readTrade('F_n_',true),note:'初始买入'};
   const buyRecords=[];
-  if(price>0&&qty>0){
-    buyRecords.push({id:F_genId(),date,price,qty,amount:amt||price*qty,note:'初始买入'});
-  }
+  if(['price','qty','amt'].some(key=>document.getElementById('F_n_'+key)?.value.trim()))buyRecords.push(record);
   const st={
     id:F_genId(),
     code:document.getElementById('F_n_code')?.value.trim()||'',
     name,buyRecords,sellRecords:[],tpPlans:[],
-    tpPct:parseFloat(document.getElementById('F_n_tp')?.value)||20,
-    slPct:-(Math.abs(parseFloat(document.getElementById('F_n_sl')?.value)||15)),
+    tpPct,slPct:-slPct,
     note:document.getElementById('F_n_note')?.value.trim()||'',
   };
+  const cal=F_calcStock(st);if(!cal.valid){alert('无法保存：'+cal.errors.join('；'));return;}
   F_STOCK_ACCOUNT.stocks.push(st);
   F_saveData();
   showToast_f('✓ 股票已添加');
@@ -3421,12 +3725,12 @@ function F_renderInvActionModal(){
   const ov=mkOv_f();
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
-    <div class="f-sheet-title">${isDeposit?'＋ 存入':'－ 取用'} · ${item.name}</div>
+    <div class="f-sheet-title">${isDeposit?'＋ 存入':'－ 取用'} · ${escHtml(item.name)}</div>
     <div class="f-sheet-sub">当前余额 ${F_fmtY(inv)} / 目标 ${F_fmtY(item.target)}</div>
     <div class="f-field-row"><span class="f-field-label">金额</span><input id="r-amt" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div>
     <div class="f-field-row"><span class="f-field-label">日期</span><input id="r-date" type="date" value="${todayStr()}"></div>
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="r-note" placeholder="可选"></div>
-    <button class="f-btn-primary" style="background:${isDeposit?'#1a5fd4':'#e65100'};margin-top:8px;" onclick="F_submitInvAction('${item.id}','${type}')">确认${isDeposit?'存入':'取用'}</button>
+    <button class="f-btn-primary" style="background:${isDeposit?'#1a5fd4':'#e65100'};margin-top:8px;" onclick="F_submitInvAction(${jsAttr(item.id)},${jsAttr(type)})">确认${isDeposit?'存入':'取用'}</button>
     <button class="f-btn-secondary" onclick="F_modal='item-detail';F_renderMain()">取消</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
@@ -3435,7 +3739,7 @@ function F_submitInvAction(itemId,type){
   const amt=parseFloat(document.getElementById('r-amt')?.value);
   const date=document.getElementById('r-date')?.value||todayStr();
   const note=document.getElementById('r-note')?.value.trim()||'';
-  if(!amt||amt<=0){alert('请填写金额');return;}
+  if(!Number.isFinite(amt)||amt<=0){alert('请填写金额');return;}
   const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
   if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
   const isWithdraw=type==='withdraw';
@@ -3446,7 +3750,9 @@ function F_submitInvAction(itemId,type){
 }
 function F_markReturned(itemId,recIdx){
   const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
-  if(F_ITEMS[idx].records[recIdx])F_ITEMS[idx].records[recIdx].returned=true;
+  const record=F_ITEMS[idx].records[recIdx];
+  if(!record||record.type!=='withdraw')return;
+  record.returned=true;
   F_saveData();showToast_f('✓ 已标记归还');F_renderMain();
 }
 function F_openEditInvRecord(itemId,recIdx){
@@ -3472,13 +3778,13 @@ function F_renderEditInvRecordModal(){
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">编辑记录</div>
-    <div class="f-sheet-sub">${item.name} · ${typeLabel}</div>
-    <div class="f-field-row"><span class="f-field-label">日期</span><input id="F_ei_date" type="date" value="${r.date}"></div>
-    <div class="f-field-row"><span class="f-field-label">金额</span><input id="F_ei_amt" type="number" inputmode="decimal" step="0.01" value="${r.amount}"></div>
-    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_ei_note" value="${r.note||''}"></div>
+    <div class="f-sheet-sub">${escHtml(item.name)} · ${typeLabel}</div>
+    <div class="f-field-row"><span class="f-field-label">日期</span><input id="F_ei_date" type="date" value="${escHtml(r.date)}"></div>
+    <div class="f-field-row"><span class="f-field-label">金额</span><input id="F_ei_amt" type="number" inputmode="decimal" step="0.01" value="${escHtml(r.amount)}"></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_ei_note" value="${escHtml(r.note||'')}"></div>
     ${isW?`<div class="f-field-row" onclick="F_ei_toggleReturned()" style="cursor:pointer"><span class="f-field-label">已归还</span><span id="F_ei_ret_lbl" style="flex:1;color:${r.returned?'#2e7d32':'#aaa'};font-size:13px">${r.returned?'✓ 已归还':'未归还（点击切换）'}</span></div>`:''}
-    <button class="f-btn-primary" onclick="F_submitEditInvRecord('${item.id}',${idx})">保存</button>
-    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteInvRecord('${item.id}',${idx})">删除这条记录</button>
+    <button class="f-btn-primary" onclick="F_submitEditInvRecord(${jsAttr(item.id)},${idx})">保存</button>
+    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteInvRecord(${jsAttr(item.id)},${idx})">删除这条记录</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -3488,7 +3794,7 @@ function F_submitEditInvRecord(itemId,recIdx){
   const date=document.getElementById('F_ei_date')?.value||rec.date;
   const amt=parseFloat(document.getElementById('F_ei_amt')?.value);
   const note=document.getElementById('F_ei_note')?.value.trim()||'';
-  if(!amt||amt<=0){alert('请填写金额');return;}
+  if(!Number.isFinite(amt)||amt<=0){alert('请填写金额');return;}
   const upd={...rec,date,amount:amt,note};
   if(rec.type==='withdraw')upd.returned=!!window._F_ei_returned;
   F_ITEMS[idx].records[recIdx]=upd;
@@ -3520,7 +3826,7 @@ function F_calcPortfolio(){
   const fundCost=fundItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
   const goldCost=goldItems.reduce((s,i)=>s+F_getTotalInvested(i),0);
   // 股票成本=初始资金+追加资金（固定资金池）
-  const stockCost=F_STOCK_ACCOUNT.initialCapital+(F_STOCK_ACCOUNT.deposits||[]).reduce((s,d)=>s+d.amount,0);
+  const stockCost=F_calcAccount().totalIn;
   // 现金安全垫余额
   const cashItem=F_ITEMS.find(i=>i.name==='现金安全垫')||F_ITEMS.find(i=>i.group==='saving');
   const cashCost=cashItem?F_getTotalInvested(cashItem):0;
@@ -3555,7 +3861,7 @@ function F_renderPortfolioSection(){
   return`<div class="f-portfolio" id="F_portfolio_card">
     <div class="f-portfolio-title">
       <span class="f-portfolio-h">🥧 资产配置</span>
-      <span class="f-portfolio-update">${updatedAt?'市值更新于 '+updatedAt:'市值待更新'}</span>
+      <span class="f-portfolio-update">${escHtml(updatedAt?'市值更新于 '+updatedAt:'市值待更新')}</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div style="text-align:center;">
@@ -3578,11 +3884,8 @@ function F_renderPortfolioSection(){
 }
 
 function F_drawPortfolioPies(){
-  ['F_pie_cost','F_pie_mkt'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el&&el._chartInstance){el._chartInstance.destroy();el._chartInstance=null;}
-  });
   setTimeout(()=>{
+    if(_currentTab!=='finance'||F_modal)return;
     const p=F_calcPortfolio();
     const labelPlugin={
       id:'pieLabels',
@@ -3613,7 +3916,7 @@ function F_drawPortfolioPies(){
       const canvas=document.getElementById('F_pie_'+type);
       if(!canvas||!window.Chart)return;
       const data=type==='cost'?p.costs:p.mkts;
-      const chart=new Chart(canvas,{
+      const chart=replaceChart(canvas,{
         type:'pie',
         data:{labels:F_PORT_NAMES,datasets:[{data,backgroundColor:F_PORT_COLORS,borderWidth:2,borderColor:'#fff'}]},
         options:{
@@ -3638,16 +3941,16 @@ function F_renderMarketUpdateModal(){
     <div class="f-sheet-title">更新市值</div>
     <div class="f-sheet-sub">填入各账户当前总市值，不填则保持上次数据</div>
     <div class="f-section">股票</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_stock" type="number" inputmode="decimal" step="0.01" placeholder="持仓总市值" value="${mkt.stock!=null?mkt.stock:''}"></div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">资金池成本 ${F_fmtY(p.costs[2])}</div>
+    <div class="f-field-row"><span class="f-field-label">账户总资产</span><input id="F_mkt_stock" type="number" inputmode="decimal" step="0.01" placeholder="股票账户总资产（含现金）" value="${escHtml(mkt.stock!=null?mkt.stock:'')}"></div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;">填写持仓市值 + 股票账户可用资金（${F_fmtY(F_calcAccount().available)}）。资金池成本 ${F_fmtY(p.costs[2])}；历史填写值保留，若曾只填持仓市值，请核对后更新。</div>
     <div class="f-section">基金</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_fund" type="number" inputmode="decimal" step="0.01" placeholder="所有基金合计市值" value="${mkt.fund!=null?mkt.fund:''}"></div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_fund" type="number" inputmode="decimal" step="0.01" placeholder="所有基金合计市值" value="${escHtml(mkt.fund!=null?mkt.fund:'')}"></div>
     <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[0])}</div>
     <div class="f-section">黄金</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_gold" type="number" inputmode="decimal" step="0.01" placeholder="黄金积存金当前价值" value="${mkt.gold!=null?mkt.gold:''}"></div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_gold" type="number" inputmode="decimal" step="0.01" placeholder="黄金积存金当前价值" value="${escHtml(mkt.gold!=null?mkt.gold:'')}"></div>
     <div style="font-size:11px;color:#aaa;margin-bottom:10px;">投入成本 ${F_fmtY(p.costs[1])}</div>
     <div class="f-section">现金（余额宝）</div>
-    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_cash" type="number" inputmode="decimal" step="0.01" placeholder="含利息的实际余额" value="${mkt.cash!=null?mkt.cash:''}"></div>
+    <div class="f-field-row"><span class="f-field-label">当前市值</span><input id="F_mkt_cash" type="number" inputmode="decimal" step="0.01" placeholder="含利息的实际余额" value="${escHtml(mkt.cash!=null?mkt.cash:'')}"></div>
     <div style="font-size:11px;color:#aaa;margin-bottom:14px;">现金安全垫本金 ${F_fmtY(p.costs[3])}，填入含利息的实际余额宝余额</div>
     <button class="f-btn-primary" onclick="F_submitMarketUpdate()">保存市值</button>
   </div>`;
@@ -3655,43 +3958,53 @@ function F_renderMarketUpdateModal(){
 }
 
 function F_submitMarketUpdate(){
-  const stock=parseFloat(document.getElementById('F_mkt_stock')?.value);
-  const fund=parseFloat(document.getElementById('F_mkt_fund')?.value);
-  const gold=parseFloat(document.getElementById('F_mkt_gold')?.value);
-  const cash=parseFloat(document.getElementById('F_mkt_cash')?.value);
-  const mkt=F_getPortfolioMarket();
+  const current=F_getPortfolioMarket();
+  const next={...current};
+  for(const key of ['stock','fund','gold','cash']){
+    const raw=document.getElementById('F_mkt_'+key)?.value;
+    if(raw==null||raw.trim()==='')continue;
+    const value=Number(raw);
+    if(!Number.isFinite(value)||value<0){alert('市值请输入有效的非负金额，留空则保留原值');return;}
+    next[key]=value;
+  }
   const now=new Date();
-  const d={
-    stock:isNaN(stock)?mkt.stock:stock,
-    fund:isNaN(fund)?mkt.fund:fund,
-    gold:isNaN(gold)?mkt.gold:gold,
-    cash:isNaN(cash)?mkt.cash:cash,
-    updatedAt:`${now.getMonth()+1}月${now.getDate()}日`
-  };
-  F_savePortfolioMarket(d);
+  next.updatedAt=`${now.getMonth()+1}月${now.getDate()}日`;
+  F_savePortfolioMarket(next);
   showToast_f('✓ 市值已更新');
   F_modal=null;F_renderMain();
   setTimeout(F_drawPortfolioPies,200);
 }
 
 function F_autoInvest(){
-  const today=new Date();
-  const todayD=today.getDate();
-  const mk=today.getFullYear()+'-'+pad2(today.getMonth()+1);
-  F_ITEMS.forEach((item,idx)=>{
+  const asOf=todayStr();
+  const mk=asOf.slice(0,7);
+  let changed=false;
+  F_ITEMS.forEach(item=>{
     if(!item.autoInvest)return;
-    if(!item.monthly||item.monthly<=0)return;
-    if(F_isCompleted(item))return;
-    const investDay=item.investDay||16;
-    if(todayD<investDay)return;
-    const recs=item.records||[];
-    const alreadyDone=recs.some(r=>r.type==='auto'&&r.date&&r.date.startsWith(mk));
-    if(alreadyDone)return;
-    if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
-    const investDate=mk+'-'+pad2(investDay);
-    F_ITEMS[idx].records.push({date:investDate,amount:item.monthly,note:'🤖 自动定投',type:'auto',returned:false});
+    const sinceDate=new Date((item.autoInvestSince||'')+'T00:00:00');
+    // 旧数据没有启用日期时只从当前月开始，绝不推测过去是否启用。
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(item.autoInvestSince||'')||!Number.isFinite(sinceDate.getTime())||dateStr(sinceDate)!==item.autoInvestSince){
+      item.autoInvestSince=mk+'-01';item.autoInvestCheckedMonth=null;changed=true;
+    }
+    const firstMonth=item.autoInvestSince.slice(0,7);
+    let month=firstMonth;
+    if(/^\d{4}-(0[1-9]|1[0-2])$/.test(item.autoInvestCheckedMonth||'')&&item.autoInvestCheckedMonth>=firstMonth&&item.autoInvestCheckedMonth<=mk)month=nextMonth(item.autoInvestCheckedMonth);
+    const investDay=Number.isInteger(Number(item.investDay))&&Number(item.investDay)>=1&&Number(item.investDay)<=31?Number(item.investDay):16;
+    const monthly=Number(item.monthly);
+    if(!Array.isArray(item.records)){item.records=[];changed=true;}
+    while(month<=mk){
+      const[y,m]=month.split('-').map(Number);
+      const investDate=dateStr(settleDate(y,m-1,investDay));
+      if(investDate>asOf)break;
+      const alreadyDone=item.records.some(r=>r.type==='auto'&&typeof r.date==='string'&&r.date.startsWith(month));
+      if(investDate>=item.autoInvestSince&&Number.isFinite(monthly)&&monthly>0&&!F_isCompleted(item)&&!alreadyDone){
+        item.records.push({date:investDate,amount:monthly,note:'🤖 自动定投',type:'auto',returned:false});
+      }
+      item.autoInvestCheckedMonth=month;changed=true;
+      month=nextMonth(month);
+    }
   });
-  F_saveData();
+  if(changed)F_saveData();
 }
 
 
@@ -3705,19 +4018,20 @@ function F_openEditBuyRecord(stId,recIdx){
 function F_renderEditBuyModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const idx=window._F_editBuyIdx||0;
-  const r=st.buyRecords[idx];if(!r)return;
+  if(idx<0||idx>=F_stockRecords(st,'buyRecords').length)return;
+  const r=st.buyRecords[idx]||{};
   const ov=mkOv_f();
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">编辑买入记录</div>
-    <div class="f-sheet-sub">${st.name} · 第 ${idx+1} 笔买入</div>
-    <div class="f-field-row"><span class="f-field-label">买入日期</span><input id="F_eb_date" type="date" value="${r.date}"></div>
-    <div class="f-field-row"><span class="f-field-label">买入价格</span><input id="F_eb_price" type="number" inputmode="decimal" step="0.001" value="${r.price}" oninput="F_calcEditBuyAmt()"></div>
-    <div class="f-field-row"><span class="f-field-label">买入股数</span><input id="F_eb_qty" type="number" inputmode="numeric" step="100" value="${r.qty}" oninput="F_calcEditBuyAmt()"></div>
-    <div class="f-field-row"><span class="f-field-label">买入金额</span><input id="F_eb_amt" type="number" inputmode="decimal" step="0.01" value="${r.amount}"><span class="f-field-note" style="font-size:10px;color:#aaa;">含手续费</span></div>
-    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_eb_note" value="${r.note||''}"></div>
-    <button class="f-btn-primary" onclick="F_submitEditBuyRecord('${st.id}',${idx})">保存</button>
-    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteBuyRecord('${st.id}',${idx})">删除这笔买入</button>
+    <div class="f-sheet-sub">${escHtml(st.name)} · 第 ${idx+1} 笔买入</div>
+    <div class="f-field-row"><span class="f-field-label">买入日期</span><input id="F_eb_date" type="date" value="${escHtml(r.date)}"></div>
+    <div class="f-field-row"><span class="f-field-label">买入价格</span><input id="F_eb_price" type="number" inputmode="decimal" step="0.001" value="${escHtml(r.price)}" oninput="F_calcEditBuyAmt()"></div>
+    <div class="f-field-row"><span class="f-field-label">买入股数</span><input id="F_eb_qty" type="number" inputmode="numeric" step="100" value="${escHtml(r.qty)}" oninput="F_calcEditBuyAmt()"></div>
+    <div class="f-field-row"><span class="f-field-label">买入金额</span><input id="F_eb_amt" type="number" inputmode="decimal" step="0.01" value="${escHtml(r.amount)}"><span class="f-field-note" style="font-size:10px;color:#aaa;">含手续费</span></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_eb_note" value="${escHtml(r.note||'')}"></div>
+    <button class="f-btn-primary" onclick="F_submitEditBuyRecord(${jsAttr(st.id)},${idx})">保存</button>
+    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteBuyRecord(${jsAttr(st.id)},${idx})">删除这笔买入</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -3733,13 +4047,10 @@ function F_calcEditBuyAmt(){
 
 function F_submitEditBuyRecord(stId,recIdx){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const date=document.getElementById('F_eb_date')?.value||todayStr();
-  const price=parseFloat(document.getElementById('F_eb_price')?.value);
-  const qty=parseFloat(document.getElementById('F_eb_qty')?.value);
-  const amt=parseFloat(document.getElementById('F_eb_amt')?.value)||(price*qty);
-  const note=document.getElementById('F_eb_note')?.value.trim()||'';
-  if(!price||!qty){alert('请填写价格和股数');return;}
-  st.buyRecords[recIdx]={...st.buyRecords[recIdx],date,price,qty,amount:amt,note};
+  const buys=F_stockRecords(st,'buyRecords').slice();
+  if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=buys.length)return;
+  buys[recIdx]={...buys[recIdx],...F_readTrade('F_eb_',true)};
+  if(!F_applyStockTrades(st,{...st,buyRecords:buys,sellRecords:F_stockRecords(st,'sellRecords')},true))return;
   F_saveData();
   showToast_f('✓ 买入记录已更新');
   F_modal='stock-detail';F_renderMain();
@@ -3748,10 +4059,58 @@ function F_submitEditBuyRecord(stId,recIdx){
 function F_deleteBuyRecord(stId,recIdx){
   if(!confirm('确认删除这笔买入记录？'))return;
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  st.buyRecords.splice(recIdx,1);
+  const buys=F_stockRecords(st,'buyRecords').slice();
+  if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=buys.length)return;
+  buys.splice(recIdx,1);
+  if(!F_applyStockTrades(st,{...st,buyRecords:buys,sellRecords:F_stockRecords(st,'sellRecords')},true))return;
   F_saveData();
   showToast_f('✓ 已删除');
   F_modal='stock-detail';F_renderMain();
+}
+function F_openEditSellRecord(stId,recIdx){
+  F_editId=stId;window._F_editSellIdx=recIdx;F_modal='edit-sell';F_renderMain();
+}
+function F_renderEditSellModal(){
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
+  const idx=window._F_editSellIdx;
+  if(!Number.isInteger(idx)||idx<0||idx>=F_stockRecords(st,'sellRecords').length)return;
+  const r=st.sellRecords[idx]||{},ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div>
+    <div class="f-sheet-title">编辑卖出记录</div><div class="f-sheet-sub">${escHtml(st.name)} · 第 ${idx+1} 笔卖出</div>
+    <div class="f-field-row"><span class="f-field-label">卖出日期</span><input id="F_es_date" type="date" value="${escHtml(r.date||'')}"></div>
+    <div class="f-field-row"><span class="f-field-label">卖出价格</span><input id="F_es_price" type="number" step="0.001" value="${escHtml(r.price??'')}" oninput="F_calcEditSellAmount()"></div>
+    <div class="f-field-row"><span class="f-field-label">卖出股数</span><input id="F_es_qty" type="number" step="1" value="${escHtml(r.qty??'')}" oninput="F_calcEditSellAmount()"></div>
+    <div class="f-field-row"><span class="f-field-label">实际到账</span><input id="F_es_amt" type="number" step="0.01" value="${escHtml(r.amount??'')}"></div>
+    <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_es_note" value="${escHtml(r.note||'')}"></div>
+    <div class="f-info-box">保存后按交易顺序重新计算相关盈亏。修改日期或股数不能导致历史持仓为负。</div>
+    <button class="f-btn-primary" onclick="F_submitEditSellRecord(${jsAttr(st.id)},${idx})">保存</button>
+    <button class="f-btn-danger" onclick="F_deleteSellRecord(${jsAttr(st.id)},${idx})">删除这笔卖出</button></div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+function F_calcEditSellAmount(){
+  const price=Number(document.getElementById('F_es_price')?.value),qty=Number(document.getElementById('F_es_qty')?.value);
+  const amount=price*qty;
+  if(Number.isFinite(amount)&&price>0&&Number.isSafeInteger(qty)&&qty>0)document.getElementById('F_es_amt').value=amount.toFixed(2);
+}
+function F_submitEditSellRecord(stId,recIdx){
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
+  const sells=F_stockRecords(st,'sellRecords').slice();
+  if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=sells.length)return;
+  sells[recIdx]={...sells[recIdx],...F_readTrade('F_es_',true)};
+  if(!F_applyStockTrades(st,{...st,buyRecords:F_stockRecords(st,'buyRecords'),sellRecords:sells},true))return;
+  F_saveData();F_modal='stock-detail';F_renderMain();showToast_f('✓ 卖出记录已更新');
+}
+function F_deleteSellRecord(stId,recIdx){
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
+  const sells=F_stockRecords(st,'sellRecords').slice();
+  if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=sells.length)return;
+  if(!confirm('确认删除这笔卖出记录？相关持仓、资金和盈亏将重新计算。'))return;
+  const removed=sells.splice(recIdx,1)[0];
+  if(!F_applyStockTrades(st,{...st,buyRecords:F_stockRecords(st,'buyRecords'),sellRecords:sells},true))return;
+  if(removed?.planId&&!sells.some(r=>r?.planId===removed.planId)){
+    const plan=F_stockRecords(st,'tpPlans').find(p=>p.id===removed.planId);if(plan)plan.done=false;
+  }
+  F_saveData();F_modal='stock-detail';F_renderMain();showToast_f('✓ 卖出记录已删除');
 }
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
