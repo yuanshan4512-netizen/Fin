@@ -473,6 +473,28 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 #panel-finance .topbar{background:#fff;border-bottom:.5px solid #e8e8e8;}
 #panel-finance .topbar-title{color:#1a1a1a;font-size:16px;font-weight:700;}
 #panel-finance .scroll-body{padding:14px 14px 32px;background:#f5f6fa;}
+/* 资产配置总览 */
+.f-allocation{background:#fff;border-radius:17px;padding:17px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.04);color:#16243b;}
+.f-allocation-title{font-size:13px;font-weight:600;margin-bottom:14px;}
+.f-allocation-body{display:flex;align-items:center;gap:15px;}
+.f-allocation-ring{width:154px;height:154px;flex:0 0 154px;position:relative;}
+.f-allocation-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg);}
+.f-allocation-arc{fill:none;stroke-width:15;transition:opacity .2s;}
+.f-allocation-center{position:absolute;inset:29px 15px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer;}
+.f-allocation-center span,.f-allocation-center small{font-size:11px;color:#65738a;}
+.f-allocation-center strong{font-size:22px;letter-spacing:-.7px;font-weight:750;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.f-allocation-center strong.f-allocation-large{font-size:17px;letter-spacing:-.5px;}
+.f-allocation-legend{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px;}
+.f-allocation-line{display:grid;grid-template-columns:8px minmax(0,1fr);gap:7px;align-items:start;text-align:left;padding:4px 2px;border:0;background:transparent;color:inherit;font:inherit;width:100%;border-radius:6px;cursor:pointer;}
+.f-allocation-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;background:var(--asset-color);}
+.f-allocation-line b{display:block;font-size:12px;font-weight:500;}
+.f-allocation-line small{display:block;font-size:11px;line-height:1.5;color:#65738a;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.f-allocation-line[aria-pressed="true"]{background:#edf3ff;}
+.f-allocation-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e8edf5;font-size:11px;color:#65738a;}
+.f-allocation-footer button{border:0;padding:3px 0;background:transparent;color:#1a5fd4;font:inherit;cursor:pointer;}
+.f-allocation-warning{font-size:11px;color:#8a6030;line-height:1.6;margin-top:10px;}
+@media(max-width:380px){.f-allocation{padding:14px}.f-allocation-ring{width:130px;height:130px;flex-basis:130px}.f-allocation-body{gap:10px}.f-allocation-center{inset:25px 10px}.f-allocation-center strong{font-size:19px}.f-allocation-center strong.f-allocation-large{font-size:15px}.f-allocation-line{gap:5px}}
+@media(prefers-reduced-motion:reduce){.f-allocation-arc{transition:none}}
 /* 英雄卡 */
 .f-hero{background:linear-gradient(135deg,#1a5fd4,#0d47a1);border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 4px 20px rgba(26,95,212,.25);}
 .f-hero-label{font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.06em;margin-bottom:6px;}
@@ -610,6 +632,15 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .f-inv-card-pct.done{color:#c62828;}
 .f-inv-card-remain{font-size:11px;color:#aaa;}
 .f-inv-card-remain.done{color:#c62828;}
+.f-inv-card-amount{font-size:21px;font-weight:700;color:#1a1a1a;margin-top:14px;letter-spacing:-.3px;overflow-wrap:anywhere;}
+.f-inv-card-balance-label{font-size:10px;color:#aaa;margin-top:4px;}
+.f-asset-note{font-size:11px;color:rgba(255,255,255,.65);line-height:1.6;}
+.f-asset-breakdown{display:flex;gap:16px;border-top:1px solid rgba(255,255,255,.15);padding-top:12px;margin-top:14px;}
+.f-asset-breakdown>div{flex:1;min-width:0;}
+.f-asset-breakdown strong{display:block;font-size:15px;color:#fff;margin-top:4px;font-weight:600;}
+.f-market-reference{margin-top:16px;}
+.f-market-reference>summary{font-size:12px;color:#888;cursor:pointer;padding:10px 2px;}
+.f-market-reference .f-portfolio{box-shadow:none;border:.5px solid #e8e8e8;}
 /* 添加按钮卡片 */
 .f-inv-add-card{background:#f8f9fc;border-radius:14px;padding:12px;cursor:pointer;border:1.5px dashed #c8dff5;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:88px;-webkit-tap-highlight-color:transparent;}
 .f-inv-add-card:active{background:#e8f0fe;}
@@ -1131,7 +1162,7 @@ function validateFinanceBackup(raw){
     const p='finance.items['+i+']';backupObject(item,p);backupId(item.id,p+'.id');
     backupEnum(item.group,['fund','gold','saving','stock'],p+'.group');
     backupString(item.name,p+'.name');backupNumber(item.target,p+'.target',0);
-    backupFields(item,p,[],['platform','note'],['autoInvest']);
+    backupFields(item,p,[],['platform','note'],['autoInvest','hidden']);
     if(backupOwn(item,'autoInvestSince')&&item.autoInvestSince!==null)backupDate(item.autoInvestSince,p+'.autoInvestSince');
     if(backupOwn(item,'autoInvestCheckedMonth')&&item.autoInvestCheckedMonth!==null){
       if(typeof item.autoInvestCheckedMonth!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(item.autoInvestCheckedMonth))backupError(p+'.autoInvestCheckedMonth');
@@ -1140,7 +1171,7 @@ function validateFinanceBackup(raw){
     if(backupOwn(item,'investDay'))backupNumber(item.investDay,p+'.investDay',1,31,true);
     if(backupOwn(item,'records'))backupArray(item.records,p+'.records').forEach((r,j)=>{
       const rp=p+'.records['+j+']';backupObject(r,rp);backupDate(r.date,rp+'.date');backupNumber(r.amount,rp+'.amount',0);
-      backupFields(r,rp,[],['note'],['returned']);
+      backupFields(r,rp,[],['note'],['returned','hidden']);
       if(backupOwn(r,'type'))backupEnum(r.type,['deposit','withdraw','auto','note'],rp+'.type');
       if(item.group==='gold'){
         if(backupOwn(r,'grams')){backupNumber(r.grams,rp+'.grams',0);if(r.grams<=0)backupError(rp+'.grams');}
@@ -1149,11 +1180,19 @@ function validateFinanceBackup(raw){
       }
     });
   });backupUnique(f.items,'id','finance.items');
-  if(!backupOwn(f,'stockAccount'))f.stockAccount={initialCapital:10000,deposits:[],stocks:[]};
+  if(backupOwn(f,'dailyCashAccounts')){
+    const rows=backupArray(f.dailyCashAccounts,'finance.dailyCashAccounts');
+    rows.forEach((row,i)=>{
+      const p='finance.dailyCashAccounts['+i+']';backupObject(row,p);backupId(row.id,p+'.id');
+      backupString(row.name,p+'.name');if(!row.name.trim()||row.name.trim().length>40)backupError(p+'.name');
+      backupNumber(row.balance,p+'.balance',0,Number.MAX_SAFE_INTEGER/100);backupDate(row.updatedAt,p+'.updatedAt');if(backupOwn(row,'hidden'))backupBool(row.hidden,p+'.hidden');
+    });backupUnique(rows,'id','finance.dailyCashAccounts');
+  }
+  if(!backupOwn(f,'stockAccount'))f.stockAccount={initialCapital:0,deposits:[],stocks:[]};
   const a=backupObject(f.stockAccount,'finance.stockAccount');
   backupNumber(a.initialCapital,'finance.stockAccount.initialCapital',0);
   backupArray(a.deposits,'finance.stockAccount.deposits').forEach((d,i)=>{
-    const p='finance.stockAccount.deposits['+i+']';backupObject(d,p);backupDate(d.date,p+'.date');backupNumber(d.amount,p+'.amount',0);backupFields(d,p,[],['note']);
+    const p='finance.stockAccount.deposits['+i+']';backupObject(d,p);backupDate(d.date,p+'.date');backupNumber(d.amount,p+'.amount',0);backupFields(d,p,[],['note'],['hidden']);
   });
   backupArray(a.stocks,'finance.stockAccount.stocks').forEach((st,i)=>{
     const p='finance.stockAccount.stocks['+i+']';backupObject(st,p);backupId(st.id,p+'.id');backupString(st.name,p+'.name');
@@ -1165,7 +1204,7 @@ function validateFinanceBackup(raw){
         if(backupOwn(r,'planId')&&r.planId!=='')backupId(r.planId,rp+'.planId');
         if(backupOwn(r,'order'))backupNumber(r.order,rp+'.order',0,Number.MAX_SAFE_INTEGER,true);
         backupNumber(r.price,rp+'.price',0);backupNumber(r.qty,rp+'.qty',0,Number.MAX_SAFE_INTEGER,true);
-        backupFields(r,rp,['profit'],['note'],['done']);
+        backupFields(r,rp,['profit'],['note'],['done','hidden']);
         if(key!=='tpPlans'){backupDate(r.date,rp+'.date');backupNumber(r.amount,rp+'.amount',0);}
         if(backupOwn(r,'type'))backupEnum(r.type,['tp','sl'],rp+'.type');
       });backupUnique(st[key],'id',p+'.'+key);
@@ -1176,12 +1215,99 @@ function validateFinanceBackup(raw){
     ['stock','fund','gold','cash'].forEach(k=>{if(backupOwn(m,k)&&m[k]!==null)backupNumber(m[k],'finance.portfolioMarket.'+k,0)});
     backupFields(m,'finance.portfolioMarket',[],['updatedAt']);
   }
+  F_validateAssetSnapshots(f);
   return f;
 }
+// Finance versions are separate, append-only snapshots of finance_v1, never of all storage.
+const FINANCE_VERSIONS_KEY='finance_versions_v1';
+function FV_validate(raw){
+  backupObject(raw,'financeVersions');backupSafeTree(raw,'financeVersions');
+  if(raw.schema!==1)backupError('financeVersions.schema');
+  const versions=backupArray(raw.versions,'financeVersions.versions');
+  versions.forEach((entry,i)=>{
+    const path='financeVersions.versions['+i+']';backupObject(entry,path);backupId(entry.id,path+'.id');
+    backupString(entry.savedAt,path+'.savedAt');
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(entry.savedAt)||!Number.isFinite(Date.parse(entry.savedAt))||new Date(entry.savedAt).toISOString()!==entry.savedAt)backupError(path+'.savedAt');
+    backupString(entry.reason,path+'.reason');backupString(entry.financeRaw,path+'.financeRaw');
+    // Raw historical text may be invalid JSON. Keep it recoverable/exportable;
+    // only a restore may parse and validate it as live financial data.
+  });
+  backupUnique(versions,'id','financeVersions.versions');return raw;
+}
+function FV_read(){
+  const raw=localStorage.getItem(FINANCE_VERSIONS_KEY);
+  if(raw===null)return{schema:1,versions:[]};
+  try{return FV_validate(JSON.parse(raw));}catch(e){throw new Error('财务历史版本暂无法读取；为保留原记录，本次未替换数据。请先导出原始历史文件。');}
+}
+function FV_id(entries){
+  let id;
+  do{id='fv_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,12);}while(entries.some(entry=>entry.id===id));
+  return id;
+}
+function FV_merge(base,incoming){
+  const result={...base,versions:base.versions.slice()};
+  if(incoming){
+    FV_validate(incoming);
+    for(const entry of incoming.versions){
+      if(result.versions.some(saved=>saved.financeRaw===entry.financeRaw))continue;
+      result.versions.push({...entry,id:result.versions.some(saved=>saved.id===entry.id)?FV_id(result.versions):entry.id});
+    }
+  }
+  return result;
+}
+function FV_append(archive,financeRaw,reason){
+  if(typeof financeRaw!=='string'||archive.versions.some(entry=>entry.financeRaw===financeRaw))return;
+  archive.versions.push({id:FV_id(archive.versions),savedAt:new Date().toISOString(),reason,financeRaw});
+}
+function FV_download(raw,name){
+  const blob=new Blob([raw],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function F_openFinanceVersions(){
+  modal=null;
+  if(_currentTab!=='finance')switchTab('finance');
+  F_modal='finance-versions';F_renderMain();
+}
+function F_viewFinanceVersion(id){FV_selectedId=FV_selectedId===id?null:id;F_modal='finance-versions';F_renderMain();}
+function F_exportFinanceVersions(){
+  try{
+    const raw=localStorage.getItem(FINANCE_VERSIONS_KEY);
+    // Even an unreadable archive can be downloaded without rewriting it.
+    if(raw===null){alert('还没有财务历史版本');return;}
+    let output=raw;
+    try{output=JSON.stringify({app:'财务管家',schema:4,exportedAt:new Date().toISOString(),financeVersions:FV_validate(JSON.parse(raw))},null,2);}catch(e){}
+    FV_download(output,'财务历史版本_'+todayStr()+'.json');
+  }catch(e){alert('历史版本导出失败，请检查浏览器存储权限');}
+}
+function F_exportFinanceVersion(id){
+  try{const entry=FV_read().versions.find(row=>row.id===id);if(!entry)throw new Error('历史版本不存在');FV_download(entry.financeRaw,'财务版本_'+entry.savedAt.replace(/[:.]/g,'-')+'.json');}
+  catch(e){alert(e.message||'历史版本导出失败');}
+}
+function F_restoreFinanceVersion(id){
+  try{
+    const entry=FV_read().versions.find(row=>row.id===id);if(!entry)throw new Error('历史版本不存在');
+    prepareImportedState({finance:JSON.parse(entry.financeRaw)},'finance');
+    if(!confirm('恢复这个财务版本？当前财务会先存为历史版本，记账和账单保持不变。'))return;
+    writeAppStorageTransaction({finance_v1:entry.financeRaw},true,{replaceFinance:true,reason:'恢复历史版本'});
+    F_loadData();F_modal='finance-versions';F_renderMain();showToast_f('✓ 已恢复；替换前的财务仍在历史版本中');
+  }catch(e){alert(e.message||'这个历史版本未通过校验，当前财务未改动；仍可导出原始版本。');}
+}
+let FV_selectedId=null;
+function F_renderFinanceVersionsModal(){
+  const ov=mkOv_f();let content;
+  try{
+    const versions=FV_read().versions.slice().reverse();
+    content=versions.length?versions.map(entry=>`<section style="border-top:1px solid #e7eaf0;padding:12px 0"><strong style="font-size:13px">${escHtml(new Date(entry.savedAt).toLocaleString('zh-CN',{hour12:false}))}</strong><div class="f-sheet-sub" style="margin:4px 0 8px">${escHtml(entry.reason)} · ${(entry.financeRaw.length/1024).toFixed(1)} KB</div><div style="display:flex;gap:8px"><button class="f-btn-secondary" style="flex:1" onclick="F_viewFinanceVersion(${jsAttr(entry.id)})">${FV_selectedId===entry.id?'收起':'查看'}</button><button class="f-btn-secondary" style="flex:1" onclick="F_exportFinanceVersion(${jsAttr(entry.id)})">导出</button><button class="f-btn-secondary" style="flex:1" onclick="F_restoreFinanceVersion(${jsAttr(entry.id)})">恢复</button></div>${FV_selectedId===entry.id?`<pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;font-size:11px;background:#f6f7fa;padding:10px">${escHtml(entry.financeRaw)}</pre>`:''}</section>`).join(''):'<div class="f-sheet-sub">还没有历史版本。整份财务被导入、撤销或恢复替换前，会自动保留原版本。</div>';
+  }catch(e){content='<div class="f-info-box" role="alert">'+escHtml(e.message)+'</div>';}
+  ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div><div class="f-sheet-title">财务历史版本</div><div class="f-sheet-sub" style="line-height:1.7">历史版本独立保留，不计入资产合计。恢复前会保留当前财务；相同内容只保存一份。普通金额修改和隐藏操作不会新增整账版本。</div><button class="f-btn-secondary" onclick="F_exportFinanceVersions()">导出全部财务历史版本</button>${content}<button class="f-btn-secondary" onclick="F_openData()">返回数据备份</button></div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+
+
 function prepareImportedState(raw,scope='all'){
   backupObject(raw,'备份');backupSafeTree(raw);
   const data=backupOwn(raw,'data')?backupObject(raw.data,'data'):raw;
-  const wrapped=['diary','monthly','finance'].some(k=>backupOwn(data,k));
+  const wrapped=['diary','monthly','finance','financeVersions'].some(k=>backupOwn(data,k));
   if(backupOwn(data,'schema'))backupNumber(data.schema,'schema',1,4,true);
   const updates={};
   if(wrapped){
@@ -1190,14 +1316,16 @@ function prepareImportedState(raw,scope='all'){
     if(backupOwn(data,'diary'))checked.diary=validateDiaryBackup(data.diary);
     if(backupOwn(data,'monthly'))checked.monthly=validateMonthlyBackup(data.monthly);
     if(backupOwn(data,'finance'))checked.finance=validateFinanceBackup(data.finance);
+    if(backupOwn(data,'financeVersions'))updates.finance_versions_v1=FV_validate(data.financeVersions);
     if(scope==='finance'){
-      if(!backupOwn(checked,'finance'))backupError('finance 缺失');updates.finance_v1=checked.finance;
+      if(!backupOwn(checked,'finance')&&!backupOwn(updates,'finance_versions_v1'))backupError('finance 缺失');
+      if(backupOwn(checked,'finance'))updates.finance_v1=checked.finance;
     }else{
       if(backupOwn(checked,'diary'))updates.bav7=checked.diary;
       if(backupOwn(checked,'monthly'))updates.monthly_v1=checked.monthly;
       if(backupOwn(checked,'finance'))updates.finance_v1=checked.finance;
     }
-  }else if(backupOwn(data,'items')||backupOwn(data,'stockAccount')||(scope==='finance'&&!Object.keys(data).length)){
+  }else if(backupOwn(data,'items')||backupOwn(data,'stockAccount')||backupOwn(data,'dailyCashAccounts')||backupOwn(data,'assetSnapshots')||(scope==='finance'&&!Object.keys(data).length)){
     updates.finance_v1=validateFinanceBackup(data);
   }else if(scope!=='finance'&&(backupOwn(data,'records')||backupOwn(data,'reimbs'))){
     updates.bav7=validateDiaryBackup(data,true);
@@ -1205,20 +1333,46 @@ function prepareImportedState(raw,scope='all'){
   if(!Object.keys(updates).length)backupError('没有可恢复的数据');
   return updates;
 }
-function writeAppStorageTransaction(serialized,saveRecovery=true){
-  const keys=Object.keys(serialized);
-  if(!keys.length||keys.some(k=>!APP_STORAGE_KEYS.includes(k)))throw new Error('恢复范围无效');
+function writeAppStorageTransaction(serialized,saveRecovery=true,options={}){
+  const keys=Object.keys(serialized),hasIncoming=backupOwn(options,'financeVersions');
+  if((!keys.length&&!hasIncoming)||keys.some(k=>!APP_STORAGE_KEYS.includes(k))||keys.some(k=>serialized[k]!==null&&typeof serialized[k]!=='string'))throw new Error('恢复范围无效');
   const before={};keys.forEach(k=>{before[k]=localStorage.getItem(k)});
-  if(saveRecovery){
-    // If the recovery copy cannot fit, abort before replacing any app data.
-    try{localStorage.setItem(RECOVERY_STORAGE_KEY,JSON.stringify({savedAt:new Date().toISOString(),values:before}));}
-    catch(e){throw new Error('无法保存导入前备份，原数据未改动；请先导出备份并检查浏览器存储空间');}
+  const retaining=options.replaceFinance===true&&keys.includes('finance_v1');
+  const protectedWrites={},oldRecovery=saveRecovery&&keys.length?localStorage.getItem(RECOVERY_STORAGE_KEY):null;
+  if(retaining||hasIncoming){
+    const oldArchive=localStorage.getItem(FINANCE_VERSIONS_KEY),archive=FV_merge(FV_read(),hasIncoming?options.financeVersions:null);
+    if(retaining){
+      if(before.finance_v1!==serialized.finance_v1)FV_append(archive,before.finance_v1,options.reason||'导入替换前');
+      // Preserve an older finance recovery copy before a whole-ledger import replaces it.
+      if(oldRecovery!==null){try{FV_append(archive,JSON.parse(oldRecovery)?.values?.finance_v1,'旧恢复副本');}catch(e){}}
+    }
+    const nextArchive=JSON.stringify(archive);
+    if(nextArchive!==oldArchive&&(archive.versions.length||oldArchive!==null||hasIncoming))protectedWrites[FINANCE_VERSIONS_KEY]=nextArchive;
   }
-  try{keys.forEach(k=>{if(serialized[k]===null)localStorage.removeItem(k);else localStorage.setItem(k,serialized[k]);});}
-  catch(e){
+  if(saveRecovery&&keys.length)protectedWrites[RECOVERY_STORAGE_KEY]=JSON.stringify({savedAt:new Date().toISOString(),values:before});
+  else if(options.consumeRecovery===true)protectedWrites[RECOVERY_STORAGE_KEY]=null;
+  const writes={...protectedWrites,...serialized},original={...before};
+  for(const key of Object.keys(protectedWrites))original[key]=localStorage.getItem(key);
+  const written=[];
+  try{
+    // Archive and recovery must fit before any live module is replaced.
+    for(const[key,value]of Object.entries(writes)){
+      if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);
+      written.push(key);
+    }
+  }catch(e){
     let restored=true;
-    keys.forEach(k=>{try{if(before[k]===null)localStorage.removeItem(k);else localStorage.setItem(k,before[k]);}catch(err){restored=false;}});
-    throw new Error(restored?'写入失败，已保留原数据；请检查浏览器存储空间':'写入失败；导入前备份仍保留，请使用“撤销上次导入”恢复');
+    // Free successful new writes before restoring original values to avoid a
+    // rollback failing solely because the temporary archive filled the quota.
+    // Ordinary mutations retain their newly saved recovery copy, as before.
+    const rollbackKeys=written.filter(key=>retaining||hasIncoming||options.consumeRecovery===true||key!==RECOVERY_STORAGE_KEY);
+    for(const key of rollbackKeys){try{localStorage.removeItem(key);}catch(err){restored=false;}}
+    for(const key of rollbackKeys){try{if(original[key]!==null)localStorage.setItem(key,original[key]);}catch(err){restored=false;}}
+    if(!restored){
+      // Last-resort recovery is best effort if the browser stopped allowing writes.
+      try{localStorage.setItem(RECOVERY_STORAGE_KEY,JSON.stringify({savedAt:new Date().toISOString(),values:before}));}catch(err){}
+    }
+    throw new Error(restored?'保存失败，原数据和历史版本未改动；请先导出备份并检查浏览器存储空间':'保存及回滚未能全部完成；请保留当前页面并导出本机数据，检查浏览器存储权限');
   }
 }
 function fullState(){
@@ -1227,13 +1381,16 @@ function fullState(){
     app:'财务管家',schema:4,exportedAt:new Date().toISOString(),
     diary:{...diary,settings:ST||diary.settings||{},records:RC||diary.records||[],reimbs:RM||diary.reimbs||[],budgetHistory:diary.budgetHistory||[]},
     monthly:JSON.parse(localStorage.getItem('monthly_v1')||'{}'),
-    finance:JSON.parse(localStorage.getItem('finance_v1')||'{}')
+    finance:JSON.parse(localStorage.getItem('finance_v1')||'{}'),
+    financeVersions:FV_read()
   };
 }
 function applyImportedState(raw,scope='all'){
-  const updates=prepareImportedState(raw,scope);
-  const serialized={};Object.keys(updates).forEach(k=>{serialized[k]=JSON.stringify(updates[k]);});
-  writeAppStorageTransaction(serialized);
+  const updates=prepareImportedState(raw,scope),serialized={};
+  for(const key of Object.keys(updates))if(key!==FINANCE_VERSIONS_KEY)serialized[key]=JSON.stringify(updates[key]);
+  const options={replaceFinance:backupOwn(serialized,'finance_v1'),reason:'导入替换前'};
+  if(backupOwn(updates,FINANCE_VERSIONS_KEY))options.financeVersions=updates[FINANCE_VERSIONS_KEY];
+  writeAppStorageTransaction(serialized,true,options);
   if(backupOwn(updates,'bav7')){ST=updates.bav7.settings;RC=updates.bav7.records;RM=updates.bav7.reimbs;}
   return Object.keys(updates);
 }
@@ -1243,19 +1400,25 @@ function undoLastImport(){
     if(!saved||!saved.values)throw new Error('没有可撤销的导入');
     backupObject(saved.values,'恢复副本');
     Object.values(saved.values).forEach(v=>{if(v!==null&&typeof v!=='string')throw new Error('恢复副本无效');});
-    if(!confirm('恢复到上次导入前的数据？导入后在相关模块新增或修改的记录也会被覆盖，请先导出当前备份。'))return;
-    writeAppStorageTransaction(saved.values,false);
-    localStorage.removeItem(RECOVERY_STORAGE_KEY);
+    // Validate every restored non-null module before touching live storage.
+    const names={bav7:'diary',monthly_v1:'monthly',finance_v1:'finance'};
+    for(const[key,value]of Object.entries(saved.values)){
+      if(!backupOwn(names,key))throw new Error('恢复范围无效');
+      if(value!==null)prepareImportedState({[names[key]]:JSON.parse(value)},key==='finance_v1'?'finance':'all');
+    }
+    if(!confirm('恢复到上次导入前的数据？涉及的记账、账单记录会回到原版本；当前财务会先保留在“财务历史版本”中。'))return;
+    writeAppStorageTransaction(saved.values,false,{replaceFinance:backupOwn(saved.values,'finance_v1'),reason:'撤销导入前',consumeRecovery:true});
+    // The one-step recovery is consumed atomically; permanent finance versions remain.
     window.location.reload();
   }catch(e){showToast(e.message||'恢复失败');}
 }
 function clearCacheAndReload(){
-  if(!confirm('确认清除本财务管家的本地数据？\n\n请确保已导出备份；清除后账本和导入恢复副本不可恢复，云备份授权也会从本机移除。'))return;
+  if(!confirm('只清除当前记账日记和本月账单，并重载？\n\n财务总览、财务历史版本、恢复副本和云备份授权都会保留。记账和账单如需保留，请先导出全部备份。'))return;
   try{
-    [...APP_STORAGE_KEYS,RECOVERY_STORAGE_KEY,'fin_cloud_backup_v1','fin_cloud_backup_attempt_v1'].forEach(k=>localStorage.removeItem(k));
-    showToast('本应用数据已清除，正在重载...');
+    writeAppStorageTransaction({bav7:null,monthly_v1:null},false);
+    showToast('记账和账单已清除，财务与备份设置已保留，正在重载…');
     setTimeout(()=>window.location.reload(),1200);
-  }catch(e){showToast('清除失败，请检查浏览器存储权限');}
+  }catch(e){showToast(e.message||'清除失败，原数据未改动');}
 }
 function exportData(){
   try{
@@ -2378,9 +2541,10 @@ function renderDataModal(){
       <button class="data-btn" onclick="GR_openRepair()">核对黄金明细</button>
       <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
       <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
-      <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">🗑️ 清除本应用数据并重载</button>
+      <button class="data-btn" onclick="F_openFinanceVersions()">财务历史版本</button>
+      <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">清除记账和账单（保留财务）</button>
     </div>
-    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px;line-height:1.6">清除本应用的账本和恢复副本，请先导出备份</div>
+    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px;line-height:1.6">仅清除当前记账和账单；财务、历史版本、恢复副本及云备份授权保留</div>
     <input id="backup-file" type="file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
     <div class="sumcard">
       <div class="sumrow"><span class="sumk">最后备份</span><span class="sumv">${escHtml(c.lastBackup?c.lastBackup.slice(0,10):'未备份')}</span></div>
@@ -2847,10 +3011,10 @@ function M_saveSettings(){
 const F_SK='finance_v1';
 const COLORS=['#378ADD','#4caf50','#FFD700','#ef5350','#9c27b0','#ff9800','#00bcd4'];
 const GROUP_INFO={
-  fund:{label:'基金定投',icon:'📈',badgeClass:'active'},
+  fund:{label:'基金',icon:'📈',badgeClass:'active'},
   gold:{label:'黄金积存金',icon:'🥇',badgeClass:'active'},
-  saving:{label:'储蓄目标',icon:'🎯',badgeClass:'saving'},
-  stock:{label:'股票账户',icon:'📊',badgeClass:'stock'},
+  saving:{label:'储蓄资金',icon:'🎯',badgeClass:'saving'},
+  stock:{label:'证券账户',icon:'📊',badgeClass:'stock'},
 };
 
 // ── 默认数据 ──
@@ -2858,7 +3022,7 @@ const F_DEFAULT_ITEMS=[];// 无默认数据，用户自行添加
 
 // 股票账户默认数据（空）
 const F_DEFAULT_STOCK_ACCOUNT={
-  initialCapital:10000,
+  initialCapital:0,
   deposits:[],
   stocks:[],
 };
@@ -2867,6 +3031,7 @@ function F_ld(){try{return JSON.parse(localStorage.getItem(F_SK)||'{}')}catch(e)
 function F_sv(d){localStorage.setItem(F_SK,JSON.stringify(d))}
 function F_fmt2(n){const value=Number(n).toFixed(2);return Number(value)===0?'0.00':value}
 function F_fmtY(n,dec=2){const value=F_fmt2(n);return value.startsWith('-')?'-¥'+value.slice(1):'¥'+value}
+function F_fmtAsset(n){if(typeof n!=='number'||!Number.isFinite(n))return'待核对';const amount=Math.round(Math.abs(n));return(n<0&&amount>0?'-¥':'¥')+amount.toLocaleString('zh-CN')}
 function F_fmtPnl(n){return(Number(F_fmt2(n))>0?'+':'')+F_fmtY(n)}
 function F_pnlClass(n){const value=Number(F_fmt2(n));return value>0?'pos':value<0?'neg':'zero'}
 function F_genId(){return'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
@@ -2877,8 +3042,18 @@ function F_loadData(){
   F_ITEMS=s.items||JSON.parse(JSON.stringify(F_DEFAULT_ITEMS));
   F_STOCK_ACCOUNT=s.stockAccount||JSON.parse(JSON.stringify(F_DEFAULT_STOCK_ACCOUNT));
 }
-function F_saveData(){
-  const s=F_ld();s.items=F_ITEMS;s.stockAccount=F_STOCK_ACCOUNT;F_sv(s);
+function F_saveData(options={}){
+  try{
+    const current=F_assetReadFinance();
+    let next={...current,items:F_ITEMS,stockAccount:F_STOCK_ACCOUNT};
+    if(options.capture===true)next=F_withCurrentAssetSnapshot(next);
+    // Ledger and its observation are serialized together in one atomic storage write.
+    F_sv(next);
+  }catch(e){
+    try{F_loadData();}catch(ignored){}
+    alert('财务金额未保存，原数据保持不变。'+(e.message||'请检查本机存储后重试'));
+    throw e;
+  }
 }
 
 // ── 股票计算 ──
@@ -3045,43 +3220,391 @@ function F_readGoldFields(prefix,amount){
   return values;
 }
 
+// Daily cash is an optional list of actual account balances, never seeded with sample funds.
+const F_DAILY_CASH_LIMIT=Number.MAX_SAFE_INTEGER/100;
+let F_dailyCashEditState=null,F_dailyCashListSnapshots=new Map();
+function F_dailyCashError(code){const error=new Error(code);error.dailyCashCode=code;return error;}
+function F_dailyCashMessage(code){
+  const messages={INVALID:'请填写 1 至 40 个字的账户名称，以及有效的非负余额。',READ:'本机财务数据无法完整读取，请先导出备份并检查原数据。',CONFLICT:'这个账户已在其他地方修改或删除。为保留新修改，请重新打开账户后再操作。',STORAGE:'未能完成保存，请检查浏览器存储空间。若需恢复，可到财务“数据”中使用“撤销上次导入”。'};
+  return messages[code]||messages.READ;
+}
+function F_dailyCashCanonical(value){
+  if(Array.isArray(value))return'['+value.map(F_dailyCashCanonical).join(',')+']';
+  if(value&&typeof value==='object')return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+F_dailyCashCanonical(value[k])).join(',')+'}';
+  return JSON.stringify(value);
+}
+function F_dailyCashValidateRows(rows){
+  if(!Array.isArray(rows))throw F_dailyCashError('READ');
+  const ids=new Set();
+  for(const row of rows){
+    if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.id!=='string'||!/^[A-Za-z0-9_-]+$/.test(row.id)||['__proto__','prototype','constructor'].includes(row.id)||ids.has(row.id)||typeof row.name!=='string'||!row.name.trim()||row.name.trim().length>40||typeof row.balance!=='number'||!Number.isFinite(row.balance)||row.balance<0||row.balance>F_DAILY_CASH_LIMIT||!F_validTradeDate(row.updatedAt))throw F_dailyCashError('READ');
+    if(Object.prototype.hasOwnProperty.call(row,'hidden')&&typeof row.hidden!=='boolean')throw F_dailyCashError('READ');
+    ids.add(row.id);
+  }
+  return rows;
+}
+function F_dailyCashRead(){
+  try{
+    const raw=localStorage.getItem('finance_v1');
+    const finance=raw===null?{}:JSON.parse(raw);
+    if(!finance||typeof finance!=='object'||Array.isArray(finance))throw 0;
+    backupSafeTree(finance);
+    const rows=Object.prototype.hasOwnProperty.call(finance,'dailyCashAccounts')?finance.dailyCashAccounts:[];
+    F_dailyCashValidateRows(rows);
+    return{finance,rows};
+  }catch(e){throw F_dailyCashError('READ');}
+}
+function F_getDailyCashAccounts(){
+  try{return JSON.parse(JSON.stringify(F_dailyCashRead().rows));}catch(e){return[];}
+}
+function F_getDailyCashTotal(){return F_getDailyCashAccounts().reduce((sum,row)=>sum+row.balance,0);}
+function F_dailyCashMoney(value){return typeof F_fmtAsset==='function'?F_fmtAsset(value):'¥'+Math.round(value).toLocaleString('zh-CN');}
+function F_renderDailyCashSection(){
+  let rows=[],readable=true;try{rows=F_dailyCashRead().rows;}catch(e){readable=false;}
+  const total=rows.reduce((sum,row)=>sum+row.balance,0);
+  return`<div class="f-account" onclick="F_openDailyCash()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();F_openDailyCash()}">
+    <div class="f-account-top"><div><div class="f-account-avail-l">日常资金</div><div class="f-account-avail">${!readable?'—':rows.length?escHtml(F_dailyCashMoney(total)):'未填写'}</div></div><button type="button" class="f-add-btn" onclick="event.stopPropagation();F_openDailyCash()">${rows.length?'管理账户':'添加账户'}</button></div>
+    <div class="f-sheet-sub" style="margin-bottom:0">${!readable?'数据暂无法读取':rows.length?rows.length+' 个账户'+(rows.some(r=>r.hidden)?'（含已隐藏）':''):'填写银行卡、微信、支付宝等实际余额'}</div>
+  </div>`;
+}
+function F_openDailyCash(){F_dailyCashEditState=null;F_modal='daily-cash';F_renderMain();}
+function F_renderDailyCashModal(){
+  const ov=mkOv_f();let rows=[],readable=true;
+  try{rows=F_dailyCashRead().rows;}catch(e){readable=false;}
+  F_dailyCashListSnapshots=new Map(rows.map(row=>[row.id,F_dailyCashCanonical(row)]));
+  const list=rows.filter(row=>!row.hidden).map(row=>`<div class="f-record-row" style="gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;overflow-wrap:anywhere">${escHtml(row.name)}</div><div style="font-size:11px;color:#aaa;margin-top:4px">更新于 ${escHtml(row.updatedAt)}</div></div><div style="font-weight:600;white-space:nowrap">${escHtml(F_dailyCashMoney(row.balance))}</div><button type="button" class="f-add-btn" onclick="F_openDailyCashEdit(${jsAttr(row.id)})">编辑</button><button type="button" class="f-add-btn" aria-label="隐藏账户" onclick="F_deleteDailyCashAccount(${jsAttr(row.id)})">隐藏</button></div>`).join('');
+  ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div><div class="f-sheet-title">日常资金</div><div class="f-sheet-sub">${readable&&rows.length?'合计 '+escHtml(F_dailyCashMoney(rows.reduce((sum,row)=>sum+row.balance,0))):'填写各账户的实际余额'}</div>
+    ${readable?(list||'<div class="f-empty">还没有账户</div>'):'<div class="f-info-box">本机财务数据暂无法读取，请先导出备份并检查原数据。</div>'}
+    ${F_hiddenEntries().some(e=>e.kind==='daily')?`<details style="margin:12px 0"><summary>已隐藏账户（仍计入合计）</summary>${F_hiddenEntries().filter(e=>e.kind==='daily').map(F_hiddenRowHtml).join('')}</details>`:''}
+    ${readable?'<button type="button" class="f-btn-primary" style="margin-top:16px" onclick="F_openDailyCashEdit()">＋ 添加账户</button>':''}
+    <button type="button" class="f-btn-secondary" onclick="F_modal=null;F_renderMain()">关闭</button></div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+function F_openDailyCashEdit(id=null){
+  try{
+    const rows=F_dailyCashRead().rows;
+    const row=id===null?null:rows.find(account=>account.id===id);
+    if(id!==null&&!row)throw F_dailyCashError('CONFLICT');
+    F_dailyCashEditState={id,baseline:row?F_dailyCashCanonical(row):null,row:row?JSON.parse(JSON.stringify(row)):null};
+    F_modal='daily-cash-edit';F_renderMain();return{ok:true};
+  }catch(e){const code=e.dailyCashCode||'READ';alert(F_dailyCashMessage(code));return{ok:false,code};}
+}
+function F_renderDailyCashEditModal(){
+  if(!F_dailyCashEditState){F_modal='daily-cash';F_renderDailyCashModal();return;}
+  const state=F_dailyCashEditState,row=state.row,ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div><div class="f-sheet-title">${row?'编辑账户':'添加账户'}</div><div class="f-sheet-sub">记录当前余额，可随时更新</div>
+    <div class="f-field-row"><span class="f-field-label">账户名称</span><input id="F_dc_name" style="min-width:0" maxlength="40" placeholder="如银行卡、微信" value="${escHtml(row?.name||'')}"></div>
+    <div class="f-field-row"><span class="f-field-label">当前余额</span><input id="F_dc_balance" style="min-width:0" type="number" inputmode="decimal" min="0" max="${F_DAILY_CASH_LIMIT}" step="0.01" placeholder="0.00" value="${escHtml(row?row.balance:'')}"></div>
+    <div class="f-sheet-sub" style="line-height:1.7;margin:12px 0">只填用于生活的余额，已计入储蓄或证券的钱不用再填。</div>
+    <button type="button" class="f-btn-primary" onclick="F_submitDailyCashEdit()">保存</button>
+    <button type="button" class="f-btn-secondary" onclick="F_openDailyCash()">取消</button>
+    ${row?`<button type="button" class="f-btn-danger" onclick="${row.hidden?'F_restoreDailyCashAccount':'F_deleteDailyCashAccount'}(${jsAttr(state.id)})">${row.hidden?'恢复显示此账户':'隐藏此账户'}</button>`:''}</div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+function F_dailyCashWrite(finance,rows){
+  let next={...finance,dailyCashAccounts:rows};
+  try{backupSafeTree(next);F_dailyCashValidateRows(rows);validateFinanceBackup(next);}catch(e){throw F_dailyCashError('READ');}
+  next=F_withCurrentAssetSnapshot(next);
+  try{writeAppStorageTransaction({finance_v1:JSON.stringify(next)});}catch(e){throw F_dailyCashError('STORAGE');}
+}
+function F_dailyCashAfterWrite(message){
+  F_dailyCashEditState=null;F_modal='daily-cash';
+  try{F_loadData();F_renderMain();showToast_f(message);return true;}catch(e){alert(message+'；页面刷新未完成，请重新打开财务页。');return false;}
+}
+function F_submitDailyCashEdit(){
+  const state=F_dailyCashEditState;
+  try{
+    if(!state)throw F_dailyCashError('CONFLICT');
+    const name=String(document.getElementById('F_dc_name')?.value??'').trim();
+    const rawBalance=String(document.getElementById('F_dc_balance')?.value??'').trim(),balance=Number(rawBalance);
+    if(!name||name.length>40||rawBalance===''||!Number.isFinite(balance)||balance<0||balance>F_DAILY_CASH_LIMIT)throw F_dailyCashError('INVALID');
+    // This read and write are synchronous; other accounts and all unrelated finance fields come from the latest storage.
+    const{finance,rows}=F_dailyCashRead();
+    const nextRows=rows.slice();
+    if(state.id===null){
+      let id=F_genId(),attempts=0;
+      while(nextRows.some(row=>row.id===id)&&attempts++<10)id=F_genId();
+      if(nextRows.some(row=>row.id===id))throw F_dailyCashError('CONFLICT');
+      nextRows.push({id,name,balance,updatedAt:todayStr()});
+    }else{
+      const index=nextRows.findIndex(row=>row.id===state.id);
+      if(index<0||F_dailyCashCanonical(nextRows[index])!==state.baseline)throw F_dailyCashError('CONFLICT');
+      nextRows[index]={...nextRows[index],name,balance,updatedAt:todayStr()};
+    }
+    F_dailyCashWrite(finance,nextRows);
+    return{ok:true,displayOk:F_dailyCashAfterWrite('✓ 日常资金已保存')};
+  }catch(e){const code=e.dailyCashCode||'READ';alert(F_dailyCashMessage(code));return{ok:false,code};}
+}
+function F_deleteDailyCashAccount(id){
+  const expected=F_dailyCashEditState?.id===id?F_dailyCashEditState.baseline:F_dailyCashListSnapshots.get(id);
+  return F_setFinanceHidden('daily',id,null,true,expected??null,'daily-cash');
+}
+
+// Visibility is separate from accounting. Every calculation and backup keeps the original arrays.
+let F_hideBaselines=new Map(),F_hideParentsBaseline=null,F_tmpTpBaseline=null,F_tmpTpOriginalCount=0;
+function F_hideCanonical(value){
+  if(Array.isArray(value))return'['+value.map(F_hideCanonical).join(',')+']';
+  if(value&&typeof value==='object')return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+F_hideCanonical(value[k])).join(',')+'}';
+  return JSON.stringify(value);
+}
+function F_hideKey(kind,id,index){return JSON.stringify([kind,id??null,index??null]);}
+function F_hideRead(){
+  const raw=localStorage.getItem('finance_v1');
+  const f=raw===null?{}:JSON.parse(raw);
+  backupSafeTree(f);validateFinanceBackup(f);return f;
+}
+function F_hideResolve(f,kind,id,index){
+  if(kind==='item')return(f.items||[]).find(r=>r.id===id);
+  if(kind==='stock')return(f.stockAccount?.stocks||[]).find(r=>r.id===id);
+  if(kind==='daily')return(f.dailyCashAccounts||[]).find(r=>r.id===id);
+  if(kind==='deposit')return(f.stockAccount?.deposits||[])[index];
+  if(kind==='record')return((f.items||[]).find(r=>r.id===id)?.records||[])[index];
+  const stock=(f.stockAccount?.stocks||[]).find(r=>r.id===id);
+  return stock?.[{buy:'buyRecords',sell:'sellRecords',plan:'tpPlans'}[kind]]?.[index];
+}
+function F_captureHideBaselines(){
+  const map=new Map(),remember=(kind,id,index,row)=>map.set(F_hideKey(kind,id,index),F_hideCanonical(row));
+  for(const item of F_ITEMS){remember('item',item.id,null,item);(item.records||[]).forEach((r,i)=>remember('record',item.id,i,r));}
+  for(const stock of F_STOCK_ACCOUNT.stocks||[]){remember('stock',stock.id,null,stock);for(const[kind,key]of[['buy','buyRecords'],['sell','sellRecords'],['plan','tpPlans']])(stock[key]||[]).forEach((r,i)=>remember(kind,stock.id,i,r));}
+  (F_STOCK_ACCOUNT.deposits||[]).forEach((r,i)=>remember('deposit',null,i,r));
+  let daily=null;try{daily=F_dailyCashRead().rows;daily.forEach(r=>remember('daily',r.id,null,r));}catch(e){}
+  F_hideBaselines=map;
+  F_hideParentsBaseline=daily===null?null:F_hideCanonical({items:F_ITEMS,stocks:F_STOCK_ACCOUNT.stocks||[],daily});
+}
+function F_hideWrite(finance){
+  backupSafeTree(finance);validateFinanceBackup(finance);
+  writeAppStorageTransaction({finance_v1:JSON.stringify(finance)});
+}
+function F_hideRefresh(message,nextModal){
+  if(nextModal!==undefined)F_modal=nextModal;
+  try{F_loadData();F_renderMain();showToast_f(message);return true;}catch(e){alert(message+'；请重新打开财务页查看。');return false;}
+}
+function F_setFinanceHidden(kind,id,index,hidden,expected=null,nextModal){
+  try{
+    if(!['item','stock','daily','deposit','record','buy','sell','plan'].includes(kind)||typeof hidden!=='boolean')return{ok:false,code:'INVALID'};
+    const baseline=expected??F_hideBaselines.get(F_hideKey(kind,id,index));
+    const finance=F_hideRead(),row=F_hideResolve(finance,kind,id,index);
+    if(!baseline||!row||F_hideCanonical(row)!==baseline){alert('这条记录已被修改或删除，请重新打开后再操作。');return{ok:false,code:'CONFLICT'};}
+    if(!!row.hidden===hidden)return{ok:true,unchanged:true};
+    row.hidden=hidden;F_hideWrite(finance);
+    return{ok:true,displayOk:F_hideRefresh(hidden?'✓ 已隐藏，资金和记录仍保留':'✓ 已恢复显示',nextModal)};
+  }catch(e){alert('未能保存显示状态，请检查本机数据和存储空间；原记录及保存前恢复副本会尽可能保留。');return{ok:false,code:'STORAGE'};}
+}
+function F_hiddenEntries(){
+  const result=[],add=(kind,id,index,row,parentName,label)=>{if(row?.hidden)result.push({kind,id,index,row,parentName,label});};
+  for(const item of F_ITEMS){add('item',item.id,null,item,'',item.name);(item.records||[]).forEach((r,i)=>add('record',item.id,i,r,item.name,r.type==='note'?'变更记录':r.type==='withdraw'?'取用记录':r.type==='auto'?'自动定投':'存入记录'));}
+  for(const stock of F_STOCK_ACCOUNT.stocks||[]){add('stock',stock.id,null,stock,'',stock.name);for(const[kind,key,label]of[['buy','buyRecords','买入记录'],['sell','sellRecords','卖出记录'],['plan','tpPlans','止盈计划']])(stock[key]||[]).forEach((r,i)=>add(kind,stock.id,i,r,stock.name,label));}
+  (F_STOCK_ACCOUNT.deposits||[]).forEach((r,i)=>add('deposit',null,i,r,'证券账户','追加资金'));
+  F_getDailyCashAccounts().forEach(r=>add('daily',r.id,null,r,'日常资金',r.name));
+  return result;
+}
+function F_hiddenRowHtml(entry){
+  const{kind,id,index,row,parentName,label}=entry,meta=[];
+  if(row.date)meta.push(row.date);
+  if(typeof row.amount==='number')meta.push(F_fmtY(row.amount));
+  if(typeof row.balance==='number')meta.push(F_fmtY(row.balance));
+  if(typeof row.qty==='number')meta.push(row.qty+'股');
+  if(typeof row.price==='number')meta.push('@'+F_fmtY(row.price));
+  if(typeof row.grams==='number')meta.push(row.grams.toFixed(4)+' g');
+  if(row.note)meta.push(row.note);
+  return`<div class="f-record-row" style="gap:8px;align-items:flex-start"><div style="flex:1;min-width:0;overflow-wrap:anywhere"><div>${escHtml(parentName?parentName+' · '+label:label)}</div><div style="font-size:11px;color:#888;line-height:1.6;margin-top:4px">${escHtml(meta.join(' · '))}</div></div><button class="f-add-btn" onclick="F_viewHidden(${jsAttr(kind)},${jsAttr(id)},${index??'null'})">查看</button><button class="f-add-btn" onclick="F_setFinanceHidden(${jsAttr(kind)},${jsAttr(id)},${index??'null'},false)">恢复显示</button></div>`;
+}
+function F_hiddenSection(kind,id,label='已隐藏记录'){
+  const entries=F_hiddenEntries().filter(e=>e.kind===kind&&e.id===(id??null));
+  return entries.length?`<details style="margin:12px 0"><summary style="font-size:12px;color:#888;cursor:pointer">${escHtml(label)}（${entries.length}）</summary>${entries.map(F_hiddenRowHtml).join('')}</details>`:'';
+}
+function F_openHiddenData(){F_modal='hidden-finance';F_renderMain();}
+function F_renderHiddenDataModal(){
+  F_captureHideBaselines();const entries=F_hiddenEntries(),ov=mkOv_f();
+  ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div><div class="f-sheet-title">已隐藏项目与记录</div><div class="f-sheet-sub" style="line-height:1.7">仅从常用列表隐藏，仍计入资产、持仓和盈亏。恢复显示不会新增一笔记录。</div>${entries.length?entries.map(F_hiddenRowHtml).join(''):'<div class="f-empty">还没有隐藏记录</div>'}<button class="f-btn-secondary" style="margin-top:16px" onclick="F_modal=null;F_renderMain()">关闭</button></div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+function F_viewHidden(kind,id,index){
+  if(kind==='item'||kind==='record'){F_editId=id;F_modal='item-detail';}
+  else if(kind==='stock'||kind==='plan'||kind==='buy'||kind==='sell'){F_editId=id;F_modal='stock-detail';}
+  else if(kind==='deposit')F_modal='account-edit';
+  else if(kind==='daily'){F_openDailyCashEdit(id);return;}
+  F_renderMain();
+}
+function F_restoreInvItem(id){return F_setFinanceHidden('item',id,null,false);}
+function F_restoreDailyCashAccount(id){return F_setFinanceHidden('daily',id,null,false,F_dailyCashEditState?.id===id?F_dailyCashEditState.baseline:null,'daily-cash');}
+function F_collectTpDraft(){
+  for(const[i,tp]of(F_tmpTpPlans||[]).entries()){
+    if(tp.hidden)continue;
+    const price=document.getElementById('F_tp_price_'+i),qty=document.getElementById('F_tp_qty_'+i),note=document.getElementById('F_tp_note_'+i);
+    if(price)tp.price=Number(price.value);if(qty)tp.qty=Number(qty.value);if(note)tp.note=note.value.trim();
+  }
+}
+function F_tpRowsHtml(){
+  const plans=F_tmpTpPlans||[];
+  const visible=plans.map((tp,i)=>tp.hidden?'':`<div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-size:11px;color:#aaa;margin-bottom:6px">${tp.done?'✓ 已完成':'计划'} ${i+1}</div><div style="display:flex;gap:6px;align-items:center"><input style="min-width:0;flex:1" id="F_tp_price_${i}" type="number" step="0.001" value="${escHtml(tp.price||'')}" placeholder="价格"><input style="width:70px" id="F_tp_qty_${i}" type="number" step="1" value="${escHtml(tp.qty||'')}" placeholder="股数"><input style="min-width:0;flex:1" id="F_tp_note_${i}" value="${escHtml(tp.note||'')}" placeholder="备注"><button type="button" class="f-add-btn" onclick="F_removeTpRow(${i})">${i<F_tmpTpOriginalCount?'隐藏':'取消新增'}</button></div></div>`).join('');
+  const hidden=plans.map((tp,i)=>tp.hidden?`<div class="f-record-row"><span style="flex:1">${escHtml(tp.note||'止盈计划')} · ${escHtml(tp.qty)}股 @ ${F_fmtY(tp.price)}${tp.done?' · 已完成':''}</span><button type="button" class="f-add-btn" onclick="F_restoreTpRow(${i})">恢复显示</button></div>`:'').join('');
+  return visible+(hidden?'<details><summary style="font-size:12px;color:#888">已隐藏计划</summary>'+hidden+'</details>':'');
+}
+function F_restoreTpRow(i){F_collectTpDraft();const tp=F_tmpTpPlans?.[i];if(tp){tp.hidden=false;const el=document.getElementById('F_tp_rows');if(el)el.innerHTML=F_tpRowsHtml();}}
+
+// Monthly observations use the same book-value basis as the asset overview.
+// This module never captures from rendering, import, export or a generic storage hook.
+function F_assetSum(values){
+  let total=0;
+  for(const value of values){
+    if(typeof value!=='number'||!Number.isFinite(value))return null;
+    const cents=Math.round(value*100);
+    if(!Number.isSafeInteger(cents)||!Number.isSafeInteger(total+cents))return null;
+    total+=cents;
+  }
+  return total/100;
+}
+function F_calcAssetOverviewFromFinance(finance){
+  const f=finance&&typeof finance==='object'&&!Array.isArray(finance)?finance:{items:null,stockAccount:null,dailyCashAccounts:null};
+  const groupTotal=group=>{try{
+    const items=f.items===undefined?[]:f.items;if(!Array.isArray(items))return null;
+    return F_assetSum(items.filter(item=>item&&item.group===group).map(F_getTotalInvested));
+  }catch(e){return null;}};
+  const fund=groupTotal('fund'),gold=groupTotal('gold'),saving=groupTotal('saving');
+  let stock=null,daily=null,dailyCount=0;
+  try{
+    const account=f.stockAccount===undefined?{initialCapital:0,deposits:[],stocks:[]}:f.stockAccount;
+    if(!account||typeof account.initialCapital!=='number'||!Number.isFinite(account.initialCapital)||!Array.isArray(account.deposits)||!Array.isArray(account.stocks))throw 0;
+    const deposits=account.deposits.map(row=>row.amount);
+    if(deposits.some(value=>typeof value!=='number'||!Number.isFinite(value)))throw 0;
+    const stocks=account.stocks.map(F_calcStock);if(stocks.some(cal=>!cal.valid))throw 0;
+    const available=account.initialCapital+deposits.reduce((n,value)=>n+value,0)-stocks.reduce((n,cal)=>n+cal.totalCost,0)+stocks.reduce((n,cal)=>n+cal.totalSoldAmt,0);
+    stock=F_assetSum([available,stocks.reduce((n,cal)=>n+cal.holdCost,0)]);
+  }catch(e){}
+  try{
+    const rows=f.dailyCashAccounts===undefined?[]:f.dailyCashAccounts;
+    F_dailyCashValidateRows(rows);daily=F_assetSum(rows.map(row=>row.balance));dailyCount=rows.length;
+  }catch(e){}
+  const storedAssets=F_assetSum([stock,fund,gold,saving]),total=F_assetSum([stock,fund,gold,saving,daily]);
+  return{fund,gold,saving,stock,daily,dailyCount,storedAssets,total,valid:total!==null};
+}
+function F_assetBeijingDate(value=new Date()){
+  const time=new Date(value).getTime();if(!Number.isFinite(time))throw new Error('记录时间无效');
+  return new Date(time+8*60*60*1000).toISOString().slice(0,10);
+}
+function F_validateAssetSnapshots(finance){
+  if(!Object.prototype.hasOwnProperty.call(finance,'assetSnapshots'))return;
+  const rows=finance.assetSnapshots;if(!Array.isArray(rows))throw new Error('月度资产记录格式无效');
+  const months=new Set();
+  for(const row of rows){
+    if(!row||typeof row!=='object'||Array.isArray(row)||row.basis!=='book-v1'||!F_validGoldMonth(row.month)||months.has(row.month)||!Number.isSafeInteger(row.totalCents)||typeof row.capturedAt!=='string')throw new Error('月度资产记录无效');
+    const date=new Date(row.capturedAt);
+    if(!Number.isFinite(date.getTime())||date.toISOString()!==row.capturedAt||F_assetBeijingDate(date).slice(0,7)!==row.month)throw new Error('月度资产日期无效');
+    months.add(row.month);
+  }
+}
+function F_withCurrentAssetSnapshot(finance,now=new Date()){
+  F_validateAssetSnapshots(finance);
+  const overview=F_calcAssetOverviewFromFinance(finance);if(!overview.valid)return finance;
+  const capturedAt=new Date(now).toISOString(),month=F_assetBeijingDate(now).slice(0,7),totalCents=Math.round(overview.total*100);
+  if(!Number.isSafeInteger(totalCents))return finance;
+  const previous=finance.assetSnapshots||[],old=previous.find(row=>row.month===month);
+  if(previous.some(row=>row.month>month))return finance;
+  if(old&&(old.capturedAt>capturedAt||(old.capturedAt===capturedAt&&old.totalCents===totalCents)))return finance;
+  const row={...old,month,capturedAt,basis:'book-v1',totalCents};
+  return{...finance,assetSnapshots:[...previous.filter(value=>value.month!==month),row].sort((a,b)=>a.month.localeCompare(b.month))};
+}
+function F_assetReadFinance(){
+  const raw=localStorage.getItem(F_SK),finance=raw===null?{}:JSON.parse(raw);
+  if(!finance||typeof finance!=='object'||Array.isArray(finance))throw new Error('本机财务记录无法读取');
+  backupSafeTree(finance);return finance;
+}
+function F_assetMonthNumber(month){return Number(month.slice(0,4))*12+Number(month.slice(5,7))-1;}
+function F_assetHistoryRows(finance){
+  F_validateAssetSnapshots(finance);
+  return (finance.assetSnapshots||[]).slice().sort((a,b)=>a.month.localeCompare(b.month)).map((row,index,rows)=>{
+    const previous=rows[index-1],difference=previous?row.totalCents-previous.totalCents:null;
+    return{...row,date:F_assetBeijingDate(row.capturedAt),previousMonth:previous?previous.month:null,
+      adjacent:!!previous&&F_assetMonthNumber(row.month)-F_assetMonthNumber(previous.month)===1,
+      deltaCents:Number.isSafeInteger(difference)?difference:null};
+  });
+}
+function F_assetHistoryChart(rows){
+  if(!rows.length)return'';
+  if(rows.length<2)return'<div class="f-sheet-sub" style="line-height:1.7;margin:16px 0">积累两个月记录后显示变化趋势</div>';
+  const width=320,height=150,left=44,right=12,top=16,bottom=28;
+  const first=F_assetMonthNumber(rows[0].month),last=F_assetMonthNumber(rows[rows.length-1].month);
+  const values=rows.map(row=>row.totalCents/100),min=Math.min(...values),max=Math.max(...values);
+  const padding=Math.max(max===min?Math.abs(max)*0.05:(max-min)*0.1,1),upper=max+padding,lower=min-padding;
+  const x=row=>left+(last===first?0.5:(F_assetMonthNumber(row.month)-first)/(last-first))*(width-left-right);
+  const y=row=>top+(upper-row.totalCents/100)/(upper-lower)*(height-top-bottom);
+  const segments=[],dots=[];
+  rows.forEach((row,index)=>{
+    const px=x(row),py=y(row);dots.push(`<circle cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" r="2.5" fill="#3462a0"><title>${escHtml(row.month+' '+F_fmtY(row.totalCents/100))}</title></circle>`);
+    if(index&&row.adjacent){const prior=rows[index-1];segments.push(`<path d="M ${x(prior).toFixed(2)} ${y(prior).toFixed(2)} L ${px.toFixed(2)} ${py.toFixed(2)}" fill="none" stroke="#3462a0" stroke-width="1.5"/>`);}
+  });
+  return`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="每月最后一次记录的总资产，缺少记录的月份不连线" style="width:100%;height:auto;display:block"><path d="M ${left} ${top} V ${height-bottom} H ${width-right}" fill="none" stroke="#e4e9ef" stroke-width="1"/><text x="${left-5}" y="${top+3}" text-anchor="end" font-size="9" fill="#8390a0">${escHtml(F_fmtAsset(upper))}</text><text x="${left-5}" y="${height-bottom+3}" text-anchor="end" font-size="9" fill="#8390a0">${escHtml(F_fmtAsset(lower))}</text>${segments.join('')}${dots.join('')}<text x="${left}" y="${height-7}" font-size="10" fill="#8390a0">${escHtml(rows[0].month)}</text>${rows.length>1?`<text x="${width-right}" y="${height-7}" text-anchor="end" font-size="10" fill="#8390a0">${escHtml(rows[rows.length-1].month)}</text>`:''}</svg>`;
+}
+function F_openAssetHistory(){F_modal='asset-history';F_renderMain();}
+function F_recordCurrentAssets(){
+  try{
+    const finance=F_assetReadFinance();if(!F_calcAssetOverviewFromFinance(finance).valid)throw new Error('部分资产记录待核对，本月金额尚未记录');
+    const next=F_withCurrentAssetSnapshot(finance);
+    if(next===finance){showToast_f('本月已有相同或更新的记录');return{ok:true,changed:false};}
+    writeAppStorageTransaction({finance_v1:JSON.stringify(next)});
+    F_loadData();F_modal='asset-history';F_renderMain();showToast_f('✓ 本月资产已记录');return{ok:true,changed:true};
+  }catch(e){alert(e.message||'本月资产记录未保存，请检查本机存储');return{ok:false};}
+}
+function F_renderAssetHistoryModal(){
+  const ov=mkOv_f();let rows=[],readable=true;
+  try{rows=F_assetHistoryRows(F_assetReadFinance());}catch(e){readable=false;}
+  const currentMonth=F_assetBeijingDate().slice(0,7);
+  const list=rows.slice().reverse().map(row=>{
+    const delta=row.deltaCents===null?(row.previousMonth?'变化金额超出显示范围':'首次记录'):(row.adjacent?'较上月':'较上次记录（'+row.previousMonth+'）')+' '+F_fmtPnl(row.deltaCents/100);
+    return`<div class="f-record-row" style="align-items:flex-start;gap:8px"><div style="flex:1;min-width:0"><div style="font-weight:600">${escHtml(row.month)}</div><div style="font-size:11px;color:#8893a1;margin-top:5px">${escHtml(row.month===currentMonth?'本月截至 '+row.date:row.date+' 记录')}</div><div style="font-size:11px;color:#637185;margin-top:5px">${escHtml(delta)}</div></div><strong style="white-space:nowrap">${escHtml(F_fmtY(row.totalCents/100))}</strong></div>`;
+  }).join('');
+  ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div><div class="f-sheet-title">每月资产变化</div><div class="f-sheet-sub" style="line-height:1.7">每月保留最后一次实际记录。金额变化包含存取、转入和账目调整，不代表投资收益。</div>${readable?(rows.length?F_assetHistoryChart(rows)+list:'<div class="f-empty">还没有月度记录<br><span style="font-size:12px;line-height:1.8">可手动记录本月，保存金额时也会自动更新。过去月份不会推算补齐。</span></div>'):'<div class="f-info-box">月度记录暂时无法读取，请先导出备份核对原数据。</div>'}<div class="f-sheet-sub" style="line-height:1.7;margin-top:14px">缺少记录的月份留空；日常资金按最近填写的余额统计。</div>${readable?'<button class="f-btn-primary" onclick="F_recordCurrentAssets()">记录本月资产</button>':''}<button class="f-btn-secondary" style="margin-top:8px" onclick="F_modal=null;F_renderMain()">关闭</button></div>`;
+  document.getElementById('panel-finance').appendChild(ov);
+}
+
+function F_calcAssetOverview(){
+  let finance;try{finance=F_dailyCashRead().finance;}catch(e){finance={dailyCashAccounts:null};}
+  return F_calcAssetOverviewFromFinance({...finance,items:F_ITEMS,stockAccount:F_STOCK_ACCOUNT});
+}
+
+let F_assetSelected=null;
+function F_assetAllocationRows(assets){
+  return[{key:'saving',name:'储蓄资金',color:'#2a66cf'},{key:'gold',name:'黄金',color:'#d8a331'},{key:'stock',name:'证券账户',color:'#8261c5'},{key:'fund',name:'基金',color:'#31a198'},{key:'daily',name:'日常资金',color:'#dc8d5c'}].map(row=>({...row,amount:assets[row.key]}));
+}
+function F_selectAsset(key){F_assetSelected=F_assetSelected===key?null:key;F_renderMain();}
+function F_renderAssetOverview(assets){
+  const rows=F_assetAllocationRows(assets),drawable=assets.valid&&assets.total>0&&rows.every(row=>Number.isFinite(row.amount)&&row.amount>=0);
+  const selected=rows.find(row=>row.key===F_assetSelected),centerAmount=selected?selected.amount:assets.total;
+  const pct=amount=>drawable?(amount/assets.total*100).toFixed(1)+'%':'—';
+  let offset=0;
+  const arcs=drawable?rows.map(row=>{
+    const size=row.amount/assets.total*100,draw=Math.max(0,size-Math.min(.9,size*.1));
+    const arc=`<circle class="f-allocation-arc" cx="77" cy="77" r="65" pathLength="100" stroke="${row.color}" stroke-dasharray="${draw} ${100-draw}" stroke-dashoffset="${-offset}" opacity="${selected&&selected!==row?.25:1}"/>`;
+    offset+=size;return arc;
+  }).join(''):'';
+  const centerText=F_fmtAsset(centerAmount);
+  const list=rows.map(row=>`<button type="button" class="f-allocation-line" aria-pressed="${selected===row}" onclick="F_selectAsset(${jsAttr(row.key)})" style="--asset-color:${row.color}"><span class="f-allocation-dot"></span><span><b>${row.name}</b><small>${row.key==='daily'&&assets.dailyCount===0&&row.amount===0?'待填写':F_fmtAsset(row.amount)} · ${pct(row.amount)}</small></span></button>`).join('');
+  return`<section class="f-allocation" aria-label="资产配置"><div class="f-allocation-title">资产配置</div><div class="f-allocation-body"><div class="f-allocation-ring"><svg viewBox="0 0 154 154" role="img" aria-label="${drawable?rows.map(row=>row.name+' '+pct(row.amount)).join('，'):'暂无可显示的资产占比'}"><circle cx="77" cy="77" r="65" fill="none" stroke="#f0f3f8" stroke-width="15"/>${arcs}</svg><button type="button" class="f-allocation-center" aria-label="显示总资产" onclick="F_selectAsset(null)"><span>${selected?selected.name:'总资产'}</span><strong class="${centerText.length>9?'f-allocation-large':''}">${centerText}</strong><small>${selected&&drawable?pct(selected.amount):'约数显示'}</small></button></div><div class="f-allocation-legend">${list}</div></div>${!assets.valid?'<div class="f-allocation-warning">部分记录待核对，请检查各账户。</div>':rows.some(row=>row.amount<0)?'<div class="f-allocation-warning">存在负余额，金额照常汇总，暂不显示占比。</div>':''}<div class="f-allocation-footer"><span>按已记录金额汇总</span><button type="button" onclick="F_openAssetHistory()">每月资产变化 ›</button></div></section>`;
+}
+
 function F_renderMain(){
-  const nonStock=F_ITEMS.filter(i=>i.group!=='stock');
-  const totalTarget=nonStock.reduce((s,i)=>s+i.target,0);
-  const totalInvested=nonStock.reduce((s,i)=>s+F_getTotalInvested(i),0);
-  const totalRemain=totalTarget-totalInvested;
-  const overallPct=totalTarget>0?Math.round(totalInvested/totalTarget*100):0;
+  F_captureHideBaselines();
+  const assets=F_calcAssetOverview();
   const acc=F_calcAccount();
 
-  // 英雄卡
-  const heroHtml=`<div class="f-hero">
-    <div class="f-hero-label">定投目标总额</div>
-    <div class="f-hero-amt">¥${F_fmt2(totalTarget)}</div>
-    <div class="f-hero-row">
-      <div class="f-hero-stat"><div class="f-hero-stat-l">已投入</div><div class="f-hero-stat-v">¥${F_fmt2(totalInvested)}</div></div>
-      <div class="f-hero-stat"><div class="f-hero-stat-l">还差</div><div class="f-hero-stat-v warn">¥${F_fmt2(totalRemain)}</div></div>
-      <div class="f-hero-stat"><div class="f-hero-stat-l">股票盈亏</div><div class="f-hero-stat-v f-pnl ${acc.valid?F_pnlClass(acc.totalProfit):'zero'}">${acc.valid?F_fmtPnl(acc.totalProfit):'待核对'}</div></div>
-    </div>
-    <div class="f-hero-bar-bg"><div class="f-hero-bar-fill" style="width:${overallPct}%"></div></div>
-    <div class="f-hero-bar-row"><span>整体完成度 ${overallPct}%</span><span>¥${F_fmt2(totalInvested)} / ¥${F_fmt2(totalTarget)}</span></div>
-  </div>`;
+  const heroHtml=F_renderAssetOverview(assets);
 
   // 股票账户卡
   const accHtml=`<div class="f-account" onclick="F_openAccountEdit()">
     <div class="f-account-top">
       <div>
-        <div class="f-account-avail-l">可用资金</div>
-        <div class="f-account-avail" style="color:${acc.available>=0?'#1a1a1a':'#e53935'}">${acc.valid?F_fmtY(acc.available):'待核对'}</div>
+        <div class="f-account-avail-l">账户金额</div>
+        <div class="f-account-avail">${F_fmtAsset(assets.stock)}</div>
       </div>
       <div>
         <div class="f-account-profit-l">累计盈亏</div>
         <div class="f-account-profit f-pnl ${acc.valid?F_pnlClass(acc.totalProfit):'zero'}">${acc.valid?F_fmtPnl(acc.totalProfit):'待核对'}</div>
       </div>
     </div>
-    <div class="f-account-grid">
-      <div class="f-account-stat"><div class="f-account-stat-l">初始资金</div><div class="f-account-stat-v">${F_fmtY(acc.initial)}</div></div>
-      <div class="f-account-stat"><div class="f-account-stat-l">追加资金</div><div class="f-account-stat-v">${F_fmtY(acc.deposited)}</div></div>
-      <div class="f-account-stat"><div class="f-account-stat-l">当前持仓</div><div class="f-account-stat-v" style="color:#e65100">${acc.valid?F_fmtY(acc.holdCost):'待核对'}</div></div>
+    <div class="f-account-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="f-account-stat"><div class="f-account-stat-l">可用资金</div><div class="f-account-stat-v" style="color:${acc.available>=0?'#1a1a1a':'#e53935'}">${acc.valid?F_fmtAsset(acc.available):'待核对'}</div></div>
+      <div class="f-account-stat"><div class="f-account-stat-l">持仓成本</div><div class="f-account-stat-v" style="color:#e65100">${acc.valid?F_fmtAsset(acc.holdCost):'待核对'}</div></div>
     </div>
   </div>`;
 
@@ -3090,8 +3613,8 @@ function F_renderMain(){
   const hiddenStocks=F_STOCK_ACCOUNT.stocks.filter(st=>st.hidden);
   const stocksHtml=visibleStocks.length?visibleStocks.map(st=>{
     const cal=F_calcStock(st);
-    const doneCount=F_stockRecords(st,'tpPlans').filter(t=>t.done).length;
-    const totalCount=F_stockRecords(st,'tpPlans').length;
+    const doneCount=F_stockRecords(st,'tpPlans').filter(t=>!t.hidden&&t.done).length;
+    const totalCount=F_stockRecords(st,'tpPlans').filter(t=>!t.hidden).length;
     return`<div class="f-stock" onclick="F_openStockDetail(${jsAttr(st.id)})">
       <div class="f-stock-top">
         <div>
@@ -3116,7 +3639,7 @@ function F_renderMain(){
           <div class="f-sl-hint">${st.slPct?'最大损失 '+F_fmtY(cal.holdCost*Math.abs(st.slPct/100)):'可在编辑中设置'}</div>
         </div>
       </div>
-      <div class="f-tp-list">${F_stockRecords(st,'tpPlans').map((tp,i)=>`
+      <div class="f-tp-list">${F_stockRecords(st,'tpPlans').filter(tp=>!tp.hidden).map((tp,i)=>`
         <div class="f-tp-item">
           <div class="f-tp-num ${tp.done?'done':'active'}">${tp.done?'✓':i+1}</div>
           <div class="f-tp-info">
@@ -3130,13 +3653,12 @@ function F_renderMain(){
   }).join(''):`<div class="f-empty">${hiddenStocks.length?'当前股票已全部隐藏，可在下方恢复':'还没有股票，点「添加股票」开始记录'}</div>`;
   const hiddenHtml=hiddenStocks.length?`<details class="f-account"><summary style="cursor:pointer">已隐藏股票（${hiddenStocks.length}）</summary><div class="f-sheet-sub" style="margin-top:10px">买卖记录、现金和累计盈亏仍计入账户。</div>${hiddenStocks.map(st=>`<div class="f-record-row"><button class="f-btn-secondary" style="flex:1" onclick="F_openStockDetail(${jsAttr(st.id)})">${escHtml(st.name)} · 查看记录</button><button class="f-btn-secondary" style="width:auto;margin-left:8px" onclick="F_restoreStock(${jsAttr(st.id)})">恢复显示</button></div>`).join('')}</details>`:'';
 
-  // 投资定投分组
-  const GROUP_LABELS={fund:{label:'基金定投',icon:'📈',badge:'fund'},gold:{label:'黄金积存金',icon:'🥇',badge:'gold'},saving:{label:'储蓄目标',icon:'🎯',badge:'saving'}};
+  // 资产分组：保留旧目标及计划字段，首页只展示已记录金额。
+  const GROUP_LABELS={fund:{label:'基金',icon:'📈',badge:'fund'},gold:{label:'黄金',icon:'🥇',badge:'gold'},saving:{label:'储蓄资金',icon:'🎯',badge:'saving'}};
   let groupsHtml='';
   ['fund','gold','saving'].forEach(g=>{
-    const items=F_ITEMS.filter(i=>i.group===g);
+    const items=F_ITEMS.filter(i=>i.group===g&&!i.hidden);
     const gl=GROUP_LABELS[g];
-    const isSaving=g==='saving';
     // 分组标题
     groupsHtml+=`<div class="f-group-hdr">
       <span class="f-group-title">${gl.icon} ${gl.label}</span>
@@ -3145,29 +3667,20 @@ function F_renderMain(){
     groupsHtml+='<div class="f-inv-grid">';
     items.forEach(item=>{
       const inv=F_getTotalInvested(item);
-      const pct=F_getPct(item);
-      const done=F_isCompleted(item);
-      const remain=F_getRemain(item);
-      const barColor=done?'#e53935':g==='gold'?'#FFD700':g==='saving'?'#1a5fd4':'#ff9800';
-      const badgeClass=done?'done':gl.badge;
-      const badgeText=done?'✓ 达标':gl.label;
-      groupsHtml+=`<div class="f-inv-card ${done?'done':''}" onclick="F_openItemDetail(${jsAttr(item.id)})">
+      groupsHtml+=`<div class="f-inv-card" onclick="F_openItemDetail(${jsAttr(item.id)})">
         <div class="f-inv-card-top">
           <div>
             <div class="f-inv-card-name">${escHtml(item.name)}</div>
             <div class="f-inv-card-meta">${escHtml(item.platform)}</div>
           </div>
-          <span class="f-inv-card-badge ${badgeClass}">${badgeText}</span>
+          <span class="f-inv-card-badge ${gl.badge}">${gl.label}</span>
         </div>
-        <div class="f-inv-card-bar-bg"><div class="f-inv-card-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-        <div class="f-inv-card-footer">
-          <span class="f-inv-card-pct ${done?'done':''}">${pct}%</span>
-          <span class="f-inv-card-remain ${done?'done':''}">${done?F_fmtY(inv)+' 达标':'还差 '+F_fmtY(remain)}</span>
-        </div>
+        <div class="f-inv-card-amount">${F_fmtAsset(inv)}</div>
+        <div class="f-inv-card-balance-label">${g==='saving'?'已攒金额':'已存入金额'}</div>
       </div>`;
     });
     // 各分组末尾加添加按钮
-    const addLabel=g==='fund'?'添加基金':g==='gold'?'添加黄金项目':'添加储蓄目标';
+    const addLabel=g==='fund'?'添加基金':g==='gold'?'添加黄金项目':'添加储蓄账户';
     groupsHtml+=`<div class="f-inv-add-card" onclick="F_openAddInvGroup(${jsAttr(g)})">
       <div class="f-inv-add-icon">＋</div>
       <div class="f-inv-add-label">${addLabel}</div>
@@ -3178,20 +3691,23 @@ function F_renderMain(){
     destroyCanvasCharts(document.getElementById('F_main'));
     document.getElementById('F_main').innerHTML=`
     ${heroHtml}
-    ${F_renderPortfolioSection()}
+    ${F_renderDailyCashSection()}
     <div class="f-group-hdr">
-      <span class="f-group-title">📊 股票账户</span>
+      <span class="f-group-title">📊 证券账户</span>
       <button class="f-add-btn" onclick="F_openAddStock()">+ 添加股票</button>
     </div>
     ${accHtml}${acc.valid?'':'<div class="f-info-box" role="alert">存在待核对的股票交易（可能在已隐藏列表中）。请打开股票详情修正，相关合计暂不显示。</div>'}${stocksHtml}${hiddenHtml}
-    ${groupsHtml}`;
+    ${groupsHtml}
+    <button class="f-btn-secondary" onclick="F_openHiddenData()">已隐藏项目与记录（${F_hiddenEntries().length}）</button>
+    <details class="f-market-reference" ontoggle="if(this.open)F_drawPortfolioPies()"><summary>市值参考</summary><div class="f-sheet-sub" style="line-height:1.7">历史填写的市值单独保留，未计入上方总资产；日常资金不在此处重复统计。</div>${F_renderPortfolioSection()}</details>`;
   F_checkModal();
 }
 function F_checkModal(){
   document.getElementById('panel-finance').querySelectorAll('.modal-overlay').forEach(e=>e.remove());
   // 如果没有模态框，绘制饼图
   if(!F_modal){setTimeout(F_drawPortfolioPies,150);}
-  if(F_modal==='stock-detail')F_renderStockDetailModal();
+  if(F_modal==='asset-history')F_renderAssetHistoryModal();
+  else if(F_modal==='stock-detail')F_renderStockDetailModal();
   else if(F_modal==='stock-add')F_renderStockAddModal();
   else if(F_modal==='stock-edit')F_renderStockEditModal();
   else if(F_modal==='buy-add')F_renderBuyAddModal();
@@ -3201,11 +3717,15 @@ function F_checkModal(){
   else if(F_modal==='item-edit')F_renderItemEditModal();
   else if(F_modal==='item-add')F_renderItemAddModal();
   else if(F_modal==='data'||F_modal==='data-f')F_renderDataModal();
+  else if(F_modal==='finance-versions')F_renderFinanceVersionsModal();
   else if(F_modal==='market-update')F_renderMarketUpdateModal();
   else if(F_modal==='edit-buy')F_renderEditBuyModal();
   else if(F_modal==='edit-sell')F_renderEditSellModal();
   else if(F_modal==='inv-action')F_renderInvActionModal();
   else if(F_modal==='edit-inv-record')F_renderEditInvRecordModal();
+  else if(F_modal==='daily-cash')F_renderDailyCashModal();
+  else if(F_modal==='daily-cash-edit')F_renderDailyCashEditModal();
+  else if(F_modal==='hidden-finance')F_renderHiddenDataModal();
 }
 function mkOv_f(){
   const ov=document.createElement('div');ov.className='modal-overlay';
@@ -3223,7 +3743,7 @@ function F_renderStockDetailModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
   const ov=mkOv_f();
-  const buyRows=F_stockRecords(st,'buyRecords').map((raw,i)=>{const r=raw||{};return`
+  const buyRows=F_stockRecords(st,'buyRecords').map((raw,i)=>{const r=raw||{};if(r.hidden)return'';return`
     <div class="f-record-row">
       <span class="f-record-date">${escHtml(r.date)}</span>
       <span class="f-record-qty">${escHtml(r.qty)}股</span>
@@ -3231,7 +3751,7 @@ function F_renderStockDetailModal(){
       <span class="f-record-amt" style="color:#e65100;flex:1">-${F_fmtY(r.amount)}</span>
       <button onclick="F_openEditBuyRecord(${jsAttr(st.id)},${i})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
     </div>`}).join('');
-  const sellRows=F_stockRecords(st,'sellRecords').map((raw,i)=>{const r=raw||{};return`
+  const sellRows=F_stockRecords(st,'sellRecords').map((raw,i)=>{const r=raw||{};if(r.hidden)return'';return`
     <div class="f-record-row">
       <span class="f-record-date">${escHtml(r.date)}</span>
       <span class="f-record-qty">${escHtml(r.qty)}股</span>
@@ -3263,7 +3783,7 @@ function F_renderStockDetailModal(){
       </div>
     </div>
     <div class="f-section">止盈计划</div>
-    ${F_stockRecords(st,'tpPlans').map((tp,i)=>`
+    ${F_stockRecords(st,'tpPlans').filter(tp=>!tp.hidden).map((tp,i)=>`
       <div class="f-tp-item">
         <div class="f-tp-num ${tp.done?'done':'active'}">${tp.done?'✓':i+1}</div>
         <div class="f-tp-info">
@@ -3282,6 +3802,7 @@ function F_renderStockDetailModal(){
     ${buyRows||'<div class="f-empty">暂无</div>'}
     <div class="f-section">卖出记录</div>
     ${sellRows||'<div class="f-empty">暂无</div>'}
+    ${F_hiddenSection('buy',st.id,'已隐藏买入')}${F_hiddenSection('sell',st.id,'已隐藏卖出')}${F_hiddenSection('plan',st.id,'已隐藏计划')}
     ${st.hidden?`<button class="f-btn-secondary" onclick="F_restoreStock(${jsAttr(st.id)})">恢复显示这只股票</button>`:`<button class="f-btn-secondary" onclick="F_deleteStock(${jsAttr(st.id)})">隐藏这只股票（保留记录）</button>`}
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
@@ -3310,7 +3831,7 @@ function F_renderBuyAddModal(){
 function F_renderSellAddModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
-  const pendPlans=F_stockRecords(st,'tpPlans').filter(t=>!t.done);
+  const pendPlans=F_stockRecords(st,'tpPlans').filter(t=>!t.done&&!t.hidden);
   const planOpts=pendPlans.map(t=>`<option value="${escHtml(t.id)}">${escHtml(t.note)} · ${escHtml(t.qty)}股 @ ${F_fmtY(t.price)}</option>`).join('');
   const ov=mkOv_f();
   const _sellType=window._F_sellType||'tp';const _isSL=_sellType==='sl';
@@ -3334,17 +3855,8 @@ function F_renderSellAddModal(){
 }function F_renderStockEditModal(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
   const cal=F_calcStock(st);
-  F_tmpTpPlans=null;
-  const tpRowsHtml=F_stockRecords(st,'tpPlans').map((tp,i)=>`
-    <div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
-      <div style="font-size:11px;color:#aaa;margin-bottom:6px;">${tp.done?'✓ 已完成':'计划'} ${i+1}</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${escHtml(tp.price)}" placeholder="价格">
-        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${escHtml(tp.qty)}" placeholder="股数">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${escHtml(tp.note||'')}" placeholder="备注">
-        <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
-      </div>
-    </div>`).join('');
+  F_tmpTpPlans=JSON.parse(JSON.stringify(F_stockRecords(st,'tpPlans')));F_tmpTpBaseline=F_hideCanonical(st);F_tmpTpOriginalCount=F_tmpTpPlans.length;
+  const tpRowsHtml=F_tpRowsHtml();
   const ov=mkOv_f();
   ov.innerHTML=`<div class="f-sheet">
     <div class="f-sheet-handle"></div>
@@ -3357,12 +3869,12 @@ function F_renderSellAddModal(){
     <div class="f-info-box">基于当前均价 ${F_fmtY(cal.avgCost)} 实时预览价格</div>
     <div class="f-field-row">
       <span class="f-field-label">止盈线</span>
-      <input id="F_e_tp" type="number" inputmode="decimal" step="1" value="${escHtml(st.tpPct||20)}" oninput="F_previewLines()">
+      <input id="F_e_tp" type="number" inputmode="decimal" step="1" value="${escHtml(st.tpPct??20)}" oninput="F_previewLines()">
       <span class="f-field-note">% → <b id="F_e_tp_price" style="color:#2e7d32">${cal.valid?F_fmtY(cal.tpPrice):'待核对'}</b></span>
     </div>
     <div class="f-field-row">
       <span class="f-field-label">止损线</span>
-      <input id="F_e_sl" type="number" inputmode="decimal" step="1" value="${Math.abs(st.slPct||15)}" oninput="F_previewLines()">
+      <input id="F_e_sl" type="number" inputmode="decimal" step="1" value="${Math.abs(st.slPct??15)}" oninput="F_previewLines()">
       <span class="f-field-note">% → <b id="F_e_sl_price" style="color:#e53935">${F_fmtY(cal.slPrice)}</b></span>
     </div>
     <div class="f-section">止盈计划</div>
@@ -3373,12 +3885,12 @@ function F_renderSellAddModal(){
   document.getElementById('panel-finance').appendChild(ov);
 }function F_renderAccountEditModal(){
   const acc=F_calcAccount();
-  const depRows=F_STOCK_ACCOUNT.deposits.map((d,i)=>`
+  const depRows=F_STOCK_ACCOUNT.deposits.map((d,i)=>d.hidden?'':`
     <div class="f-record-row">
       <span class="f-record-date">${escHtml(d.date)}</span>
       <span class="f-record-amt pos">+${F_fmtY(d.amount)}</span>
       <span style="flex:1;color:#aaa;font-size:11px;margin-left:8px">${escHtml(d.note||'')}</span>
-      <button onclick="F_deleteDeposit(${i})" class="f-record-del">×</button>
+      <button onclick="F_deleteDeposit(${i})" class="f-add-btn">隐藏</button>
     </div>`).join('');
   const ov=mkOv_f();
   ov.innerHTML=`<div class="f-sheet">
@@ -3397,6 +3909,7 @@ function F_renderSellAddModal(){
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_a_note" placeholder="如：追加操作资金"></div>
     <button class="f-btn-primary" onclick="F_submitDeposit()">确认追加</button>
     ${F_STOCK_ACCOUNT.deposits.length?`<div class="f-section">追加记录</div>${depRows}`:''}
+    ${F_hiddenSection('deposit',null,'已隐藏追加记录')}
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }function F_renderItemDetailModal(){
@@ -3406,8 +3919,8 @@ function F_renderSellAddModal(){
   const remain=F_getRemain(item);
   const pct=F_getPct(item);
   const done=F_isCompleted(item);
-  const recs=(item.records||[]).slice().reverse();
-  const recsHtml=recs.length?recs.map((r,ri)=>{
+  const recs=(item.records||[]).map((r,i)=>({r,i})).filter(x=>!x.r.hidden).reverse();
+  const recsHtml=recs.length?recs.map(({r,i})=>{
     const isW=r.type==='withdraw';
     const isA=r.type==='auto';
     const isN=r.type==='note'||r.amount===0;
@@ -3415,7 +3928,7 @@ function F_renderSellAddModal(){
     if(isN)return`<div class="f-record-row" style="opacity:.7">
       <span class="f-record-date">${escHtml(r.date)}</span>
       <span style="flex:1;color:#888;font-size:11px;margin-left:4px">${escHtml(r.note||'变更记录')}</span>
-      <button onclick="F_deleteInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
+      <button onclick="F_deleteInvRecord(${jsAttr(item.id)},${i})" class="f-add-btn">隐藏</button>
     </div>`;
     return`<div class="f-record-row">
       <span class="f-record-date">${escHtml(r.date)}</span>
@@ -3426,9 +3939,9 @@ function F_renderSellAddModal(){
         ${isW?'🔴 取用':isA?'🤖 自动定投':'🟢 存入'}${escHtml(!isA&&r.note?' · '+r.note:'')}${isW&&isR?' (已归还)':''}
         ${F_goldRecordMetaHtml(item,r)}
       </span>
-      ${isW&&!isR?`<button onclick="F_markReturned(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
-      <button onclick="F_openEditInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
-      <button onclick="F_deleteInvRecord(${jsAttr(item.id)},${(item.records||[]).length-1-ri})" class="f-record-del">×</button>
+      ${isW&&!isR?`<button onclick="F_markReturned(${jsAttr(item.id)},${i})" style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0">归还</button>`:''}
+      <button onclick="F_openEditInvRecord(${jsAttr(item.id)},${i})" style="background:none;border:none;color:#1a5fd4;font-size:12px;cursor:pointer;padding:0 4px;flex-shrink:0">编辑</button>
+      <button onclick="F_deleteInvRecord(${jsAttr(item.id)},${i})" class="f-add-btn">隐藏</button>
     </div>`;
   }).join(''):`<div class="f-empty">还没有记录</div>`;
 
@@ -3454,38 +3967,16 @@ function F_renderSellAddModal(){
     </div>
     <div class="f-section">流水记录（${(item.records||[]).length}笔）</div>
     ${recsHtml}
+    ${F_hiddenSection('record',item.id)}
     <button class="f-btn-primary" style="margin-top:12px;background:#555;font-size:13px;" onclick="F_modal='item-edit';F_renderMain()">✏️ 编辑基本信息</button>
-    <button class="f-btn-danger" onclick="F_deleteInvItem(${jsAttr(item.id)})">删除此项目</button>
+    ${item.hidden?'<div class="f-info-box">此项目已隐藏，记录和金额仍计入资产。自动定投设置保持不变。</div>':''}
+    <button class="f-btn-secondary" onclick="${item.hidden?'F_restoreInvItem':'F_deleteInvItem'}(${jsAttr(item.id)})">${item.hidden?'恢复显示此项目':'隐藏此项目（保留记录）'}</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
-function F_deleteInvRecord(itemId,recIdx){
-  if(!confirm('确认删除？'))return;
-  const idx=F_ITEMS.findIndex(i=>i.id===itemId);if(idx<0)return;
-  F_ITEMS[idx].records.splice(recIdx,1);
-  F_saveData();F_modal='item-detail';F_renderMain();
-}
-function F_deleteInvItem(id){
-  const item=F_ITEMS.find(i=>i.id===id);if(!item)return;
-  const existing=document.getElementById('F_del_confirm');
-  if(existing)existing.remove();
-  const box=document.createElement('div');
-  box.id='F_del_confirm';
-  box.style.cssText='position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,.15);';
-  box.innerHTML=`<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">删除「${escHtml(item.name)}」？</div>
-    <div style="font-size:13px;color:#888;margin-bottom:20px;">所有定投记录将一并删除，不可恢复</div>
-    <button onclick="F_confirmDeleteInvItem(${jsAttr(id)})" style="width:100%;height:44px;border-radius:12px;border:none;background:#e53935;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">确认删除</button>
-    <button onclick="document.getElementById('F_del_confirm').remove()" style="width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:14px;cursor:pointer;">取消</button>`;
-  document.getElementById('panel-finance').appendChild(box);
-}
-function F_confirmDeleteInvItem(id){
-  F_ITEMS=F_ITEMS.filter(i=>i.id!==id);
-  F_saveData();
-  const box=document.getElementById('F_del_confirm');
-  if(box)box.remove();
-  F_modal=null;F_editId=null;F_renderMain();
-  showToast_f('✓ 已删除');
-}
+function F_deleteInvRecord(itemId,recIdx){return F_setFinanceHidden('record',itemId,recIdx,true,null,'item-detail');}
+function F_deleteInvItem(id){return F_confirmDeleteInvItem(id);}
+function F_confirmDeleteInvItem(id){return F_setFinanceHidden('item',id,null,true,null,null);}
 function F_renderItemEditModal(){
   const item=F_ITEMS.find(i=>i.id===F_editId);if(!item)return;
   const ov=mkOv_f();
@@ -3544,7 +4035,7 @@ function F_submitItemEdit(id){
   const schedule=scheduleChanged?{autoInvestSince:newAutoInvest?todayStr():null,autoInvestCheckedMonth:null}:{};
   F_ITEMS[idx]={...F_ITEMS[idx],...schedule,name:newName,group:newGroup,target:newTarget,invested:newInvested,monthly:newMonthly,platform:newPlatform,note:newNote,autoInvest:newAutoInvest,investDay:newInvestDay};
   F_autoInvest();
-  F_saveData();showToast_f('✓ 已保存');F_modal=null;F_editId=null;F_renderMain();
+  F_saveData({capture:newInvested!==old.invested});showToast_f('✓ 已保存');F_modal=null;F_editId=null;F_renderMain();
 }
 function F_renderItemAddModal(){
   const ov=mkOv_f();
@@ -3575,7 +4066,7 @@ function F_submitAddInv(){
     target,invested,monthly,
     platform:document.getElementById('n-platform')?.value.trim()||'',
     note:document.getElementById('n-note')?.value.trim()||'',records:[]});
-  F_saveData();F_modal=null;F_renderMain();
+  F_saveData({capture:invested>0});F_modal=null;F_renderMain();
 }
 
 // ── 数据备份 ──
@@ -3589,20 +4080,22 @@ function F_renderDataModal(){
     <button class="f-btn-secondary" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
     <button class="f-btn-secondary" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
     <button class="f-btn-secondary" onclick="undoLastImport()">↩️ 撤销上次导入</button>
+    <button class="f-btn-secondary" onclick="F_openFinanceVersions()">财务历史版本</button>
     <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
     <details>
       <summary class="f-section" style="cursor:pointer">历史记录整理</summary>
       <button class="f-btn-secondary" onclick="CR_openRepair()">补回历史股票记录</button>
       <button class="f-btn-secondary" onclick="GR_openRepair()">核对黄金明细</button>
     </details>
-    <div class="f-section">重置</div>
-    <button class="f-btn-danger" onclick="F_resetData()">恢复默认数据</button>
+    <div class="f-section">显示管理</div>
+    <button class="f-btn-secondary" onclick="F_openHiddenData()">已隐藏项目与记录</button>
+    <button class="f-btn-secondary" onclick="F_resetData()">隐藏全部财务项目和日常账户</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
 function F_exportData(){
   try{
-    const data={app:'财务管家',schema:4,exportedAt:new Date().toISOString(),finance:F_ld()};
+    const data={app:'财务管家',schema:4,exportedAt:new Date().toISOString(),finance:JSON.parse(localStorage.getItem('finance_v1')||'{}'),financeVersions:FV_read()};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     const d=new Date();
@@ -3623,65 +4116,44 @@ function F_importData(e){
   reader.readAsText(file);input.value='';
 }
 function F_resetData(){
-  if(!confirm('确认恢复默认数据？'))return;
-  F_ITEMS=JSON.parse(JSON.stringify(F_DEFAULT_ITEMS));
-  F_STOCK_ACCOUNT=JSON.parse(JSON.stringify(F_DEFAULT_STOCK_ACCOUNT));
-  F_saveData();F_modal=null;F_renderMain();
+  const baseline=F_hideParentsBaseline;
+  if(!confirm('隐藏全部财务项目和日常账户？资产、资金及完整记录仍保留，可在“已隐藏项目与记录”中恢复显示。'))return{ok:false,code:'CANCELLED'};
+  try{
+    const f=F_hideRead(),parents={items:f.items||[],stocks:f.stockAccount?.stocks||[],daily:f.dailyCashAccounts||[]};
+    if(!baseline||F_hideCanonical(parents)!==baseline){alert('财务记录已变化，请重新打开财务页后再操作。');return{ok:false,code:'CONFLICT'};}
+    const rows=[...parents.items,...parents.stocks,...parents.daily];
+    if(rows.every(r=>r.hidden===true))return{ok:true,unchanged:true};
+    rows.forEach(row=>{row.hidden=true;});F_hideWrite(f);
+    return{ok:true,displayOk:F_hideRefresh('✓ 已隐藏全部项目，资产和记录仍保留',null)};
+  }catch(e){alert('未能保存隐藏状态，请检查本机数据和存储空间。');return{ok:false,code:'STORAGE'};}
 }
 function F_submitStockEdit(stId){
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const tpPct=Number(document.getElementById('F_e_tp')?.value);
-  const slPct=Number(document.getElementById('F_e_sl')?.value);
-  if(!Number.isFinite(tpPct)||tpPct<0||!Number.isFinite(slPct)||slPct<0||slPct>100){alert('止盈比例必须为非负数，止损比例须在 0–100 之间（0 表示未设置）');return;}
-  // 读取止盈计划
-  const plans=F_tmpTpPlans||F_stockRecords(st,'tpPlans');
-  const newPlans=[];
-  for(const [i,tp] of plans.entries()){
-    const price=Number(document.getElementById(`F_tp_price_${i}`)?.value??tp.price);
-    const qty=Number(document.getElementById(`F_tp_qty_${i}`)?.value??tp.qty);
-    const note=document.getElementById(`F_tp_note_${i}`)?.value.trim()||tp.note||'';
-    if(!Number.isFinite(price)||price<=0||!Number.isSafeInteger(qty)||qty<=0){alert('第 '+(i+1)+' 个计划需填写正价格和正整数股数');return;}
-    newPlans.push({...tp,price,qty,note});
-  }
-  st.name=document.getElementById('F_e_name')?.value.trim()||st.name;
-  st.code=document.getElementById('F_e_code')?.value.trim()||'';
-  st.note=document.getElementById('F_e_note')?.value.trim()||'';
-  st.tpPct=tpPct;st.slPct=-slPct;
-  st.tpPlans=newPlans;
-  F_tmpTpPlans=null;
-  F_saveData();F_modal='stock-detail';F_renderMain();
+  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return{ok:false};
+  const tpPct=Number(document.getElementById('F_e_tp')?.value),slPct=Number(document.getElementById('F_e_sl')?.value);
+  if(!Number.isFinite(tpPct)||tpPct<0||!Number.isFinite(slPct)||slPct<0||slPct>100){alert('止盈比例必须为非负数，止损比例须在 0–100 之间（0 表示未设置）');return{ok:false,code:'INVALID'};}
+  if(!F_tmpTpPlans){F_tmpTpPlans=JSON.parse(JSON.stringify(F_stockRecords(st,'tpPlans')));F_tmpTpBaseline=F_hideBaselines.get(F_hideKey('stock',stId,null))||F_hideCanonical(st);F_tmpTpOriginalCount=F_tmpTpPlans.length;}
+  F_collectTpDraft();
+  for(const[i,tp]of F_tmpTpPlans.entries())if(!tp.hidden&&(!Number.isFinite(tp.price)||tp.price<=0||!Number.isSafeInteger(tp.qty)||tp.qty<=0)){alert('第 '+(i+1)+' 个计划需填写正价格和正整数股数');return{ok:false,code:'INVALID'};}
+  try{
+    const f=F_hideRead(),current=(f.stockAccount?.stocks||[]).find(s=>s.id===stId);
+    if(!current||F_hideCanonical(current)!==F_tmpTpBaseline){alert('这只股票的记录已被修改，请重新打开编辑。');return{ok:false,code:'CONFLICT'};}
+    current.name=document.getElementById('F_e_name')?.value.trim()||current.name;
+    current.code=document.getElementById('F_e_code')?.value.trim()||'';current.note=document.getElementById('F_e_note')?.value.trim()||'';
+    current.tpPct=tpPct;current.slPct=-slPct;current.tpPlans=JSON.parse(JSON.stringify(F_tmpTpPlans));
+    F_hideWrite(f);F_tmpTpPlans=null;F_tmpTpBaseline=null;
+    return{ok:true,displayOk:F_hideRefresh('✓ 已保存，隐藏计划仍保留','stock-detail')};
+  }catch(e){alert('未能保存计划，请检查本机数据和存储空间。');return{ok:false,code:'STORAGE'};}
 }
 function F_removeTpRow(i){
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
-  if(!F_tmpTpPlans)F_tmpTpPlans=[...F_stockRecords(st,'tpPlans')];
-  F_tmpTpPlans.splice(i,1);
-  const container=document.getElementById('F_tp_rows');
-  if(container)container.innerHTML=F_tmpTpPlans.map((tp,i)=>`
-    <div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
-      <div style="font-size:11px;color:#aaa;margin-bottom:6px;">${tp.done?'✓ 已完成':'计划'} ${i+1}</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" value="${escHtml(tp.price)}" placeholder="价格">
-        <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" value="${escHtml(tp.qty)}" placeholder="股数">
-        <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" value="${escHtml(tp.note||'')}" placeholder="备注">
-        <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
-      </div>
-    </div>`).join('');
+  if(!F_tmpTpPlans||!Number.isInteger(i)||i<0||i>=F_tmpTpPlans.length)return;
+  F_collectTpDraft();
+  if(i<F_tmpTpOriginalCount)F_tmpTpPlans[i].hidden=true;else F_tmpTpPlans.splice(i,1);
+  const el=document.getElementById('F_tp_rows');if(el)el.innerHTML=F_tpRowsHtml();
 }
 function F_addTpRow(){
-  const container=document.getElementById('F_tp_rows');if(!container)return;
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
-  if(!F_tmpTpPlans)F_tmpTpPlans=[...F_stockRecords(st,'tpPlans')];
-  const i=F_tmpTpPlans.length;
-  F_tmpTpPlans.push({id:F_genId(),price:0,qty:0,note:'',done:false});
-  container.innerHTML+=`<div style="background:#f8f9fc;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
-    <div style="font-size:11px;color:#aaa;margin-bottom:6px;">计划 ${i+1}</div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_price_${i}" type="number" inputmode="decimal" step="0.001" placeholder="价格">
-      <input style="width:70px;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_qty_${i}" type="number" inputmode="numeric" step="100" placeholder="股数">
-      <input style="flex:1;background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;" id="F_tp_note_${i}" placeholder="备注">
-      <button onclick="F_removeTpRow(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
-    </div>
-  </div>`;
+  if(!F_tmpTpPlans)return;
+  F_collectTpDraft();F_tmpTpPlans.push({id:F_genId(),price:0,qty:0,note:'',done:false});
+  const el=document.getElementById('F_tp_rows');if(el)el.innerHTML=F_tpRowsHtml();
 }
 function F_previewLines(){
   const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===F_editId);if(!st)return;
@@ -3699,7 +4171,7 @@ function F_submitBuy(stId){
   const record={id:F_genId(),order:F_nextTradeOrder(st),...F_readTrade('F_b_',true)};
   const candidate={...st,buyRecords:[...F_stockRecords(st,'buyRecords'),record],sellRecords:F_stockRecords(st,'sellRecords')};
   if(!F_applyStockTrades(st,candidate,true))return;
-  F_saveData();F_modal='stock-detail';F_renderMain();
+  F_saveData({capture:true});F_modal='stock-detail';F_renderMain();
 }
 
 // ── 止盈/止损卖出 ──
@@ -3713,7 +4185,7 @@ function F_submitSell(stId,sellType){
   // 标记对应止盈计划为已完成
   if(planId&&type==='tp'){const tp=F_stockRecords(st,'tpPlans').find(t=>t.id===planId);if(tp)tp.done=true;}
   window._F_sellType=null;
-  F_saveData();F_modal='stock-detail';F_renderMain();
+  F_saveData({capture:true});F_modal='stock-detail';F_renderMain();
 }
 
 // ── 股票编辑 ──
@@ -3767,19 +4239,15 @@ function F_submitDeposit(){
   if(!Number.isFinite(amt)||amt<=0||amt>Number.MAX_SAFE_INTEGER/100){alert('请填写有效的追加金额');return;}
   if(!F_validTradeDate(date)){alert('请填写有效日期');return;}
   F_STOCK_ACCOUNT.deposits.push({date,amount:amt,note});
-  F_saveData();F_modal='account-edit';F_renderMain();
+  F_saveData({capture:true});F_modal='account-edit';F_renderMain();
 }
-function F_deleteDeposit(i){
-  if(!confirm('确认删除这条追加记录？'))return;
-  F_STOCK_ACCOUNT.deposits.splice(i,1);
-  F_saveData();F_modal='account-edit';F_renderMain();
-}
+function F_deleteDeposit(i){return F_setFinanceHidden('deposit',null,i,true,null,'account-edit');}
 function F_saveInitial(){
   const raw=document.getElementById('F_a_init')?.value;
   const v=Number(raw);
   if(raw==null||raw.trim()===''||!Number.isFinite(v)||v<0||v>Number.MAX_SAFE_INTEGER/100){alert('初始资金必须为有效的非负金额');return;}
   F_STOCK_ACCOUNT.initialCapital=v;
-  F_saveData();F_modal=null;F_renderMain();
+  F_saveData({capture:true});F_modal=null;F_renderMain();
 }
 
 // ── 投资定投详情 ──
@@ -3798,19 +4266,8 @@ function F_deleteStock(stId){
     <button onclick="document.getElementById('F_del_confirm').remove()" style="width:100%;height:40px;border-radius:12px;border:1px solid #e0e0e0;background:#fff;color:#555;font-size:14px;cursor:pointer;">取消</button>`;
   document.getElementById('panel-finance').appendChild(box);
 }
-function F_confirmDeleteStock(stId){
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  st.hidden=true;
-  F_saveData();
-  const box=document.getElementById('F_del_confirm');
-  if(box)box.remove();
-  F_modal=null;F_editId=null;F_renderMain();
-  showToast_f('✓ 已隐藏，记录和资金已保留');
-}
-function F_restoreStock(stId){
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  st.hidden=false;F_saveData();F_modal=null;F_renderMain();showToast_f('✓ 已恢复显示');
-}
+function F_confirmDeleteStock(stId){const result=F_setFinanceHidden('stock',stId,null,true,null,null);if(result.ok)document.getElementById('F_del_confirm')?.remove();return result;}
+function F_restoreStock(stId){return F_setFinanceHidden('stock',stId,null,false,null,F_modal==='hidden-finance'?'hidden-finance':null);}
 
 // ── 新增股票 ──
 function F_renderStockAddModal(){
@@ -3859,7 +4316,7 @@ function F_submitAddStock(){
   };
   const cal=F_calcStock(st);if(!cal.valid){alert('无法保存：'+cal.errors.join('；'));return;}
   F_STOCK_ACCOUNT.stocks.push(st);
-  F_saveData();
+  F_saveData({capture:buyRecords.length>0});
   showToast_f('✓ 股票已添加');
   F_editId=st.id;F_modal='stock-detail';F_renderMain();
 }
@@ -3907,7 +4364,7 @@ function F_submitInvAction(itemId,type){
   if(!F_ITEMS[idx].records)F_ITEMS[idx].records=[];
   const isWithdraw=type==='withdraw';
   F_ITEMS[idx].records.push({date,amount:amt,note,type:isWithdraw?'withdraw':'deposit',returned:false,...goldFields});
-  F_saveData();
+  F_saveData({capture:true});
   showToast_f(isWithdraw?'✓ 取用已记录':'✓ 存入已记录');
   F_modal='item-detail';F_renderMain();
 }
@@ -3916,7 +4373,7 @@ function F_markReturned(itemId,recIdx){
   const record=F_ITEMS[idx].records[recIdx];
   if(!record||record.type!=='withdraw')return;
   record.returned=true;
-  F_saveData();showToast_f('✓ 已标记归还');F_renderMain();
+  F_saveData({capture:true});showToast_f('✓ 已标记归还');F_renderMain();
 }
 function F_openEditInvRecord(itemId,recIdx){
   F_editId=itemId;
@@ -3948,7 +4405,7 @@ function F_renderEditInvRecordModal(){
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_ei_note" value="${escHtml(r.note||'')}"></div>
     ${isW?`<div class="f-field-row" onclick="F_ei_toggleReturned()" style="cursor:pointer"><span class="f-field-label">已归还</span><span id="F_ei_ret_lbl" style="flex:1;color:${r.returned?'#2e7d32':'#aaa'};font-size:13px">${r.returned?'✓ 已归还':'未归还（点击切换）'}</span></div>`:''}
     <button class="f-btn-primary" onclick="F_submitEditInvRecord(${jsAttr(item.id)},${idx})">保存</button>
-    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteInvRecord(${jsAttr(item.id)},${idx})">删除这条记录</button>
+    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_setFinanceHidden('record',${jsAttr(item.id)},${idx},${r.hidden?'false':'true'})">${r.hidden?'恢复显示这条记录':'隐藏这条记录'}</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -3969,7 +4426,7 @@ function F_submitEditInvRecord(itemId,recIdx){
   if(isGold){['grams','fee','allocationMonth'].forEach(k=>{delete upd[k]});Object.assign(upd,goldFields);}
   if(rec.type==='withdraw')upd.returned=!!window._F_ei_returned;
   F_ITEMS[idx].records[recIdx]=upd;
-  F_saveData();
+  F_saveData({capture:rec.type!=='note'&&(amt!==rec.amount||(rec.type==='withdraw'&&!!window._F_ei_returned!==!!rec.returned))});
   showToast_f('✓ 记录已更新');
   F_modal='item-detail';F_renderMain();
 }
@@ -4149,7 +4606,7 @@ function F_submitMarketUpdate(){
 function F_autoInvest(){
   const asOf=todayStr();
   const mk=asOf.slice(0,7);
-  let changed=false;
+  let changed=false,addedMoney=false;
   F_ITEMS.forEach(item=>{
     if(!item.autoInvest)return;
     const sinceDate=new Date((item.autoInvestSince||'')+'T00:00:00');
@@ -4169,13 +4626,13 @@ function F_autoInvest(){
       if(investDate>asOf)break;
       const alreadyDone=item.records.some(r=>r.type==='auto'&&typeof r.date==='string'&&r.date.startsWith(month));
       if(investDate>=item.autoInvestSince&&Number.isFinite(monthly)&&monthly>0&&!F_isCompleted(item)&&!alreadyDone){
-        item.records.push({date:investDate,amount:monthly,note:'🤖 自动定投',type:'auto',returned:false});
+        item.records.push({date:investDate,amount:monthly,note:'🤖 自动定投',type:'auto',returned:false});addedMoney=true;
       }
       item.autoInvestCheckedMonth=month;changed=true;
       month=nextMonth(month);
     }
   });
-  if(changed)F_saveData();
+  if(changed)F_saveData({capture:addedMoney});
 }
 
 
@@ -4202,7 +4659,7 @@ function F_renderEditBuyModal(){
     <div class="f-field-row"><span class="f-field-label">买入金额</span><input id="F_eb_amt" type="number" inputmode="decimal" step="0.01" value="${escHtml(r.amount)}"><span class="f-field-note" style="font-size:10px;color:#aaa;">含手续费</span></div>
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_eb_note" value="${escHtml(r.note||'')}"></div>
     <button class="f-btn-primary" onclick="F_submitEditBuyRecord(${jsAttr(st.id)},${idx})">保存</button>
-    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_deleteBuyRecord(${jsAttr(st.id)},${idx})">删除这笔买入</button>
+    <button class="f-btn-danger" style="margin-top:6px;" onclick="F_setFinanceHidden('buy',${jsAttr(st.id)},${idx},${r.hidden?'false':'true'})">${r.hidden?'恢复显示这笔买入':'隐藏这笔买入'}</button>
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -4222,22 +4679,12 @@ function F_submitEditBuyRecord(stId,recIdx){
   if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=buys.length)return;
   buys[recIdx]={...buys[recIdx],...F_readTrade('F_eb_',true)};
   if(!F_applyStockTrades(st,{...st,buyRecords:buys,sellRecords:F_stockRecords(st,'sellRecords')},true))return;
-  F_saveData();
+  F_saveData({capture:true});
   showToast_f('✓ 买入记录已更新');
   F_modal='stock-detail';F_renderMain();
 }
 
-function F_deleteBuyRecord(stId,recIdx){
-  if(!confirm('确认删除这笔买入记录？'))return;
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const buys=F_stockRecords(st,'buyRecords').slice();
-  if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=buys.length)return;
-  buys.splice(recIdx,1);
-  if(!F_applyStockTrades(st,{...st,buyRecords:buys,sellRecords:F_stockRecords(st,'sellRecords')},true))return;
-  F_saveData();
-  showToast_f('✓ 已删除');
-  F_modal='stock-detail';F_renderMain();
-}
+function F_deleteBuyRecord(stId,recIdx){return F_setFinanceHidden('buy',stId,recIdx,true,null,'stock-detail');}
 function F_openEditSellRecord(stId,recIdx){
   F_editId=stId;window._F_editSellIdx=recIdx;F_modal='edit-sell';F_renderMain();
 }
@@ -4255,7 +4702,7 @@ function F_renderEditSellModal(){
     <div class="f-field-row"><span class="f-field-label">备注</span><input id="F_es_note" value="${escHtml(r.note||'')}"></div>
     <div class="f-info-box">保存后按交易顺序重新计算相关盈亏。修改日期或股数不能导致历史持仓为负。</div>
     <button class="f-btn-primary" onclick="F_submitEditSellRecord(${jsAttr(st.id)},${idx})">保存</button>
-    <button class="f-btn-danger" onclick="F_deleteSellRecord(${jsAttr(st.id)},${idx})">删除这笔卖出</button></div>`;
+    <button class="f-btn-danger" onclick="F_setFinanceHidden('sell',${jsAttr(st.id)},${idx},${r.hidden?'false':'true'})">${r.hidden?'恢复显示这笔卖出':'隐藏这笔卖出'}</button></div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
 function F_calcEditSellAmount(){
@@ -4269,20 +4716,9 @@ function F_submitEditSellRecord(stId,recIdx){
   if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=sells.length)return;
   sells[recIdx]={...sells[recIdx],...F_readTrade('F_es_',true)};
   if(!F_applyStockTrades(st,{...st,buyRecords:F_stockRecords(st,'buyRecords'),sellRecords:sells},true))return;
-  F_saveData();F_modal='stock-detail';F_renderMain();showToast_f('✓ 卖出记录已更新');
+  F_saveData({capture:true});F_modal='stock-detail';F_renderMain();showToast_f('✓ 卖出记录已更新');
 }
-function F_deleteSellRecord(stId,recIdx){
-  const st=F_STOCK_ACCOUNT.stocks.find(s=>s.id===stId);if(!st)return;
-  const sells=F_stockRecords(st,'sellRecords').slice();
-  if(!Number.isInteger(recIdx)||recIdx<0||recIdx>=sells.length)return;
-  if(!confirm('确认删除这笔卖出记录？相关持仓、资金和盈亏将重新计算。'))return;
-  const removed=sells.splice(recIdx,1)[0];
-  if(!F_applyStockTrades(st,{...st,buyRecords:F_stockRecords(st,'buyRecords'),sellRecords:sells},true))return;
-  if(removed?.planId&&!sells.some(r=>r?.planId===removed.planId)){
-    const plan=F_stockRecords(st,'tpPlans').find(p=>p.id===removed.planId);if(plan)plan.done=false;
-  }
-  F_saveData();F_modal='stock-detail';F_renderMain();showToast_f('✓ 卖出记录已删除');
-}
+function F_deleteSellRecord(stId,recIdx){return F_setFinanceHidden('sell',stId,recIdx,true,null,'stock-detail');}
 function F_openData(){F_modal='data-f';F_renderMain();}
 function showToast_f(msg){
   const el=document.createElement('div');
@@ -4356,7 +4792,8 @@ function CB_hasLedgerData(diary,monthly,finance){
   if(nonempty(monthly.bills)||nonempty(monthly.budgets)||nonempty(monthly.archivedUtilityBills))return true;
   if(monthly.billsStatus&&Object.values(monthly.billsStatus).some(v=>v&&typeof v==='object'&&Object.keys(v).length))return true;
   if(monthly.utility&&(Number(monthly.utility.balance)!==0&&Number.isFinite(Number(monthly.utility.balance))||monthly.utility.lastUpdate))return true;
-  if(nonempty(finance.items))return true;
+  if(nonempty(finance.items)||nonempty(finance.dailyCashAccounts))return true;
+  if(nonempty(finance.assetSnapshots))return true;
   const account=finance.stockAccount||{};
   if(nonempty(account.stocks)||nonempty(account.deposits))return true;
   if(Number.isFinite(account.initialCapital)&&account.initialCapital>=0&&account.initialCapital!==10000)return true;
@@ -4372,9 +4809,10 @@ function CB_buildSnapshot(c){
       modules[name]=data;
     }
   }catch(e){throw CB_error('INVALID');}
-  if(!CB_hasLedgerData(modules.diary,modules.monthly,modules.finance))throw CB_error('EMPTY');
+  let financeVersions;try{financeVersions=FV_read();}catch(e){throw CB_error('INVALID');}
+  if(!CB_hasLedgerData(modules.diary,modules.monthly,modules.finance)&&!financeVersions.versions.length)throw CB_error('EMPTY');
   const exportedAt=new Date().toISOString();
-  const payload={app:'财务管家',schema:4,exportedAt,deviceLabel:c.deviceLabel,...modules};
+  const payload={app:'财务管家',schema:4,exportedAt,deviceLabel:c.deviceLabel,...modules,financeVersions};
   try{if(typeof prepareImportedState!=='function')throw CB_error('INVALID');prepareImportedState(payload,'all');}
   catch(e){throw CB_error('INVALID');}
   // Validation above is read-only. Export the original stored objects, not normalized defaults.
