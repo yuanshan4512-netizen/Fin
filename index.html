@@ -3459,7 +3459,10 @@ function F_calcAssetOverviewFromFinance(finance){
   const f=finance&&typeof finance==='object'&&!Array.isArray(finance)?finance:{items:null,stockAccount:null,dailyCashAccounts:null};
   const groupTotal=group=>{try{
     const items=f.items===undefined?[]:f.items;if(!Array.isArray(items))return null;
-    return F_assetSum(items.filter(item=>item&&item.group===group).map(F_getTotalInvested));
+    const selected=items.filter(item=>item&&item.group===group&&(group!=='saving'||(typeof item.name==='string'&&item.name.trim()==='现金安全垫')));
+    // Other saving projects keep their history but are outside this asset overview.
+    if(group==='saving'&&selected.length>1)return null;
+    return F_assetSum(selected.map(F_getTotalInvested));
   }catch(e){return null;}};
   const fund=groupTotal('fund'),gold=groupTotal('gold'),saving=groupTotal('saving');
   let stock=null,daily=null,dailyCount=0;
@@ -3488,10 +3491,10 @@ function F_validateAssetSnapshots(finance){
   const rows=finance.assetSnapshots;if(!Array.isArray(rows))throw new Error('月度资产记录格式无效');
   const months=new Set();
   for(const row of rows){
-    if(!row||typeof row!=='object'||Array.isArray(row)||row.basis!=='book-v1'||!F_validGoldMonth(row.month)||months.has(row.month)||!Number.isSafeInteger(row.totalCents)||typeof row.capturedAt!=='string')throw new Error('月度资产记录无效');
+    if(!row||typeof row!=='object'||Array.isArray(row)||!['book-v1','book-cash-cushion-v2'].includes(row.basis)||!F_validGoldMonth(row.month)||months.has(row.month+'|'+row.basis)||!Number.isSafeInteger(row.totalCents)||typeof row.capturedAt!=='string')throw new Error('月度资产记录无效');
     const date=new Date(row.capturedAt);
     if(!Number.isFinite(date.getTime())||date.toISOString()!==row.capturedAt||F_assetBeijingDate(date).slice(0,7)!==row.month)throw new Error('月度资产日期无效');
-    months.add(row.month);
+    months.add(row.month+'|'+row.basis);
   }
 }
 function F_withCurrentAssetSnapshot(finance,now=new Date()){
@@ -3499,11 +3502,11 @@ function F_withCurrentAssetSnapshot(finance,now=new Date()){
   const overview=F_calcAssetOverviewFromFinance(finance);if(!overview.valid)return finance;
   const capturedAt=new Date(now).toISOString(),month=F_assetBeijingDate(now).slice(0,7),totalCents=Math.round(overview.total*100);
   if(!Number.isSafeInteger(totalCents))return finance;
-  const previous=finance.assetSnapshots||[],old=previous.find(row=>row.month===month);
+  const previous=finance.assetSnapshots||[],old=previous.find(row=>row.month===month&&row.basis==='book-cash-cushion-v2');
   if(previous.some(row=>row.month>month))return finance;
-  if(old&&(old.capturedAt>capturedAt||(old.capturedAt===capturedAt&&old.totalCents===totalCents)))return finance;
-  const row={...old,month,capturedAt,basis:'book-v1',totalCents};
-  return{...finance,assetSnapshots:[...previous.filter(value=>value.month!==month),row].sort((a,b)=>a.month.localeCompare(b.month))};
+  if(old&&(old.capturedAt>capturedAt||(old.capturedAt===capturedAt&&old.totalCents===totalCents&&old.basis==='book-cash-cushion-v2')))return finance;
+  const row={...old,month,capturedAt,basis:'book-cash-cushion-v2',totalCents};
+  return{...finance,assetSnapshots:[...previous.filter(value=>value!==old),row].sort((a,b)=>a.month.localeCompare(b.month)||a.capturedAt.localeCompare(b.capturedAt)||Number(a.basis==='book-cash-cushion-v2')-Number(b.basis==='book-cash-cushion-v2'))};
 }
 function F_assetReadFinance(){
   const raw=localStorage.getItem(F_SK),finance=raw===null?{}:JSON.parse(raw);
@@ -3513,16 +3516,17 @@ function F_assetReadFinance(){
 function F_assetMonthNumber(month){return Number(month.slice(0,4))*12+Number(month.slice(5,7))-1;}
 function F_assetHistoryRows(finance){
   F_validateAssetSnapshots(finance);
-  return (finance.assetSnapshots||[]).slice().sort((a,b)=>a.month.localeCompare(b.month)).map((row,index,rows)=>{
-    const previous=rows[index-1],difference=previous?row.totalCents-previous.totalCents:null;
+  return (finance.assetSnapshots||[]).slice().sort((a,b)=>a.month.localeCompare(b.month)||a.capturedAt.localeCompare(b.capturedAt)||Number(a.basis==='book-cash-cushion-v2')-Number(b.basis==='book-cash-cushion-v2')).map((row,index,rows)=>{
+    const previous=rows[index-1],sameBasis=!!previous&&previous.basis===row.basis,difference=sameBasis?row.totalCents-previous.totalCents:null;
     return{...row,date:F_assetBeijingDate(row.capturedAt),previousMonth:previous?previous.month:null,
-      adjacent:!!previous&&F_assetMonthNumber(row.month)-F_assetMonthNumber(previous.month)===1,
+      basisChanged:!!previous&&!sameBasis,
+      adjacent:sameBasis&&F_assetMonthNumber(row.month)-F_assetMonthNumber(previous.month)===1,
       deltaCents:Number.isSafeInteger(difference)?difference:null};
   });
 }
 function F_assetHistoryChart(rows){
   if(!rows.length)return'';
-  if(rows.length<2)return'<div class="f-sheet-sub" style="line-height:1.7;margin:16px 0">积累两个月记录后显示变化趋势</div>';
+  if(new Set(rows.map(row=>row.month)).size<2)return'<div class="f-sheet-sub" style="line-height:1.7;margin:16px 0">积累两个月记录后显示变化趋势</div>';
   const width=320,height=150,left=44,right=12,top=16,bottom=28;
   const first=F_assetMonthNumber(rows[0].month),last=F_assetMonthNumber(rows[rows.length-1].month);
   const values=rows.map(row=>row.totalCents/100),min=Math.min(...values),max=Math.max(...values);
@@ -3531,8 +3535,8 @@ function F_assetHistoryChart(rows){
   const y=row=>top+(upper-row.totalCents/100)/(upper-lower)*(height-top-bottom);
   const segments=[],dots=[];
   rows.forEach((row,index)=>{
-    const px=x(row),py=y(row);dots.push(`<circle cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" r="2.5" fill="#3462a0"><title>${escHtml(row.month+' '+F_fmtY(row.totalCents/100))}</title></circle>`);
-    if(index&&row.adjacent){const prior=rows[index-1];segments.push(`<path d="M ${x(prior).toFixed(2)} ${y(prior).toFixed(2)} L ${px.toFixed(2)} ${py.toFixed(2)}" fill="none" stroke="#3462a0" stroke-width="1.5"/>`);}
+    const px=x(row),py=y(row);dots.push(`<circle cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" r="2.5" fill="#3462a0"><title>${escHtml(row.month+' '+F_fmtY(row.totalCents/100)+(row.basis==='book-v1'?'（旧范围：包含全部储蓄项目）':'（储蓄仅现金安全垫）'))}</title></circle>`);
+    if(index&&row.adjacent&&rows[index-1].basis===row.basis){const prior=rows[index-1];segments.push(`<path d="M ${x(prior).toFixed(2)} ${y(prior).toFixed(2)} L ${px.toFixed(2)} ${py.toFixed(2)}" fill="none" stroke="#3462a0" stroke-width="1.5"/>`);}
   });
   return`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="每月最后一次记录的总资产，缺少记录的月份不连线" style="width:100%;height:auto;display:block"><path d="M ${left} ${top} V ${height-bottom} H ${width-right}" fill="none" stroke="#e4e9ef" stroke-width="1"/><text x="${left-5}" y="${top+3}" text-anchor="end" font-size="9" fill="#8390a0">${escHtml(F_fmtAsset(upper))}</text><text x="${left-5}" y="${height-bottom+3}" text-anchor="end" font-size="9" fill="#8390a0">${escHtml(F_fmtAsset(lower))}</text>${segments.join('')}${dots.join('')}<text x="${left}" y="${height-7}" font-size="10" fill="#8390a0">${escHtml(rows[0].month)}</text>${rows.length>1?`<text x="${width-right}" y="${height-7}" text-anchor="end" font-size="10" fill="#8390a0">${escHtml(rows[rows.length-1].month)}</text>`:''}</svg>`;
 }
@@ -3551,8 +3555,9 @@ function F_renderAssetHistoryModal(){
   try{rows=F_assetHistoryRows(F_assetReadFinance());}catch(e){readable=false;}
   const currentMonth=F_assetBeijingDate().slice(0,7);
   const list=rows.slice().reverse().map(row=>{
-    const delta=row.deltaCents===null?(row.previousMonth?'变化金额超出显示范围':'首次记录'):(row.adjacent?'较上月':'较上次记录（'+row.previousMonth+'）')+' '+F_fmtPnl(row.deltaCents/100);
-    return`<div class="f-record-row" style="align-items:flex-start;gap:8px"><div style="flex:1;min-width:0"><div style="font-weight:600">${escHtml(row.month)}</div><div style="font-size:11px;color:#8893a1;margin-top:5px">${escHtml(row.month===currentMonth?'本月截至 '+row.date:row.date+' 记录')}</div><div style="font-size:11px;color:#637185;margin-top:5px">${escHtml(delta)}</div></div><strong style="white-space:nowrap">${escHtml(F_fmtY(row.totalCents/100))}</strong></div>`;
+    const delta=row.basisChanged?'统计范围已调整，不比较增减':row.deltaCents===null?(row.previousMonth?'变化金额超出显示范围':'首次记录'):(row.adjacent?'较上月':'较上次记录（'+row.previousMonth+'）')+' '+F_fmtPnl(row.deltaCents/100);
+    const scope=row.basis==='book-v1'?'旧范围：包含全部储蓄项目':'储蓄仅现金安全垫';
+    return`<div class="f-record-row" style="align-items:flex-start;gap:8px"><div style="flex:1;min-width:0"><div style="font-weight:600">${escHtml(row.month)}</div><div style="font-size:11px;color:#8893a1;margin-top:5px">${escHtml(row.month===currentMonth?'本月截至 '+row.date:row.date+' 记录')}</div><div style="font-size:11px;color:#8893a1;margin-top:5px">${escHtml(scope)}</div><div style="font-size:11px;color:#637185;margin-top:5px">${escHtml(delta)}</div></div><strong style="white-space:nowrap">${escHtml(F_fmtY(row.totalCents/100))}</strong></div>`;
   }).join('');
   ov.innerHTML=`<div class="f-sheet"><div class="f-sheet-handle"></div><div class="f-sheet-title">每月资产变化</div><div class="f-sheet-sub" style="line-height:1.7">每月保留最后一次实际记录。金额变化包含存取、转入和账目调整，不代表投资收益。</div>${readable?(rows.length?F_assetHistoryChart(rows)+list:'<div class="f-empty">还没有月度记录<br><span style="font-size:12px;line-height:1.8">可手动记录本月，保存金额时也会自动更新。过去月份不会推算补齐。</span></div>'):'<div class="f-info-box">月度记录暂时无法读取，请先导出备份核对原数据。</div>'}<div class="f-sheet-sub" style="line-height:1.7;margin-top:14px">缺少记录的月份留空；日常资金按最近填写的余额统计。</div>${readable?'<button class="f-btn-primary" onclick="F_recordCurrentAssets()">记录本月资产</button>':''}<button class="f-btn-secondary" style="margin-top:8px" onclick="F_modal=null;F_renderMain()">关闭</button></div>`;
   document.getElementById('panel-finance').appendChild(ov);
