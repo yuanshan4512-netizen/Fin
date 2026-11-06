@@ -90,6 +90,25 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .cal-footer-l{font-size:9px;color:#aaa;margin-top:1px}
 /* 预算环形卡 */
 .ring-area{display:flex;flex-direction:column;align-items:center}
+.money-ring-layout{display:flex;align-items:center;gap:15px;margin:8px 0;min-width:0;color:#1a1a1a}
+.money-ring{position:relative;width:154px;height:154px;flex:0 0 154px}
+.money-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.money-ring-arc{fill:none;stroke-width:15}
+.money-ring-center{position:absolute;inset:28px 13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:none}
+.money-ring-center span,.money-ring-center small{font-size:10px;color:#65738a;text-align:center}
+.money-ring-center strong{font-size:21px;font-weight:750;letter-spacing:-.7px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.money-ring-center strong.money-ring-large{font-size:14px;letter-spacing:-.5px}
+.money-ring-legend{min-width:0;flex:1;display:flex;flex-direction:column;gap:7px}
+.money-ring-line{display:flex;align-items:center;gap:6px;min-width:0;border:0;background:transparent;padding:0;color:inherit;text-align:left;font:inherit}
+button.money-ring-line{cursor:pointer;min-height:30px}
+.money-ring-line i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.money-ring-line span{min-width:0;flex:1}.money-ring-line b{display:block;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.money-ring-line small,.money-ring-legend>small{display:block;font-size:10px;color:#65738a;margin-top:2px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.money-ring-compact{gap:6px}.money-ring-compact .money-ring{width:90px;height:90px;flex-basis:90px}.money-ring-compact .money-ring-center{inset:16px 7px;gap:2px}
+.money-ring-compact .money-ring-center strong{font-size:13px;letter-spacing:-.4px}.money-ring-compact .money-ring-center strong.money-ring-large{font-size:9px}
+.money-ring-compact .money-ring-center span,.money-ring-compact .money-ring-center small{font-size:8px}.money-ring-compact .money-ring-line b{font-size:10px}.money-ring-compact .money-ring-line small{font-size:9px}.money-ring-compact .money-ring-legend{gap:5px}
+.money-ring-compact .money-ring-line{gap:3px}.money-ring-compact .money-ring-line i{width:5px;height:5px}
+@media(max-width:380px){.money-ring-layout:not(.money-ring-compact){gap:10px}.money-ring-layout:not(.money-ring-compact) .money-ring{width:130px;height:130px;flex-basis:130px}.money-ring-compact .money-ring{width:76px;height:76px;flex-basis:76px}.money-ring-compact .money-ring-center strong{font-size:11px}.money-ring-compact .money-ring-center strong.money-ring-large{font-size:8px}}
 .ring-canvas-wrap{position:relative;display:inline-block}
 .ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
 .ring-center-pct{font-size:20px;font-weight:800;color:#1a1a1a;line-height:1}
@@ -327,6 +346,20 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .top-cat-bar-bg{width:80px;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden}
 .top-cat-bar{height:100%;border-radius:2px;background:#378ADD}
 .top-cat-amt{font-size:11px;font-weight:600;color:#1a1a1a;min-width:44px;text-align:right}
+.report-cat-block{border-bottom:.5px solid #f0f0f0;padding-bottom:4px}
+.report-cat-block:last-child{border-bottom:0}
+.report-cat-trigger{width:100%;border:0;background:transparent;text-align:left;padding:8px 0;cursor:pointer;font:inherit}
+.report-cat-trigger .top-cat-name{min-width:0;overflow-wrap:anywhere}
+.report-cat-trigger .top-cat-bar-bg{width:48px;flex-shrink:0}
+.report-cat-count{display:block;font-size:10px;color:#999;font-weight:400;margin-top:3px}
+.report-cat-arrow{font-size:15px;color:#888;flex-shrink:0}
+.report-category-records{padding:0 0 8px 8px;border-left:2px solid #e4eef9;margin:2px 0 6px 10px}
+.report-record-hint{font-size:10px;color:#999;line-height:1.6;padding:4px 2px}
+.report-expense-record{display:flex;align-items:center;gap:10px;width:100%;padding:10px 3px;background:transparent;border:0;border-bottom:.5px solid #f0f0f0;text-align:left;cursor:pointer;font:inherit}
+.report-expense-body{flex:1;min-width:0;font-size:12px;color:#333;overflow-wrap:anywhere}
+.report-expense-time{display:block;font-size:10px;color:#999;margin-top:4px}
+.report-expense-amount{font-size:12px;font-weight:600;color:#c62828;white-space:nowrap;font-variant-numeric:tabular-nums}
+.report-cat-trigger:focus-visible,.report-expense-record:focus-visible{outline:2px solid #378ADD;outline-offset:2px;border-radius:4px}
 /* 模态框 */
 .modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.35);border-radius:inherit;display:flex;flex-direction:column;justify-content:flex-end;z-index:100}
 .modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:16px 16px 24px;max-height:88%;overflow-y:auto}
@@ -734,22 +767,50 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
     </button>
   </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
 // User text must never become HTML or inline JavaScript.
 function escHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function jsAttr(value){return escHtml(JSON.stringify(value)??'null');}
 function safeColor(value){return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value)?value:'#f0f0f5';}
 
-// A queued render may reach the same canvas more than once. Replace its chart synchronously.
-function replaceChart(canvas,config){
-  window.Chart.getChart(canvas)?.destroy();
-  return new window.Chart(canvas,config);
+// Rings render with the page itself: no network, timers or chart instances.
+function moneyRingState(rows){
+  const valid=rows.every(r=>typeof r.amount==='number'&&Number.isFinite(r.amount)&&Math.abs(r.amount)<=Number.MAX_SAFE_INTEGER/100);
+  const total=valid?rows.reduce((sum,r)=>sum+r.amount,0):NaN;
+  const safe=valid&&Number.isFinite(total)&&Math.abs(total)<=Number.MAX_SAFE_INTEGER/100;
+  return{total:safe?total:null,drawable:safe&&total>0&&rows.every(r=>r.amount>=0)};
 }
-function destroyCanvasCharts(root){
-  if(!window.Chart)return;
-  for(const canvas of root?.querySelectorAll('canvas')||[])window.Chart.getChart(canvas)?.destroy();
+function moneyRingAmount(value){return typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=Number.MAX_SAFE_INTEGER/100?(value<0?'-':'')+fmtN(value):'待核对';}
+function moneyRingSvg(rows,total,label){
+  const drawable=typeof total==='number'&&Number.isFinite(total)&&total>0&&total<=Number.MAX_SAFE_INTEGER/100&&rows.every(r=>typeof r.amount==='number'&&Number.isFinite(r.amount)&&r.amount>=0&&r.amount<=total);
+  let offset=0;
+  const arcs=drawable?rows.filter(r=>r.amount>0).map(row=>{
+    const size=row.amount/total*100,draw=Math.max(0,size-Math.min(.9,size*.1));
+    const arc=`<circle class="money-ring-arc" cx="77" cy="77" r="65" pathLength="100" stroke="${safeColor(row.color)}" stroke-dasharray="${draw} ${100-draw}" stroke-dashoffset="${-offset}"/>`;offset+=size;return arc;
+  }).join(''):'';
+  return`<svg viewBox="0 0 154 154" role="img" aria-label="${escHtml(label)}"><circle cx="77" cy="77" r="65" fill="none" stroke="#f0f3f8" stroke-width="15"/>${arcs}</svg>`;
 }
+function renderMoneyRing(rows,{label='总金额',compact=false,maxRows=6,mode=null}={}){
+  const state=moneyRingState(rows),pct=amount=>state.drawable?(amount/state.total*100).toFixed(1)+'%':'—';
+  const shown=rows.slice(0,maxRows);
+  if(rows.length>maxRows)shown.push({name:'其余 '+(rows.length-maxRows)+' 类',amount:rows.slice(maxRows).reduce((sum,r)=>sum+r.amount,0),color:'#aab6c8',aggregate:true});
+  const list=shown.map(row=>{
+    const click=mode&&!row.aggregate?` onclick="event.stopPropagation();openRingCategory(${jsAttr(row.name)},${jsAttr(mode)})"`:'';
+    return`<${click?'button type="button"':'div'} class="money-ring-line"${click}><i style="background:${safeColor(row.color)}"></i><span><b>${escHtml(row.name)}</b><small>${escHtml(moneyRingAmount(row.amount))} · ${pct(row.amount)}</small></span></${click?'button':'div'}>`;
+  }).join('');
+  const note=state.total===null?'金额待核对':rows.some(r=>r.amount<0)?'有负金额，暂不显示占比':state.total===0?'暂无占比':'';
+  return`<div class="money-ring-layout${compact?' money-ring-compact':''}"><div class="money-ring">${moneyRingSvg(shown,state.drawable?state.total:0,label+(state.drawable?'，'+shown.map(r=>r.name+' '+pct(r.amount)).join('，'):'，暂无可显示的占比'))}<div class="money-ring-center"><span>${escHtml(label)}</span><strong class="${moneyRingAmount(state.total).length>9?'money-ring-large':''}">${escHtml(moneyRingAmount(state.total))}</strong>${note?'<small>'+note+'</small>':''}</div></div><div class="money-ring-legend">${list||'<small>暂无记录</small>'}</div></div>`;
+}
+function renderBudgetRing(spent,budget,compact=false){
+  const valid=typeof spent==='number'&&typeof budget==='number'&&Number.isFinite(spent)&&Number.isFinite(budget)&&spent>=0&&Math.max(spent,Math.abs(budget))<=Number.MAX_SAFE_INTEGER/100;
+  const hasBudget=valid&&budget>0,pct=hasBudget?spent/budget*100:null,over=valid&&spent>budget;
+  const color=over?'#e53935':pct>80?'#e65100':'#378ADD';
+  const progress=hasBudget?Math.min(100,pct):0;
+  const used=hasBudget?(Number.isFinite(pct)&&pct<1000000?Math.round(pct)+'%':'超过预算'):'未设正预算';
+  const rows=[{amount:progress,color},{amount:100-progress,color:'#e5edf8'}];
+  return`<div class="money-ring-layout${compact?' money-ring-compact':''}"><div class="money-ring">${moneyRingSvg(rows,hasBudget?100:0,'预算使用 '+(valid?used:'待核对'))}<div class="money-ring-center"><span>已支出</span><strong style="color:${color}" class="${moneyRingAmount(spent).length>9?'money-ring-large':''}">${escHtml(moneyRingAmount(valid?spent:null))}</strong><small>${valid?used:'待核对'}</small></div></div><div class="money-ring-legend"><div class="money-ring-line"><i style="background:#378ADD"></i><span><b>预算</b><small>${escHtml(moneyRingAmount(valid?budget:null))}</small></span></div><div class="money-ring-line"><i style="background:${over?'#e53935':'#31a198'}"></i><span><b>${over?'超支':'剩余'}</b><small style="color:${over?'#c62828':'#2e7d32'}">${escHtml(moneyRingAmount(valid?Math.abs(budget-spent):null))}</small></span></div></div></div>`;
+}
+function openRingCategory(cat,mode){window._pieMode=mode;openDetail('pie');openSubDetail(cat,'__all__');}
 // ─── Tab 切换（最先定义）───
 let _currentTab='diary';
 let _tabInited={'diary':false,'monthly':false,'finance':false};
@@ -760,11 +821,11 @@ function switchTab(tab){
   document.getElementById('tab-'+tab).classList.add('active');
   _currentTab=tab;
   if(tab==='diary'){
-    try{if(typeof destroyCharts==='function')destroyCharts();if(typeof showApp==='function')showApp();}catch(e){console.warn('diary:',e)}
+    try{if(typeof showApp==='function')showApp();}catch(e){console.warn('diary:',e)}
   }else if(tab==='monthly'){
-    try{if(typeof M_renderMain==='function')M_renderMain();}catch(e){console.warn('monthly:',e)}
+    try{if(!_tabInited.monthly){M_loadData();_tabInited.monthly=true;}M_renderMain();}catch(e){console.warn('monthly:',e)}
   }else if(tab==='finance'){
-    try{if(typeof F_autoInvest==='function')F_autoInvest();if(typeof F_renderMain==='function')F_renderMain();}catch(e){console.warn('finance:',e)}
+    try{if(!_tabInited.finance){F_loadData();_tabInited.finance=true;}F_autoInvest();F_renderMain();}catch(e){console.warn('finance:',e)}
   }
 }
 
@@ -842,29 +903,14 @@ function budgetRingData(){
 function fmtSigned(n){return(n<0?'-':'')+fmtN(n)}
 function budgetRingCard(){
   const r=budgetRingData();
-  const ringColor=r.pct<=70?'#43a047':r.pct<=90?'#F9A825':r.pct<=100?'#e65100':'#e53935';
-  const C=2*Math.PI*42;
-  const off=C*(1-Math.min(1,Math.max(0,r.pct/100)));
-  const remainColor=r.remain>=0?'#2e7d32':'#c62828';
+
   const mon=parseInt(r.mk.split('-')[1],10);
   return `<div class="bring-card">
     <div class="bring-top">
       <span class="bring-top-l">${r.settleDay===1?mon+'月预算':'本周期预算 · '+r.periodStart.slice(5)+'～'+r.periodEnd.slice(5)}</span>
       <span class="bring-top-v">${fmtSigned(r.totalBudget)}</span>
     </div>
-    <div class="bring-mid">
-      <div class="bring-ring">
-        <svg viewBox="0 0 100 100" width="92" height="92">
-          <circle cx="50" cy="50" r="42" fill="none" stroke="#eee" stroke-width="11"></circle>
-          <circle cx="50" cy="50" r="42" fill="none" stroke="${ringColor}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"></circle>
-        </svg>
-        <span class="bring-ring-txt">${r.pct}%</span>
-      </div>
-      <div class="bring-cols">
-        <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a">${fmtN(r.spent)}</div><div class="bring-col-l">已消费</div></div>
-        <div class="bring-col"><div class="bring-col-v" style="color:${remainColor}">${fmtSigned(r.remain)}</div><div class="bring-col-l">剩余额度</div></div>
-      </div>
-    </div>
+    ${renderBudgetRing(r.spent,r.totalBudget)}
     <div class="bring-rows">
       <div class="bring-formula">日¥${fmtRaw(r.dailyBudget)}×${r.dim}天+零花¥${fmtRaw(r.pocket)}${r.prevCarry!==0?(r.prevCarry>0?'+':'-')+'结余¥'+fmtRaw(r.prevCarry):''}${r.income>0?'+收入¥'+fmtRaw(r.income):''}</div>
       <div class="bring-prow"><span class="bring-dot" style="background:#F9A825"></span><span class="bring-pl">日均消费</span><span class="bring-pv">${fmtN(r.avgSpent)}</span></div>
@@ -952,7 +998,7 @@ let detailView=null,detailSel=todayStr();
 let modal=null,mType='expense',mCat='餐饮',mTs=null;
 let reimbFilter='all';
 let tmpR={hasInvoice:false,invoiceStatus:'未开',reimbursed:false,deadline:'',cat:'其他'};
-let charts={};
+
 let viewMonth=null;
 function getViewMonth(){if(!viewMonth){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1);}return viewMonth;}
 function prevMonth(mk){const[y,m]=mk.split('-').map(Number);return m===1?`${y-1}-12`:`${escHtml(y)}-${pad2(m-1)}`}
@@ -1443,7 +1489,7 @@ function refreshAfterImport(){
   const errors=[];
   for(const load of [F_loadData,M_loadData]){try{load();}catch(e){errors.push(e);}}
   for(const render of [state.setupDone?showApp:showQuiz,M_renderMain,F_renderMain]){try{render();}catch(e){errors.push(e);}}
-  if(errors.length)throw new Error('数据已恢复，部分页面暂时无法显示；请重载或撤销本次导入');
+  if(errors.length)throw new Error('数据已恢复，部分页面暂时无法显示；请重新加载页面。');
 }
 function importDataFile(input){
   const file=input.files?.[0];if(!file)return;
@@ -1451,8 +1497,8 @@ function importDataFile(input){
   reader.onload=()=>{
     try{applyImportedState(JSON.parse(reader.result));}
     catch(e){showToast(e.message||'备份文件无法识别');return;}
-    try{refreshAfterImport();showToast('数据已恢复，可在数据页撤销本次导入');}
-    catch(e){showToast('数据已恢复，显示异常；可在数据页撤销本次导入');}
+    try{refreshAfterImport();showToast('数据已恢复');}
+    catch(e){showToast('数据已恢复，页面显示异常，请重新加载页面。');}
   };
   reader.onerror=()=>showToast('读取文件失败，原数据未改动');
   reader.readAsText(file);input.value='';
@@ -1564,8 +1610,7 @@ function budgetState(asOf=todayStr()){
   const daysRemain=Math.max(0,daysBetween(asOf,p.end)-1);
   return{periodStart:p.start,periodEnd:p.end,settleDay:p.settleDay,calcStart:start,daily,extra,previous,spent,earned,todaySpent,dailyRemaining,days,accrued,added,balance,periodDays,daysRemain,periodTotal:daily*periodDays};
 }
-let chartRenderVersion=0;
-function destroyCharts(){chartRenderVersion++;Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={}}
+
 function currentEntryDate(){return detailView==='cal'?detailSel:selDate}
 function normalizeTime(v){const m=String(v||'').match(/([01]?\d|2[0-3])[:：点](\d{1,2})?/);return m?pad2(m[1])+':'+pad2(m[2]||0):nowStr()}
 function showToast(msg){const shell=document.getElementById('panel-diary');if(!shell)return;const old=shell.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;shell.appendChild(t);setTimeout(()=>t.remove(),1600)}
@@ -1612,7 +1657,7 @@ function getCatStats(mk,asOf='9999-12-31'){
   const daysInM=new Date(yr,mo,0).getDate();
   const isThisMonth=isCurrentMonth(mk);
   const todayDay=isThisMonth?new Date().getDate():daysInM;
-  const catMap={};
+  const catMap=Object.create(null);
   RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.date<=asOf&&r.type==='expense').forEach(r=>{
     if(!catMap[r.cat])catMap[r.cat]={total:0,count:0,max:0};
     catMap[r.cat].total+=r.amount;catMap[r.cat].count++;
@@ -1641,17 +1686,17 @@ function timeMeal(time){
   return '宵夜';
 }
 function getSubCat(rec){
-  const rule=SUBCAT_RULES[rec.cat];
+  const rule=Object.prototype.hasOwnProperty.call(SUBCAT_RULES,rec.cat)?SUBCAT_RULES[rec.cat]:null;
   if(!rule)return null;// 该大类无二级
   const lbl=(rec.label||'').toLowerCase();
   for(const grp of rule.kw){for(let i=1;i<grp.length;i++){if(lbl.includes(grp[i].toLowerCase()))return grp[0];}}
   if(rule.meal)return timeMeal(rec.time);
   return '其他';
 }
-function hasSubCats(cat){return !!SUBCAT_RULES[cat];}
+function hasSubCats(cat){return Object.prototype.hasOwnProperty.call(SUBCAT_RULES,cat);}
 function getCatStatsByType(mk,type){
   if(!mk){const now=new Date();mk=now.getFullYear()+'-'+pad2(now.getMonth()+1);}
-  const catMap={};
+  const catMap=Object.create(null);
   RC.filter(r=>r.date&&r.date.startsWith(mk)&&r.type===type).forEach(r=>{
     if(!catMap[r.cat])catMap[r.cat]={total:0,count:0};
     catMap[r.cat].total+=r.amount;catMap[r.cat].count++;
@@ -1705,6 +1750,25 @@ function getYearOverview(year){
   const totalSpent=months.reduce((sum,m)=>sum+m.spent,0),totalIncome=months.reduce((sum,m)=>sum+m.income,0);
   const highestMonth=months.reduce((best,m)=>m.spent>0&&(!best||m.spent>best.spent)?m:best,null);
   return{year,months,totalSpent,totalIncome,highestMonth,asOf};
+}
+// Report expansion is display state only; the source records and totals stay unchanged.
+const reportExpandedCategories=new Set();
+function getReportCategoryRecords(mk,cat,asOf=todayStr()){
+  return RC.filter(r=>typeof r.date==='string'&&r.date.startsWith(mk)&&r.date<=asOf&&r.type==='expense'&&r.cat===cat).sort((a,b)=>
+    b.date.localeCompare(a.date)||String(b.time||'').localeCompare(String(a.time||''))||((Number(b.ts)||0)-(Number(a.ts)||0)));
+}
+function isReportCategoryExpanded(mk,cat){return reportExpandedCategories.has(JSON.stringify([mk,cat]));}
+function toggleReportCategory(mk,cat){
+  const key=JSON.stringify([mk,cat]);
+  if(reportExpandedCategories.has(key))reportExpandedCategories.delete(key);else reportExpandedCategories.add(key);
+  const body=document.querySelector('#detail-screen .detail-body'),scroll=body?body.scrollTop:0;
+  renderDetail();const next=document.querySelector('#detail-screen .detail-body');if(next)next.scrollTop=scroll;
+}
+function renderReportCategoryRecords(mk,cat,asOf=todayStr()){
+  const records=getReportCategoryRecords(mk,cat,asOf),groups=new Map();
+  for(const record of records){if(!groups.has(record.date))groups.set(record.date,[]);groups.get(record.date).push(record);}
+  if(!records.length)return'<div class="report-record-hint">这个月此分类暂无支出记录</div>';
+  return`<div class="report-category-records"><div class="report-record-hint">按日期排列 · 点击一笔查看或编辑</div>${[...groups].map(([date,rows])=>`<div class="d-txn-date">${escHtml(date)}</div>${rows.map(r=>`<button type="button" class="report-expense-record" onclick="openEdit(${jsAttr(r.ts)})"><span class="report-expense-body">${escHtml(r.label||'未命名支出')}${r.time?`<span class="report-expense-time">${escHtml(r.time)}</span>`:''}</span><span class="report-expense-amount">-${fmtN(r.amount)}</span></button>`).join('')}`).join('')}</div>`;
 }
 function reportScrollTop(){const body=document.querySelector('#detail-screen .detail-body');if(body)body.scrollTop=0;}
 function setReportMode(mode){window._reportMode=mode==='month'?'month':'overview';renderDetail();reportScrollTop();}
@@ -1785,7 +1849,6 @@ function openReimbDetail(){
 }
 
 function showApp(){
-  destroyCharts();
   initBudgetHistory();// 确保预算历史已初始化
   document.getElementById('quiz-screen').style.display='none';
   document.getElementById('detail-screen').style.display='none';
@@ -1822,15 +1885,13 @@ function calCellsHtml(prefix,clickFn,selD,mk){
 }
 
 function renderApp(){
-  destroyCharts();
-  const renderVersion=chartRenderVersion;
   const bs=budgetState();
   const todaySpent=bs?bs.todaySpent:RC.filter(r=>r.type==='expense'&&r.date===todayStr()).reduce((a,r)=>a+r.amount,0);
   const budget=bs?bs.daily:(parseFloat(ST.budget)||0);
   const dailyRemaining=bs?bs.dailyRemaining:null;
   const bal=bs?bs.balance:null;
-  const pct=budget>0?Math.min(100,todaySpent/budget*100):0;
-  const pctRound=Math.round(pct);
+  const pct=Number.isFinite(budget)&&budget>0&&Number.isFinite(todaySpent)?todaySpent/budget*100:0;
+
 
   // 月统计 - 使用当前viewMonth
   const vm=getViewMonth();
@@ -1844,7 +1905,7 @@ function renderApp(){
   const predictOver=isCurMonth&&budget>0&&predictMonthEnd>(budget*ms.daysInMonth);
 
   // 分类饼图 - 只算viewMonth
-  const catSpend={};RC.filter(r=>r.type==='expense'&&r.date&&r.date.startsWith(vm)).forEach(r=>{catSpend[r.cat]=(catSpend[r.cat]||0)+r.amount});
+  const catSpend=Object.create(null);RC.filter(r=>r.type==='expense'&&r.date&&r.date.startsWith(vm)).forEach(r=>{catSpend[r.cat]=(catSpend[r.cat]||0)+r.amount});
   const catE=Object.entries(catSpend).sort((a,b)=>b[1]-a[1]);
 
   // 报销
@@ -1930,20 +1991,12 @@ function renderApp(){
         </div>
         <div class="card" onclick="openDetail('budget')">
           <div class="card-hdr"><span class="card-title">${ST.purpose==='budget'?'今日预算':'支出概览'}</span>${bal!=null?`<span class="card-badge" style="background:${(bal||0)<0?'#FFEBEE':'#E8F5E9'};color:${(bal||0)<0?'#c62828':'#2e7d32'}">可用余额 ${(bal||0)<0?'-':''}${fmtRaw(Math.abs(bal||0))}</span>`:''}</div>
-          <div class="bring-stats" style="margin-bottom:10px">
-            <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a;font-size:14px">${fmtRaw(budget)}</div><div class="bring-col-l">预算</div></div>
-            <div class="bring-col"><div class="bring-col-v" style="color:#e53935;font-size:14px">${fmtRaw(todaySpent)}</div><div class="bring-col-l">支出</div></div>
-            <div class="bring-col"><div class="bring-col-v" style="color:${dailyRemaining!=null&&dailyRemaining<0?'#c62828':'#2e7d32'};font-size:14px">${dailyRemaining!=null?(dailyRemaining<0?'-':'')+fmtRaw(Math.abs(dailyRemaining)):'—'}</div><div class="bring-col-l">剩余</div></div>
-          </div>
+          ${renderBudgetRing(todaySpent,budget,true)}
           <div class="ring-area">
-            <div class="ring-canvas-wrap">
-              <canvas id="ring-c" width="110" height="110"></canvas>
-              <div class="ring-center"><div class="ring-center-pct" style="color:${pctRound>100?'#c62828':pctRound>80?'#e65100':'#1a1a1a'}">${pctRound}%</div></div>
-            </div>
             <div class="budget-predict ${predictClass}">${predictText}</div>
           </div>
         </div>
-        <div class="card" onclick="openDetail('reimb')">
+        <div class="card" style="grid-column:1/-1" onclick="openDetail('reimb')">
           <div class="card-hdr"><span class="card-title">报销</span><span class="card-expand">展开 ›</span></div>
           <div class="reimb-stat">
             <div class="rs-item"><div class="rs-v" style="color:#185FA5">${fmtN(pendAmt)}</div><div class="rs-l">待报销</div></div>
@@ -1952,9 +2005,9 @@ function renderApp(){
           ${urgentReimb.length?urgentReimb.slice(0,2).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span><span class="rmr-dl">${daysLeft(r.deadline)}天</span></div>`).join(''):pendR.slice(0,3).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span></div>`).join('')}
           ${reimbFooter}
         </div>
-        <div class="card" onclick="openDetail('pie')">
+        <div class="card" style="grid-column:1/-1" onclick="openDetail('pie')">
           <div class="card-hdr"><span class="card-title">支出分类</span><span class="card-expand">展开 ›</span></div>
-          <div class="pie-area"><div class="pie-card-wrap"><canvas id="pie-c" width="150" height="150"></canvas><div class="pie-card-center"><div class="pie-card-lbl">总支出</div><div class="pie-card-val">${catE.length?fmtN(totalMonthSpent):'¥0'}</div></div></div></div>
+          ${renderMoneyRing(catE.map(([name,amount],i)=>({name,amount,color:PIE_COLORS[i%PIE_COLORS.length]})),{label:'总支出',maxRows:4,mode:'expense'})}
         </div>
       </div>
       ${budgetRingCard()}
@@ -1962,59 +2015,7 @@ function renderApp(){
     </div>
     ${quickInputHtml('qi-app')}`;
 
-  setTimeout(()=>{
-    if(renderVersion!==chartRenderVersion||_currentTab!=='diary')return;
-    const rc=document.getElementById('ring-c');
-    if(rc&&window.Chart){
-      const rem=Math.max(0,budget-todaySpent);
-      const overSpent=todaySpent>budget?todaySpent-budget:0;
-      charts.ring=replaceChart(rc,{type:'doughnut',data:{datasets:[{data:budget>0?overSpent>0?[budget,overSpent]:[todaySpent,rem]:[0,1],backgroundColor:budget>0?overSpent>0?['#e53935','#ff8a80']:['#e53935','#C8E6C9']:['#e0e0e0','#e0e0e0'],borderWidth:0}]},options:{cutout:'68%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}}});
-    }
-    const pc=document.getElementById('pie-c');
-    if(pc&&window.Chart){
-      if(catE.length){
-        const cardPiePlugin={id:'cardPiePlugin',afterDraw(chart){
-          const ctx=chart.ctx;const ds=chart.getDatasetMeta(0);if(!ds||!ds.data)return;
-          const total=catE.reduce((a,e)=>a+e[1],0);
-          const lbls=[];
-          ds.data.forEach((arc,i)=>{
-            if(i>=3)return;
-            const val=catE[i]?catE[i][1]:0;const pct=total>0?val/total*100:0;if(pct<8)return;
-            const ang=(arc.startAngle+arc.endAngle)/2;
-            const r=arc.outerRadius+13;
-            lbls.push({x:arc.x+Math.cos(ang)*r,y:arc.y+Math.sin(ang)*r,
-              name:catE[i][0].length>3?catE[i][0].slice(0,3):catE[i][0],pct:Math.round(pct)});
-          });
-          // 碰撞推开：y 轴迭代
-          const GAP=20;
-          for(let it=0;it<10;it++){
-            lbls.sort((a,b)=>a.y-b.y);
-            for(let i=1;i<lbls.length;i++){
-              const dy=lbls[i].y-lbls[i-1].y;
-              if(dy<GAP){const push=(GAP-dy)/2;lbls[i-1].y-=push;lbls[i].y+=push;}
-            }
-          }
-          // 边界夹紧
-          const pad=12;
-          lbls.forEach(l=>{l.y=Math.max(pad,Math.min(chart.height-pad,l.y));});
-          ctx.save();
-          lbls.forEach(({x,y,name,pct})=>{
-            ctx.textAlign='center';ctx.textBaseline='middle';
-            ctx.fillStyle='#666';ctx.font='500 9px -apple-system,sans-serif';
-            ctx.fillText(name,x,y-6);
-            ctx.fillStyle='#222';ctx.font='700 10px -apple-system,sans-serif';
-            ctx.fillText(pct+'%',x,y+6);
-          });
-          ctx.restore();
-        }};
-        charts.pie=replaceChart(pc,{type:'doughnut',data:{labels:catE.map(e=>e[0]),datasets:[{data:catE.map(e=>e[1]),backgroundColor:PIE_COLORS,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:20,bottom:20,left:20,right:20}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:0}},plugins:[cardPiePlugin]});
-      }else{
-        const lg=document.getElementById('pie-leg');
-        if(lg)lg.innerHTML=`<div style="font-size:10px;color:#bbb;text-align:center;padding:6px 0">暂无支出</div>`;
-      }
-    }
-    checkModal();
-  },30);
+  checkModal();
 }
 
 function switchMonth(dir){
@@ -2040,7 +2041,7 @@ function switchMonth(dir){
 function selDay(ds){selDate=ds;showApp()}
 function openDetail(view){
   if(view==='report'){window._reportMode='overview';window._reportYear=new Date().getFullYear();}
-  destroyCharts();detailView=view;
+  detailView=view;
   // 进入日历详情，保持当前选中日期；如果选中日期不在 viewMonth，重置为 viewMonth 第一天
   const vm=getViewMonth();
   if(view==='cal'&&(!detailSel||!detailSel.startsWith(vm))){
@@ -2054,8 +2055,6 @@ function openDetail(view){
   renderDetail();
 }
 function renderDetail(){
-  destroyCharts();
-  const renderVersion=chartRenderVersion;
   const ds=document.getElementById('detail-screen');
   const wds=['日','一','二','三','四','五','六'];
   let title='',body='',inputHtml=quickInputHtml('qi-detail');
@@ -2151,32 +2150,32 @@ function renderDetail(){
     const vmP=getViewMonth();const[vpY,vpM]=vmP.split('-').map(Number);
     const pmode=window._pieMode||'expense';
     title=`${vpM}月${pmode==='income'?'收入':'支出'}分类`;
-    const catStats=getCatStatsByType(vmP,pmode);const total=catStats.reduce((a,c)=>a+c.total,0);
+    const catStats=getCatStatsByType(vmP,pmode);const pieState=moneyRingState(catStats.map(c=>({amount:c.total}))),total=pieState.total;
     window._pieExpand=window._pieExpand||{};
     body=`<div class="pie-mode-row">
         <button class="pie-mode-btn${pmode==='expense'?' sel-out':''}" onclick="setPieMode('expense')">支出</button>
         <button class="pie-mode-btn${pmode==='income'?' sel-in':''}" onclick="setPieMode('income')">收入</button>
       </div>
-      <div class="d-pie-wrap"><canvas id="d-pie" width="300" height="240"></canvas></div>
+      ${renderMoneyRing(catStats.map((c,i)=>({name:c.cat,amount:c.total,color:PIE_COLORS[i%PIE_COLORS.length]})),{label:pmode==='income'?'总收入':'总支出',mode:pmode})}
       <div class="d-cat-list">${catStats.map((c,i)=>{
-        const meta=getCatMeta(c.cat,pmode);const pct=total>0?(c.total/total*100):0;const color=PIE_COLORS[i%9];
+        const meta=getCatMeta(c.cat,pmode);const pct=pieState.drawable?(c.total/total*100):null;const color=PIE_COLORS[i%PIE_COLORS.length];
         const expandable=hasSubCats(c.cat);const isOpen=window._pieExpand[c.cat];
         const subs=isOpen?getSubStats(vmP,c.cat,pmode):[];
         return `<div class="d-cat-block">
           <div class="d-cat-head" onclick="${expandable?`togglePieExpand(${jsAttr(c.cat)})`:`openSubDetail(${jsAttr(c.cat)},'__all__')`}">
             <div class="d-cat-icon" style="background:${meta.bg}">${meta.i}</div>
             <span class="d-cat-name">${escHtml(c.cat)}</span>
-            <span class="d-cat-meta">(${pct.toFixed(2)}%, ${c.count}笔)</span>
-            <span class="d-cat-amt">${fmtN(c.total)}</span>
+            <span class="d-cat-meta">(${pct===null?'—':pct.toFixed(2)+'%'}, ${c.count}笔)</span>
+            <span class="d-cat-amt">${moneyRingAmount(c.total)}</span>
             ${expandable?`<span class="d-cat-arrow${isOpen?' open':''}">⌄</span>`:`<span class="d-cat-arrow" style="color:#ddd">›</span>`}
           </div>
-          <div class="d-cat-barbg"><div class="d-cat-bar" style="width:${pct}%;background:${color}"></div></div>
+          <div class="d-cat-barbg"><div class="d-cat-bar" style="width:${pct??0}%;background:${color}"></div></div>
           ${isOpen?`<div class="d-sub-list" style="border-left-color:${color}">${subs.map(s=>`
             <div class="d-sub-row" onclick="openSubDetail(${jsAttr(c.cat)},${jsAttr(s.sub)})">
               <span class="d-sub-dot" style="background:${color}"></span>
               <span class="d-sub-name">${escHtml(s.sub)}</span>
-              <span class="d-sub-amt">${fmtN(s.total)}</span>
-              <span class="d-sub-meta">[${s.count}笔, ${s.pct.toFixed(2)}%]</span>
+              <span class="d-sub-amt">${moneyRingAmount(s.total)}</span>
+              <span class="d-sub-meta">[${s.count}笔, ${pieState.drawable&&Number.isFinite(s.pct)&&s.pct>=0?s.pct.toFixed(2)+'%':'—'}]</span>
             </div>`).join('')}</div>`:''}
         </div>`;
       }).join('')}
@@ -2241,8 +2240,9 @@ function renderDetail(){
     const rMk=window._reportMk||getViewMonth();
     const allMs=[...new Set([rMk,...getAllMonths()])].sort((a,b)=>b.localeCompare(a));
     const[rY,rM]=rMk.split('-').map(Number);
-    const msR=getMonthStats(rMk,todayStr());
-    const catStatsR=getCatStats(rMk,todayStr());
+    const reportAsOf=todayStr();
+    const msR=getMonthStats(rMk,reportAsOf);
+    const catStatsR=getCatStats(rMk,reportAsOf);
     const totalR=catStatsR.reduce((a,cv)=>a+cv.total,0);
     const wc=getWeekCompare();const trend=get7DayTrend();const maxTrend=Math.max(...trend.map(d=>d.spent),1);
     // 上月对比
@@ -2303,14 +2303,17 @@ function renderDetail(){
         </div>
         <div class="report-card">
           <div class="rc-title">支出分类</div>
+          <div class="report-record-hint">点击分类，展开具体花费</div>
           <div class="top-cats">${catStatsR.map((cv,i)=>{
             const m=getCatMeta(cv.cat,'expense');
-            return`<div class="top-cat-row">
+            const expanded=isReportCategoryExpanded(rMk,cv.cat);
+            return`<div class="report-cat-block"><button type="button" class="top-cat-row report-cat-trigger" aria-expanded="${expanded}" onclick="toggleReportCategory(${jsAttr(rMk)},${jsAttr(cv.cat)})">
               <span class="top-cat-icon">${m.i}</span>
-              <span class="top-cat-name">${escHtml(cv.cat)}</span>
-              <div class="top-cat-bar-bg"><div class="top-cat-bar" style="width:${totalR>0?Math.round(cv.total/totalR*100):0}%;background:${PIE_COLORS[i%9]}"></div></div>
+              <span class="top-cat-name">${escHtml(cv.cat||'未分类')}<span class="report-cat-count">${cv.count}笔</span></span>
+              <span class="top-cat-bar-bg"><span class="top-cat-bar" style="display:block;width:${totalR>0?Math.round(cv.total/totalR*100):0}%;background:${PIE_COLORS[i%9]}"></span></span>
               <span class="top-cat-amt">${fmtN(cv.total)}</span>
-            </div>`;
+              <span class="report-cat-arrow" aria-hidden="true">${expanded?'⌃':'⌄'}</span>
+            </button>${expanded?renderReportCategoryRecords(rMk,cv.cat,reportAsOf):''}</div>`;
           }).join('')}${!catStatsR.length?`<div style="text-align:center;color:#bbb;font-size:12px;padding:12px">暂无记录</div>`:''}</div>
         </div>
         <div class="report-card">
@@ -2328,58 +2331,7 @@ function renderDetail(){
 
   ds.innerHTML=`<div class="detail-bar"><button class="back-btn" onclick="detailBack()">←</button><div class="detail-title">${escHtml(title)}</div></div><div class="detail-body">${body}</div>${inputHtml}`;
 
-  if(detailView==='pie'){
-    setTimeout(()=>{
-    if(renderVersion!==chartRenderVersion||_currentTab!=='diary')return;
-      const vmPie=getViewMonth();
-      const pm=window._pieMode||'expense';
-      const catSpend={};RC.filter(r=>r.type===pm&&r.date&&r.date.startsWith(vmPie)).forEach(r=>{catSpend[r.cat]=(catSpend[r.cat]||0)+r.amount});
-      const entries=Object.entries(catSpend).sort((a,b)=>b[1]-a[1]);
-      const pc=document.getElementById('d-pie');
-      const total=entries.reduce((a,e)=>a+e[1],0);
-      const cols=PIE_COLORS;
-      const leaderLabels={id:'leaderLabels',afterDraw(chart){
-        const ctx=chart.ctx;const ds=chart.getDatasetMeta(0);if(!ds||!ds.data)return;
-        // 收集标签信息
-        const items=[];
-        ds.data.forEach((arc,i)=>{
-          const val=entries[i]?entries[i][1]:0;const pct=total>0?val/total*100:0;
-          if(pct<3)return; // 小于3%不标
-          const ang=(arc.startAngle+arc.endAngle)/2;const r=arc.outerRadius;
-          const ca=Math.cos(ang),sa=Math.sin(ang);const right=ca>=0;
-          items.push({i,x0:arc.x+ca*r,y0:arc.y+sa*r,
-            x1:arc.x+ca*(r+10),x2:arc.x+ca*(r+10)+(right?14:-14),
-            y:arc.y+sa*(r+10),right,pct,name:entries[i][0],col:cols[i%9]});
-        });
-        // 碰撞推开：左右两侧分别处理
-        ['right','left'].forEach(side=>{
-          const g=items.filter(l=>(side==='right'?l.right:!l.right)).sort((a,b)=>a.y-b.y);
-          const GAP=18;
-          for(let it=0;it<15;it++){
-            for(let k=1;k<g.length;k++){
-              const dy=g[k].y-g[k-1].y;
-              if(dy<GAP){const push=(GAP-dy)/2;g[k-1].y-=push;g[k].y+=push;}
-            }
-          }
-          const m=10;g.forEach(l=>{l.y=Math.max(m,Math.min(chart.height-m,l.y));});
-        });
-        // 绘制
-        ctx.save();
-        items.forEach(({x0,y0,x1,x2,y,right,pct,name,col})=>{
-          ctx.strokeStyle=col;ctx.lineWidth=1;
-          ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
-          const tx=x2+(right?3:-3);
-          ctx.textAlign=right?'left':'right';ctx.textBaseline='middle';
-          ctx.fillStyle='#333';ctx.font='600 11px -apple-system,sans-serif';
-          ctx.fillText(name,tx,y-6);
-          ctx.fillStyle='#999';ctx.font='600 10px -apple-system,sans-serif';
-          ctx.fillText(pct.toFixed(1)+'%',tx,y+6);
-        });
-        ctx.restore();
-      }};
-      if(pc&&entries.length&&window.Chart)charts.dpie=replaceChart(pc,{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols,borderWidth:0}]},options:{cutout:'62%',layout:{padding:{top:18,bottom:18,left:70,right:70}},plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},plugins:[leaderLabels]});
-    },30);
-  }
+
   checkModal();
 }
 function detailSelDay(ds){
@@ -2531,28 +2483,15 @@ function openReimbEdit(ts){mTs=ts;modal='reimb-edit';const r=RM.find(r=>r.ts===t
 function openDataCenter(){modal='data';detailView?renderDetail():showApp()}
 function openSettings(){modal='settings-panel';detailView?renderDetail():showApp()}
 function renderDataModal(){
-  const c=dataCounts();const ov=mkOverlay();
+  const ov=mkOverlay();
   ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">数据备份与恢复</div>
-    <div class="data-note">一次导出包含全部数据：<b>记账日记</b>（${c.records}条）+ <b>报销</b>（${c.reimbs}条）+ <b>本月账单</b> + <b>财务总览</b>（${c.financeCount}个项目）<br>完整备份恢复全部模块；旧版或部分备份只恢复包含的数据。</div>
+    <div class="data-note">导出包含记账、报销、本月账单和财务总览。完整备份恢复全部模块；旧版或部分备份只恢复包含的数据。</div>
     <div class="data-actions">
+      <button class="data-btn" onclick="triggerImport()">📥 导入备份</button>
       <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
-      <button class="data-btn" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
-      <button class="data-btn" onclick="CR_openRepair()">补回历史股票记录</button>
-      <button class="data-btn" onclick="GR_openRepair()">核对黄金明细</button>
-      <button class="data-btn" onclick="triggerImport()">📥 导入恢复</button>
-      <button class="data-btn" onclick="undoLastImport()">↩️ 撤销上次导入</button>
-      <button class="data-btn" onclick="F_openFinanceVersions()">财务历史版本</button>
-      <button class="data-btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;margin-top:4px" onclick="clearCacheAndReload()">清除记账和账单（保留财务）</button>
+      <button class="data-btn" style="grid-column:1/-1" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
     </div>
-    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px;line-height:1.6">仅清除当前记账和账单；财务、历史版本、恢复副本及云备份授权保留</div>
     <input id="backup-file" type="file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
-    <div class="sumcard">
-      <div class="sumrow"><span class="sumk">最后备份</span><span class="sumv">${escHtml(c.lastBackup?c.lastBackup.slice(0,10):'未备份')}</span></div>
-      <div class="sumrow"><span class="sumk">记账流水</span><span class="sumv">${c.records} 条</span></div>
-      <div class="sumrow"><span class="sumk">报销记录</span><span class="sumv">${c.reimbs} 条</span></div>
-      <div class="sumrow"><span class="sumk">财务总览</span><span class="sumv">${c.financeCount} 个投资项目</span></div>
-      <div class="sumrow"><span class="sumk">本月账单</span><span class="sumv">${c.monthlyCount?'有数据':'无数据'}</span></div>
-    </div>
   </div>`;
   document.getElementById('panel-diary').appendChild(ov);
 }
@@ -2657,17 +2596,6 @@ function quickAdd(inputId='qi-app'){
   const hint=document.getElementById(inputId+'-hint');if(hint){hint.textContent='';hint.className='input-hint';}
   detailView?renderDetail():showApp();
 }
-
-const s=ld();
-if(s.setupDone){
-  ST=s.settings||{purpose:'budget',budget:50,settleDay:1,carryover:'yes',income_merge:'yes',hasExtra:false,extraAmount:0,show_reimb:'no',decimals:'2'};
-  RC=s.records||[];RM=s.reimbs||[];
-  showApp();
-}else{
-  // 首次进入，显示简短问卷
-  qStep=0;qAns={};showQuiz();
-}
-
 
 // ─── 本月账单 JS ───
 
@@ -3225,7 +3153,7 @@ const F_DAILY_CASH_LIMIT=Number.MAX_SAFE_INTEGER/100;
 let F_dailyCashEditState=null,F_dailyCashListSnapshots=new Map();
 function F_dailyCashError(code){const error=new Error(code);error.dailyCashCode=code;return error;}
 function F_dailyCashMessage(code){
-  const messages={INVALID:'请填写 1 至 40 个字的账户名称，以及有效的非负余额。',READ:'本机财务数据无法完整读取，请先导出备份并检查原数据。',CONFLICT:'这个账户已在其他地方修改或删除。为保留新修改，请重新打开账户后再操作。',STORAGE:'未能完成保存，请检查浏览器存储空间。若需恢复，可到财务“数据”中使用“撤销上次导入”。'};
+  const messages={INVALID:'请填写 1 至 40 个字的账户名称，以及有效的非负余额。',READ:'本机财务数据无法完整读取，请先导出备份并检查原数据。',CONFLICT:'这个账户已在其他地方修改或删除。为保留新修改，请重新打开账户后再操作。',STORAGE:'本机保存遇到问题，请检查浏览器存储空间并核对当前记录；必要时可导入备份恢复。'};
   return messages[code]||messages.READ;
 }
 function F_dailyCashCanonical(value){
@@ -3693,7 +3621,7 @@ function F_renderMain(){
     groupsHtml+='</div>';
   });
 
-    destroyCanvasCharts(document.getElementById('F_main'));
+
     document.getElementById('F_main').innerHTML=`
     ${heroHtml}
     ${F_renderDailyCashSection()}
@@ -3704,13 +3632,12 @@ function F_renderMain(){
     ${accHtml}${acc.valid?'':'<div class="f-info-box" role="alert">存在待核对的股票交易（可能在已隐藏列表中）。请打开股票详情修正，相关合计暂不显示。</div>'}${stocksHtml}${hiddenHtml}
     ${groupsHtml}
     <button class="f-btn-secondary" onclick="F_openHiddenData()">已隐藏项目与记录（${F_hiddenEntries().length}）</button>
-    <details class="f-market-reference" ontoggle="if(this.open)F_drawPortfolioPies()"><summary>市值参考</summary><div class="f-sheet-sub" style="line-height:1.7">历史填写的市值单独保留，未计入上方总资产；日常资金不在此处重复统计。</div>${F_renderPortfolioSection()}</details>`;
+    <details class="f-market-reference"><summary>市值参考</summary><div class="f-sheet-sub" style="line-height:1.7">历史填写的市值单独保留，未计入上方总资产；日常资金不在此处重复统计。</div>${F_renderPortfolioSection()}</details>`;
   F_checkModal();
 }
 function F_checkModal(){
   document.getElementById('panel-finance').querySelectorAll('.modal-overlay').forEach(e=>e.remove());
-  // 如果没有模态框，绘制饼图
-  if(!F_modal){setTimeout(F_drawPortfolioPies,150);}
+
   if(F_modal==='asset-history')F_renderAssetHistoryModal();
   else if(F_modal==='stock-detail')F_renderStockDetailModal();
   else if(F_modal==='stock-add')F_renderStockAddModal();
@@ -4081,20 +4008,10 @@ function F_renderDataModal(){
     <div class="f-sheet-handle"></div>
     <div class="f-sheet-title">数据备份</div>
     <div class="f-sheet-sub" style="line-height:1.7">导出与导入仅处理财务数据，云备份包含全部账本。</div>
+    <button class="f-btn-secondary" onclick="document.getElementById('imp-file').click()">📥 导入财务总览</button>
     <button class="f-btn-primary" onclick="F_exportData()">📤 导出财务总览</button>
-    <button class="f-btn-secondary" onclick="document.getElementById('imp-file').click()">📥 仅恢复财务总览</button>
     <button class="f-btn-secondary" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
-    <button class="f-btn-secondary" onclick="undoLastImport()">↩️ 撤销上次导入</button>
-    <button class="f-btn-secondary" onclick="F_openFinanceVersions()">财务历史版本</button>
-    <input type="file" id="imp-file" accept=".json" style="display:none" onchange="F_importData(event)">
-    <details>
-      <summary class="f-section" style="cursor:pointer">历史记录整理</summary>
-      <button class="f-btn-secondary" onclick="CR_openRepair()">补回历史股票记录</button>
-      <button class="f-btn-secondary" onclick="GR_openRepair()">核对黄金明细</button>
-    </details>
-    <div class="f-section">显示管理</div>
-    <button class="f-btn-secondary" onclick="F_openHiddenData()">已隐藏项目与记录</button>
-    <button class="f-btn-secondary" onclick="F_resetData()">隐藏全部财务项目和日常账户</button>
+    <input type="file" id="imp-file" accept="application/json,.json" style="display:none" onchange="F_importData(event)">
   </div>`;
   document.getElementById('panel-finance').appendChild(ov);
 }
@@ -4113,9 +4030,9 @@ function F_importData(e){
   const reader=new FileReader();
   reader.onload=ev=>{
     try{applyImportedState(JSON.parse(ev.target.result),'finance');}
-    catch(err){alert(err.message||'导入失败，原数据未改动');return;}
-    try{F_loadData();F_modal=null;F_renderMain();alert('✓ 财务总览已恢复，记账和账单不变；可撤销本次导入');}
-    catch(err){alert('财务数据已恢复，显示异常；可在数据页撤销本次导入');}
+    catch(err){alert(err.message||'导入未完成，请检查存储空间并核对本机记录，必要时可导入备份恢复。');return;}
+    try{F_loadData();F_modal=null;F_renderMain();alert('✓ 财务总览已恢复');}
+    catch(err){alert('财务数据已恢复，页面显示异常，请重新加载页面。');}
   };
   reader.onerror=()=>alert('读取文件失败，原数据未改动');
   reader.readAsText(file);input.value='';
@@ -4478,16 +4395,17 @@ function F_calcPortfolio(){
 function F_renderPortfolioSection(){
   const p=F_calcPortfolio();
   const{costs,mkts,totalCost,totalMkt,updatedAt}=p;
-  const costPcts=costs.map(v=>totalCost>0?Math.round(v/totalCost*100):25);
-  const mktPcts=mkts.map(v=>totalMkt>0?Math.round(v/totalMkt*100):25);
+  const costState=moneyRingState(costs.map(amount=>({amount}))),mktState=moneyRingState(mkts.map(amount=>({amount})));
+  const costPcts=costs.map(v=>costState.drawable?(v/totalCost*100).toFixed(1)+'%':'—');
+  const mktPcts=mkts.map(v=>mktState.drawable?(v/totalMkt*100).toFixed(1)+'%':'—');
   const rows=F_PORT_NAMES.map((name,i)=>{
     const pnl=mkts[i]-costs[i];
     const pnlPct=costs[i]>0?pnl/costs[i]*100:0;
     return`<div class="f-portfolio-row">
       <div class="f-portfolio-dot" style="background:${F_PORT_COLORS[i]}"></div>
       <span class="f-portfolio-name">${name}</span>
-      <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}%</span></span>
-      <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}%</span></span>
+      <span class="f-portfolio-cost">成本 ${F_fmtY(costs[i])}<br><span style="font-size:10px;color:#bbb">${costPcts[i]}</span></span>
+      <span class="f-portfolio-mkt">${F_fmtY(mkts[i])}<br><span style="font-size:10px;color:#bbb">${mktPcts[i]}</span></span>
       <span class="f-portfolio-pnl f-pnl ${F_pnlClass(pnl)}">${F_fmtPnl(pnl)}<br><span style="font-size:10px">${pnl>0?'+':''}${pnlPct.toFixed(1)}%</span></span>
     </div>`;
   }).join('');
@@ -4496,16 +4414,8 @@ function F_renderPortfolioSection(){
       <span class="f-portfolio-h">🥧 资产配置</span>
       <span class="f-portfolio-update">${escHtml(updatedAt?'市值更新于 '+updatedAt:'市值待更新')}</span>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div style="text-align:center;">
-        <div class="f-pie-label">投入成本</div>
-        <canvas id="F_pie_cost" width="130" height="130"></canvas>
-      </div>
-      <div style="text-align:center;">
-        <div class="f-pie-label">当前市值</div>
-        <canvas id="F_pie_mkt" width="130" height="130"></canvas>
-      </div>
-    </div>
+    ${renderMoneyRing(F_PORT_NAMES.map((name,i)=>({name,amount:costs[i],color:F_PORT_COLORS[i]})),{label:'投入成本'})}
+    ${renderMoneyRing(F_PORT_NAMES.map((name,i)=>({name,amount:mkts[i],color:F_PORT_COLORS[i]})),{label:'当前市值'})}
     <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;padding:0 2px">
       <span>总成本 ${F_fmtY(totalCost)}</span>
       <span>总市值 ${F_fmtY(totalMkt)}</span>
@@ -4516,52 +4426,7 @@ function F_renderPortfolioSection(){
   </div>`;
 }
 
-function F_drawPortfolioPies(){
-  setTimeout(()=>{
-    if(_currentTab!=='finance'||F_modal)return;
-    const p=F_calcPortfolio();
-    const labelPlugin={
-      id:'pieLabels',
-      afterDraw(chart){
-        const{ctx,data}=chart;
-        const total=data.datasets[0].data.reduce((a,b)=>a+b,0);
-        if(total===0)return;
-        chart.getDatasetMeta(0).data.forEach((arc,i)=>{
-          const val=data.datasets[0].data[i];
-          const pct=Math.round(val/total*100);
-          if(pct<8)return;
-          const angle=(arc.startAngle+arc.endAngle)/2;
-          const r=arc.outerRadius*0.62;
-          const x=arc.x+Math.cos(angle)*r;
-          const y=arc.y+Math.sin(angle)*r;
-          ctx.save();
-          ctx.textAlign='center';ctx.textBaseline='middle';
-          ctx.fillStyle='#fff';
-          ctx.font='bold 10px -apple-system,sans-serif';
-          ctx.fillText(data.labels[i],x,y-6);
-          ctx.font='10px -apple-system,sans-serif';
-          ctx.fillText(pct+'%',x,y+6);
-          ctx.restore();
-        });
-      }
-    };
-    ['cost','mkt'].forEach(type=>{
-      const canvas=document.getElementById('F_pie_'+type);
-      if(!canvas||!window.Chart)return;
-      const data=type==='cost'?p.costs:p.mkts;
-      const chart=replaceChart(canvas,{
-        type:'pie',
-        data:{labels:F_PORT_NAMES,datasets:[{data,backgroundColor:F_PORT_COLORS,borderWidth:2,borderColor:'#fff'}]},
-        options:{
-          plugins:{legend:{display:false},tooltip:{enabled:false}},
-          animation:{duration:400}
-        },
-        plugins:[labelPlugin]
-      });
-      canvas._chartInstance=chart;
-    });
-  },150);
-}
+
 
 function F_openMarketUpdate(){F_modal='market-update';F_renderMain();}
 
@@ -4605,7 +4470,7 @@ function F_submitMarketUpdate(){
   F_savePortfolioMarket(next);
   showToast_f('✓ 市值已更新');
   F_modal=null;F_renderMain();
-  setTimeout(F_drawPortfolioPies,200);
+
 }
 
 function F_autoInvest(){
@@ -4999,7 +4864,7 @@ let CR_pending=null,CR_openPromise=null,CR_applyPromise=null,CR_generation=0;
 function CR_repairBusy(){return !!(CB_uploadPromise||(typeof GR_isBusy==='function'&&GR_isBusy()));}
 function CR_error(code){const e=new Error(code);e.stockRepairCode=code;return e;}
 function CR_message(code){
-  const messages={AUTH:'请先在 GitHub 云备份中保存本机专用授权码。',TARGET:'补回记录只支持已配置的指定私有备份仓库。',BUSY:'正在进行云备份或补回操作，请完成后再试。',PACKAGE:'云端补回记录的格式或买卖记录不符合要求，原账本未改动。',SIZE:'补回文件超过 64 KB，原账本未改动。',EMPTY:'本机尚无可用的财务账本，请先确认打开的是原来记账的浏览器。',LOCAL:'本机财务账本无法完整校验，原账本未改动。',CONFLICT:'本机已有同名、同代码或同编号的不同股票记录。为避免重复，本次没有修改，请先核对记录。',CANCELLED:'授权、预览或设置已变更，请重新打开补回预览。',STORAGE:'无法完成本机保存。请保留当前页面，检查存储空间；可在数据中使用“撤销上次导入”恢复保存前的财务数据。',NETWORK:'无法读取私有补回文件，请检查网络、专用授权码和仓库权限。',UNKNOWN:'补回未完成，原账本未改动，请重新打开预览。'};
+  const messages={AUTH:'请先在 GitHub 云备份中保存本机专用授权码。',TARGET:'补回记录只支持已配置的指定私有备份仓库。',BUSY:'正在进行云备份或补回操作，请完成后再试。',PACKAGE:'云端补回记录的格式或买卖记录不符合要求，原账本未改动。',SIZE:'补回文件超过 64 KB，原账本未改动。',EMPTY:'本机尚无可用的财务账本，请先确认打开的是原来记账的浏览器。',LOCAL:'本机财务账本无法完整校验，原账本未改动。',CONFLICT:'本机已有同名、同代码或同编号的不同股票记录。为避免重复，本次没有修改，请先核对记录。',CANCELLED:'授权、预览或设置已变更，请重新打开补回预览。',STORAGE:'本机保存遇到问题。请保留当前页面，检查存储空间并核对当前记录；必要时可导入备份恢复财务数据。',NETWORK:'无法读取私有补回文件，请检查网络、专用授权码和仓库权限。',UNKNOWN:'补回未完成，请重新打开预览并核对本机记录。'};
   return messages[code]||messages.UNKNOWN;
 }
 function CR_code(error){
@@ -5074,7 +4939,7 @@ function CR_mount(){
   const old=document.getElementById('cr-overlay');if(old)old.remove();
   const overlay=document.createElement('div');overlay.id='cr-overlay';
   overlay.style.cssText='position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box';
-  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="cr-title" style="background:#fff;color:#243142;border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-sizing:border-box"><h2 id="cr-title" style="font-size:20px;margin:0 0 12px">补回已隐藏股票记录</h2><p style="font-size:13px;line-height:1.7">从已授权的私有备份仓库读取一只已清仓股票。只追加缺失记录，保留手机现有账目和隐藏状态。</p><div id="cr-status" role="status" style="font-size:14px;line-height:1.7;margin:10px 0">正在读取补回文件…</div><div id="cr-preview"></div><p style="font-size:12px;color:#64748b;line-height:1.7">保存前会保留本机财务恢复副本。若需撤销，请在数据中使用“撤销上次导入”；这会恢复整个财务模块，随后新增的财务记录也会被撤销。</p><div style="display:flex;gap:10px;margin-top:16px"><button id="cr-apply" type="button" disabled style="flex:1;min-height:44px;border:0;border-radius:9px;background:#3379df;color:white;padding:10px">补回这只股票</button><button id="cr-close" type="button" style="min-height:44px;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:10px 16px">关闭</button></div></section>';
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="cr-title" style="background:#fff;color:#243142;border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-sizing:border-box"><h2 id="cr-title" style="font-size:20px;margin:0 0 12px">补回已隐藏股票记录</h2><p style="font-size:13px;line-height:1.7">从已授权的私有备份仓库读取一只已清仓股票。只追加缺失记录，保留手机现有账目和隐藏状态。</p><div id="cr-status" role="status" style="font-size:14px;line-height:1.7;margin:10px 0">正在读取补回文件…</div><div id="cr-preview"></div><p style="font-size:12px;color:#64748b;line-height:1.7">保存前会保留本机财务恢复副本，请先导出备份。</p><div style="display:flex;gap:10px;margin-top:16px"><button id="cr-apply" type="button" disabled style="flex:1;min-height:44px;border:0;border-radius:9px;background:#3379df;color:white;padding:10px">补回这只股票</button><button id="cr-close" type="button" style="min-height:44px;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:10px 16px">关闭</button></div></section>';
   document.body.appendChild(overlay);
   document.getElementById('cr-close').onclick=CR_closeRepair;
   document.getElementById('cr-apply').onclick=CR_applyRepair;
@@ -5215,7 +5080,7 @@ function GR_mount(){
   const old=document.getElementById('gr-overlay');if(old)old.remove();
   const overlay=document.createElement('div');overlay.id='gr-overlay';
   overlay.style.cssText='position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box';
-  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="gr-title" style="background:#fff;color:#243142;border-radius:16px;padding:20px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-sizing:border-box"><h2 id="gr-title" style="font-size:20px;margin:0 0 12px">核对黄金明细</h2><p style="font-size:13px;line-height:1.7">将初始已投金额展开为实际买入记录，合并已有明细。每次买入单独保留，金额已包含已知手续费。</p><div id="gr-status" role="status" style="font-size:14px;line-height:1.7;margin:10px 0">正在读取私有备份仓库中的黄金明细…</div><div id="gr-preview"></div><p style="font-size:12px;color:#64748b;line-height:1.7">保存前会保留本机财务恢复副本。如需撤销，可在数据中选择“撤销上次导入”；这会恢复整个财务模块，随后新增的财务记录也会撤销。</p><div style="display:flex;gap:10px;margin-top:16px"><button id="gr-apply" type="button" disabled style="flex:1;min-height:44px;border:0;border-radius:9px;background:#b67b13;color:white;padding:10px">更新手机黄金记录</button><button id="gr-close" type="button" style="min-height:44px;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:10px 16px">关闭</button></div></section>';
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="gr-title" style="background:#fff;color:#243142;border-radius:16px;padding:20px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-sizing:border-box"><h2 id="gr-title" style="font-size:20px;margin:0 0 12px">核对黄金明细</h2><p style="font-size:13px;line-height:1.7">将初始已投金额展开为实际买入记录，合并已有明细。每次买入单独保留，金额已包含已知手续费。</p><div id="gr-status" role="status" style="font-size:14px;line-height:1.7;margin:10px 0">正在读取私有备份仓库中的黄金明细…</div><div id="gr-preview"></div><p style="font-size:12px;color:#64748b;line-height:1.7">保存前会保留本机财务恢复副本，请先导出备份。</p><div style="display:flex;gap:10px;margin-top:16px"><button id="gr-apply" type="button" disabled style="flex:1;min-height:44px;border:0;border-radius:9px;background:#b67b13;color:white;padding:10px">更新手机黄金记录</button><button id="gr-close" type="button" style="min-height:44px;border:1px solid #cbd5e1;border-radius:9px;background:white;padding:10px 16px">关闭</button></div></section>';
   document.body.appendChild(overlay);document.getElementById('gr-close').onclick=GR_closeRepair;document.getElementById('gr-apply').onclick=GR_applyRepair;
 }
 function GR_renderPreview(pkg,result){
@@ -5292,12 +5157,6 @@ function GR_applyRepair(){
       qStep=0;qAns={};showQuiz();
     }
   }catch(e){console.error('diary init error:',e.message,e.stack);}
-  setTimeout(function(){
-    try{M_loadData();}catch(e){console.error('M_loadData:',e.message,e.stack);}
-    try{M_renderMain();}catch(e){console.error('M_renderMain:',e.message,e.stack);}
-    try{F_loadData();}catch(e){console.error('F_loadData:',e.message,e.stack);}
-    try{F_renderMain();}catch(e){console.error('F_renderMain:',e.message,e.stack);}
-  },100);
   CB_startAutoBackup();
   const openLinkedPanel=()=>{
     if(window.location.hash==='#cloud-backup')CB_openSettings();
