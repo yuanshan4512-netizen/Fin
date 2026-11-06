@@ -801,14 +801,14 @@ function renderMoneyRing(rows,{label='总金额',compact=false,maxRows=6,mode=nu
   const note=state.total===null?'金额待核对':rows.some(r=>r.amount<0)?'有负金额，暂不显示占比':state.total===0?'暂无占比':'';
   return`<div class="money-ring-layout${compact?' money-ring-compact':''}"><div class="money-ring">${moneyRingSvg(shown,state.drawable?state.total:0,label+(state.drawable?'，'+shown.map(r=>r.name+' '+pct(r.amount)).join('，'):'，暂无可显示的占比'))}<div class="money-ring-center"><span>${escHtml(label)}</span><strong class="${moneyRingAmount(state.total).length>9?'money-ring-large':''}">${escHtml(moneyRingAmount(state.total))}</strong>${note?'<small>'+note+'</small>':''}</div></div><div class="money-ring-legend">${list||'<small>暂无记录</small>'}</div></div>`;
 }
-function renderBudgetRing(spent,budget,compact=false){
+function renderBudgetRing(spent,budget){
   const valid=typeof spent==='number'&&typeof budget==='number'&&Number.isFinite(spent)&&Number.isFinite(budget)&&spent>=0&&Math.max(spent,Math.abs(budget))<=Number.MAX_SAFE_INTEGER/100;
   const hasBudget=valid&&budget>0,pct=hasBudget?spent/budget*100:null,over=valid&&spent>budget;
-  const color=over?'#e53935':pct>80?'#e65100':'#378ADD';
-  const progress=hasBudget?Math.min(100,pct):0;
+  const color=over?'#c62828':pct>80?'#e65100':'#1a1a1a';
+  const progress=hasBudget?(over?budget/spent*100:Math.min(100,pct)):0;
   const used=hasBudget?(Number.isFinite(pct)&&pct<1000000?Math.round(pct)+'%':'超过预算'):'未设正预算';
-  const rows=[{amount:progress,color},{amount:100-progress,color:'#e5edf8'}];
-  return`<div class="money-ring-layout${compact?' money-ring-compact':''}"><div class="money-ring">${moneyRingSvg(rows,hasBudget?100:0,'预算使用 '+(valid?used:'待核对'))}<div class="money-ring-center"><span>已支出</span><strong style="color:${color}" class="${moneyRingAmount(spent).length>9?'money-ring-large':''}">${escHtml(moneyRingAmount(valid?spent:null))}</strong><small>${valid?used:'待核对'}</small></div></div><div class="money-ring-legend"><div class="money-ring-line"><i style="background:#378ADD"></i><span><b>预算</b><small>${escHtml(moneyRingAmount(valid?budget:null))}</small></span></div><div class="money-ring-line"><i style="background:${over?'#e53935':'#31a198'}"></i><span><b>${over?'超支':'剩余'}</b><small style="color:${over?'#c62828':'#2e7d32'}">${escHtml(moneyRingAmount(valid?Math.abs(budget-spent):null))}</small></span></div></div></div>`;
+  const label=valid?used:'待核对',description=valid?'预算 '+moneyRingAmount(budget)+'，已支出 '+moneyRingAmount(spent)+'，'+(over?'超支 ':'剩余 ')+moneyRingAmount(Math.abs(budget-spent)):'金额待核对';
+  return`<div class="ring-canvas-wrap"><svg viewBox="0 0 110 110" width="110" height="110" role="img" aria-label="预算使用 ${escHtml(label)}"><title>${escHtml(description)}</title><circle cx="55" cy="55" r="45" fill="none" stroke="${hasBudget?(over?'#ff8a80':'#C8E6C9'):'#e0e0e0'}" stroke-width="17"/>${hasBudget&&progress>0?`<circle class="budget-ring-progress" cx="55" cy="55" r="45" fill="none" stroke="#e53935" stroke-width="17" pathLength="100" stroke-dasharray="${progress} ${100-progress}" transform="rotate(-90 55 55)"/>`:''}</svg><div class="ring-center"><div class="ring-center-pct" style="color:${color};${label.length>5?'font-size:12px;line-height:1.4':''}">${escHtml(label)}</div></div></div>`;
 }
 function openRingCategory(cat,mode){window._pieMode=mode;openDetail('pie');openSubDetail(cat,'__all__');}
 // ─── Tab 切换（最先定义）───
@@ -903,14 +903,29 @@ function budgetRingData(){
 function fmtSigned(n){return(n<0?'-':'')+fmtN(n)}
 function budgetRingCard(){
   const r=budgetRingData();
-
+  const ringColor=r.pct<=70?'#43a047':r.pct<=90?'#F9A825':r.pct<=100?'#e65100':'#e53935';
+  const C=2*Math.PI*42;
+  const off=C*(1-Math.min(1,Math.max(0,r.pct/100)));
+  const remainColor=r.remain>=0?'#2e7d32':'#c62828';
   const mon=parseInt(r.mk.split('-')[1],10);
   return `<div class="bring-card">
     <div class="bring-top">
       <span class="bring-top-l">${r.settleDay===1?mon+'月预算':'本周期预算 · '+r.periodStart.slice(5)+'～'+r.periodEnd.slice(5)}</span>
       <span class="bring-top-v">${fmtSigned(r.totalBudget)}</span>
     </div>
-    ${renderBudgetRing(r.spent,r.totalBudget)}
+    <div class="bring-mid">
+      <div class="bring-ring">
+        <svg viewBox="0 0 100 100" width="92" height="92">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#eee" stroke-width="11"></circle>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="${ringColor}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"></circle>
+        </svg>
+        <span class="bring-ring-txt">${r.pct}%</span>
+      </div>
+      <div class="bring-cols">
+        <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a">${fmtN(r.spent)}</div><div class="bring-col-l">已消费</div></div>
+        <div class="bring-col"><div class="bring-col-v" style="color:${remainColor}">${fmtSigned(r.remain)}</div><div class="bring-col-l">剩余额度</div></div>
+      </div>
+    </div>
     <div class="bring-rows">
       <div class="bring-formula">日¥${fmtRaw(r.dailyBudget)}×${r.dim}天+零花¥${fmtRaw(r.pocket)}${r.prevCarry!==0?(r.prevCarry>0?'+':'-')+'结余¥'+fmtRaw(r.prevCarry):''}${r.income>0?'+收入¥'+fmtRaw(r.income):''}</div>
       <div class="bring-prow"><span class="bring-dot" style="background:#F9A825"></span><span class="bring-pl">日均消费</span><span class="bring-pv">${fmtN(r.avgSpent)}</span></div>
@@ -1755,7 +1770,7 @@ function getYearOverview(year){
 const reportExpandedCategories=new Set();
 function getReportCategoryRecords(mk,cat,asOf=todayStr()){
   return RC.filter(r=>typeof r.date==='string'&&r.date.startsWith(mk)&&r.date<=asOf&&r.type==='expense'&&r.cat===cat).sort((a,b)=>
-    b.date.localeCompare(a.date)||String(b.time||'').localeCompare(String(a.time||''))||((Number(b.ts)||0)-(Number(a.ts)||0)));
+    b.amount-a.amount||b.date.localeCompare(a.date)||String(b.time||'').localeCompare(String(a.time||''))||((Number(b.ts)||0)-(Number(a.ts)||0)));
 }
 function isReportCategoryExpanded(mk,cat){return reportExpandedCategories.has(JSON.stringify([mk,cat]));}
 function toggleReportCategory(mk,cat){
@@ -1765,10 +1780,9 @@ function toggleReportCategory(mk,cat){
   renderDetail();const next=document.querySelector('#detail-screen .detail-body');if(next)next.scrollTop=scroll;
 }
 function renderReportCategoryRecords(mk,cat,asOf=todayStr()){
-  const records=getReportCategoryRecords(mk,cat,asOf),groups=new Map();
-  for(const record of records){if(!groups.has(record.date))groups.set(record.date,[]);groups.get(record.date).push(record);}
+  const records=getReportCategoryRecords(mk,cat,asOf);
   if(!records.length)return'<div class="report-record-hint">这个月此分类暂无支出记录</div>';
-  return`<div class="report-category-records"><div class="report-record-hint">按日期排列 · 点击一笔查看或编辑</div>${[...groups].map(([date,rows])=>`<div class="d-txn-date">${escHtml(date)}</div>${rows.map(r=>`<button type="button" class="report-expense-record" onclick="openEdit(${jsAttr(r.ts)})"><span class="report-expense-body">${escHtml(r.label||'未命名支出')}${r.time?`<span class="report-expense-time">${escHtml(r.time)}</span>`:''}</span><span class="report-expense-amount">-${fmtN(r.amount)}</span></button>`).join('')}`).join('')}</div>`;
+  return`<div class="report-category-records"><div class="report-record-hint">按金额从高到低 · 点击一笔查看或编辑</div>${records.map(r=>`<button type="button" class="report-expense-record" onclick="openEdit(${jsAttr(r.ts)})"><span class="report-expense-body">${escHtml(r.label||'未命名支出')}<span class="report-expense-time">${escHtml(r.date)}${r.time?' · '+escHtml(r.time):''}</span></span><span class="report-expense-amount">-${fmtN(r.amount)}</span></button>`).join('')}</div>`;
 }
 function reportScrollTop(){const body=document.querySelector('#detail-screen .detail-body');if(body)body.scrollTop=0;}
 function setReportMode(mode){window._reportMode=mode==='month'?'month':'overview';renderDetail();reportScrollTop();}
@@ -1991,12 +2005,17 @@ function renderApp(){
         </div>
         <div class="card" onclick="openDetail('budget')">
           <div class="card-hdr"><span class="card-title">${ST.purpose==='budget'?'今日预算':'支出概览'}</span>${bal!=null?`<span class="card-badge" style="background:${(bal||0)<0?'#FFEBEE':'#E8F5E9'};color:${(bal||0)<0?'#c62828':'#2e7d32'}">可用余额 ${(bal||0)<0?'-':''}${fmtRaw(Math.abs(bal||0))}</span>`:''}</div>
-          ${renderBudgetRing(todaySpent,budget,true)}
+          <div class="bring-stats" style="margin-bottom:10px">
+            <div class="bring-col"><div class="bring-col-v" style="color:#1a1a1a;font-size:14px">${fmtRaw(budget)}</div><div class="bring-col-l">预算</div></div>
+            <div class="bring-col"><div class="bring-col-v" style="color:#e53935;font-size:14px">${fmtRaw(todaySpent)}</div><div class="bring-col-l">支出</div></div>
+            <div class="bring-col"><div class="bring-col-v" style="color:${dailyRemaining!=null&&dailyRemaining<0?'#c62828':'#2e7d32'};font-size:14px">${dailyRemaining!=null?(dailyRemaining<0?'-':'')+fmtRaw(Math.abs(dailyRemaining)):'—'}</div><div class="bring-col-l">剩余</div></div>
+          </div>
           <div class="ring-area">
+            ${renderBudgetRing(todaySpent,budget)}
             <div class="budget-predict ${predictClass}">${predictText}</div>
           </div>
         </div>
-        <div class="card" style="grid-column:1/-1" onclick="openDetail('reimb')">
+        <div class="card" onclick="openDetail('reimb')">
           <div class="card-hdr"><span class="card-title">报销</span><span class="card-expand">展开 ›</span></div>
           <div class="reimb-stat">
             <div class="rs-item"><div class="rs-v" style="color:#185FA5">${fmtN(pendAmt)}</div><div class="rs-l">待报销</div></div>
@@ -2005,9 +2024,9 @@ function renderApp(){
           ${urgentReimb.length?urgentReimb.slice(0,2).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span><span class="rmr-dl">${daysLeft(r.deadline)}天</span></div>`).join(''):pendR.slice(0,3).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span></div>`).join('')}
           ${reimbFooter}
         </div>
-        <div class="card" style="grid-column:1/-1" onclick="openDetail('pie')">
+        <div class="card" onclick="openDetail('pie')">
           <div class="card-hdr"><span class="card-title">支出分类</span><span class="card-expand">展开 ›</span></div>
-          ${renderMoneyRing(catE.map(([name,amount],i)=>({name,amount,color:PIE_COLORS[i%PIE_COLORS.length]})),{label:'总支出',maxRows:4,mode:'expense'})}
+          ${renderMoneyRing(catE.map(([name,amount],i)=>({name,amount,color:PIE_COLORS[i%PIE_COLORS.length]})),{label:'总支出',compact:true,maxRows:2,mode:'expense'})}
         </div>
       </div>
       ${budgetRingCard()}
