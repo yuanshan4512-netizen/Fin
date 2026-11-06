@@ -712,20 +712,23 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 
 /* Compact, equal-height diary cards. Other panels retain their layout. */
 .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
-.cards-grid>.card{min-width:0;display:flex;flex-direction:column;padding:10px 10px 8px}
-.cards-grid .card-hdr{min-width:0;gap:3px;margin-bottom:5px}
+.cards-grid>.card{min-width:0;min-height:230px;display:flex;flex-direction:column;padding:12px 10px 10px}
+.cards-grid .card-hdr{min-width:0;gap:3px;margin-bottom:8px}
 .cards-grid .card-title{white-space:nowrap;letter-spacing:0}
 .cards-grid .card-badge{font-size:8px;padding:2px 5px;min-width:0;overflow-wrap:anywhere;text-align:right}
-.cards-grid .mcc{aspect-ratio:auto;height:18px}
-.cards-grid .mini-cal-grid{gap:2px 1.5px}
-.cards-grid .cal-footer{margin-top:5px;padding-top:5px}
+.cards-grid .mcc{aspect-ratio:auto;height:24px}
+.cards-grid .mcd{font-size:10px}
+.cards-grid .mcn{margin-top:2px}
+.cards-grid .mini-wl{font-size:9px}
+.cards-grid .mini-cal-grid{gap:3px 2px}
+.cards-grid .cal-footer{margin-top:7px;padding-top:6px}
 .cards-grid .cal-footer-v{font-size:10px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .cards-grid .cal-footer-l{font-size:8px}
 .cards-grid .bring-stats{margin-bottom:4px!important}
 .cards-grid .bring-col{min-width:0}
 .cards-grid .bring-col-v{font-size:12px!important;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .cards-grid .bring-col-l{font-size:9px;margin-top:2px}
-.cards-grid .ring-area{gap:2px}
+.cards-grid .ring-area{flex:1;justify-content:space-evenly;gap:8px}
 .cards-grid .budget-predict{font-size:8px;line-height:1.5;margin-top:2px;padding-top:4px;overflow-wrap:anywhere}
 .diary-budget-ring{position:relative;width:84px;height:84px;flex:0 0 84px;margin:0 auto}
 .diary-budget-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
@@ -741,7 +744,17 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 .cards-grid .money-ring-line small{line-height:1.4}
 .cards-grid .reimb-footer{overflow-wrap:anywhere}
 .cards-grid{grid-auto-rows:1fr}
-@media(min-width:410px){.cards-grid .mcc{height:19px}.cards-grid .money-ring-compact .money-ring{width:84px;height:84px;flex-basis:84px}}
+@media(min-width:410px){.cards-grid .money-ring-compact .money-ring{width:84px;height:84px;flex-basis:84px}}
+.cards-grid .card-category .money-ring-layout{flex-direction:column;justify-content:center;gap:9px;margin:0}
+.cards-grid .card-category .money-ring{width:90px;height:90px;flex-basis:90px}
+.cards-grid .card-category .money-ring-center strong{font-size:13px}
+.cards-grid .card-category .money-ring-center strong.money-ring-large{font-size:9px}
+.cards-grid .card-category .money-ring-legend{width:100%;flex:0 0 auto;gap:0}
+.cards-grid .card-category .money-ring-line{width:100%;min-height:29px;gap:5px;padding:5px 0;border-bottom:.5px solid #f0f3f7}
+.cards-grid .card-category .money-ring-line:last-child{border-bottom:0}
+.cards-grid .card-category .money-ring-line>span{display:flex;align-items:baseline;justify-content:space-between;gap:4px;min-width:0}
+.cards-grid .card-category .money-ring-line b{min-width:0;font-size:10px;flex:1}
+.cards-grid .card-category .money-ring-line small{margin-top:0;max-width:75%;font-size:9px;line-height:1.4;text-align:right;overflow-wrap:break-word}
 
 </style>
 </head>
@@ -2059,7 +2072,7 @@ function renderApp(){
           ${urgentReimb.length?urgentReimb.slice(0,2).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span><span class="rmr-dl">${daysLeft(r.deadline)}天</span></div>`).join(''):pendR.slice(0,3).map(r=>`<div class="reimb-mini-row"><span class="rmr-name">${escHtml(r.name)}</span><span class="rmr-amt">${fmtN(r.amount)}</span></div>`).join('')}
           ${reimbFooter}
         </div>
-        <div class="card" onclick="openDetail('pie')">
+        <div class="card card-category" onclick="openDetail('pie')">
           <div class="card-hdr"><span class="card-title">支出分类</span><span class="card-expand">展开 ›</span></div>
           ${renderMoneyRing(catE.map(([name,amount],i)=>({name,amount,color:PIE_COLORS[i%PIE_COLORS.length]})),{label:'总支出',compact:true,maxRows:2,mode:'expense'})}
         </div>
