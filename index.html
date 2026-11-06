@@ -709,6 +709,40 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 #panel-diary .shell{max-width:none!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;position:relative!important;overflow:hidden!important;}
 #panel-monthly .shell{max-width:none;width:100%;min-height:0;height:100%;overflow-y:auto;margin:0;position:relative;}
 #panel-finance .shell{max-width:none;width:100%;min-height:0;height:100%;overflow-y:auto;margin:0;position:relative;}
+
+/* Compact, equal-height diary cards. Other panels retain their layout. */
+.cards-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+.cards-grid>.card{min-width:0;display:flex;flex-direction:column;padding:10px 10px 8px}
+.cards-grid .card-hdr{min-width:0;gap:3px;margin-bottom:5px}
+.cards-grid .card-title{white-space:nowrap;letter-spacing:0}
+.cards-grid .card-badge{font-size:8px;padding:2px 5px;min-width:0;overflow-wrap:anywhere;text-align:right}
+.cards-grid .mcc{aspect-ratio:auto;height:18px}
+.cards-grid .mini-cal-grid{gap:2px 1.5px}
+.cards-grid .cal-footer{margin-top:5px;padding-top:5px}
+.cards-grid .cal-footer-v{font-size:10px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.cards-grid .cal-footer-l{font-size:8px}
+.cards-grid .bring-stats{margin-bottom:4px!important}
+.cards-grid .bring-col{min-width:0}
+.cards-grid .bring-col-v{font-size:12px!important;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.cards-grid .bring-col-l{font-size:9px;margin-top:2px}
+.cards-grid .ring-area{gap:2px}
+.cards-grid .budget-predict{font-size:8px;line-height:1.5;margin-top:2px;padding-top:4px;overflow-wrap:anywhere}
+.diary-budget-ring{position:relative;width:84px;height:84px;flex:0 0 84px;margin:0 auto}
+.diary-budget-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.diary-budget-center{position:absolute;inset:15px 6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;text-align:center;pointer-events:none}
+.diary-budget-center span{font-size:8px;color:#8893a1}
+.diary-budget-center strong{font-size:17px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.diary-budget-center strong.long{font-size:10px;letter-spacing:0}
+.cards-grid .money-ring-layout{margin:4px 0;flex:1;gap:5px}
+.cards-grid .money-ring-compact .money-ring{width:76px;height:76px;flex-basis:76px}
+.cards-grid .money-ring-compact .money-ring-center strong{font-size:11px}
+.cards-grid .money-ring-compact .money-ring-center strong.money-ring-large{font-size:8px}
+.cards-grid .money-ring-legend{gap:4px}
+.cards-grid .money-ring-line small{line-height:1.4}
+.cards-grid .reimb-footer{overflow-wrap:anywhere}
+.cards-grid{grid-auto-rows:1fr}
+@media(min-width:410px){.cards-grid .mcc{height:19px}.cards-grid .money-ring-compact .money-ring{width:84px;height:84px;flex-basis:84px}}
+
 </style>
 </head>
 <body>
@@ -804,11 +838,12 @@ function renderMoneyRing(rows,{label='总金额',compact=false,maxRows=6,mode=nu
 function renderBudgetRing(spent,budget){
   const valid=typeof spent==='number'&&typeof budget==='number'&&Number.isFinite(spent)&&Number.isFinite(budget)&&spent>=0&&Math.max(spent,Math.abs(budget))<=Number.MAX_SAFE_INTEGER/100;
   const hasBudget=valid&&budget>0,pct=hasBudget?spent/budget*100:null,over=valid&&spent>budget;
-  const color=over?'#c62828':pct>80?'#e65100':'#1a1a1a';
-  const progress=hasBudget?(over?budget/spent*100:Math.min(100,pct)):0;
+  const color=over?'#e53935':pct>80?'#d8a331':'#2a66cf';
+  const progress=hasBudget?Math.min(100,pct):0;
   const used=hasBudget?(Number.isFinite(pct)&&pct<1000000?Math.round(pct)+'%':'超过预算'):'未设正预算';
   const label=valid?used:'待核对',description=valid?'预算 '+moneyRingAmount(budget)+'，已支出 '+moneyRingAmount(spent)+'，'+(over?'超支 ':'剩余 ')+moneyRingAmount(Math.abs(budget-spent)):'金额待核对';
-  return`<div class="ring-canvas-wrap"><svg viewBox="0 0 110 110" width="110" height="110" role="img" aria-label="预算使用 ${escHtml(label)}"><title>${escHtml(description)}</title><circle cx="55" cy="55" r="45" fill="none" stroke="${hasBudget?(over?'#ff8a80':'#C8E6C9'):'#e0e0e0'}" stroke-width="17"/>${hasBudget&&progress>0?`<circle class="budget-ring-progress" cx="55" cy="55" r="45" fill="none" stroke="#e53935" stroke-width="17" pathLength="100" stroke-dasharray="${progress} ${100-progress}" transform="rotate(-90 55 55)"/>`:''}</svg><div class="ring-center"><div class="ring-center-pct" style="color:${color};${label.length>5?'font-size:12px;line-height:1.4':''}">${escHtml(label)}</div></div></div>`;
+  const rows=[{amount:progress,color},{amount:100-progress,color:'#e3eaf5'}];
+  return`<div class="diary-budget-ring" title="${escHtml(description)}">${moneyRingSvg(rows,hasBudget?100:0,'预算使用 '+label)}<div class="diary-budget-center"><span>已使用</span><strong class="${label.length>5?'long':''}" style="color:${over?'#c62828':'#1a1a1a'}">${escHtml(label)}</strong></div></div>`;
 }
 function openRingCategory(cat,mode){window._pieMode=mode;openDetail('pie');openSubDetail(cat,'__all__');}
 // ─── Tab 切换（最先定义）───
