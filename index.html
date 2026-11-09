@@ -1931,17 +1931,19 @@ function calCellsHtml(prefix,clickFn,selD,mk){
   const dim=new Date(yr,mo,0).getDate();
   const todS=todayStr();const dayMap=buildDayMap();
   const budget=parseFloat(ST.budget)||50;
-  const off=firstDay===7?0:firstDay-1;
+  const off=firstDay-1; // 表头从周一开始，周日应在第七列
   let html='';
   for(let i=0;i<off;i++)html+=`<div class="${prefix}cc emp"></div>`;
   for(let d=1;d<=dim;d++){
     const ds=yr+'-'+pad2(mo)+'-'+pad2(d);
     const dm=dayMap[ds];const isToday=ds===todS;const isSel=ds===selD;
     let bg='#f0f0f0',txt='#1a1a1a',netTxt='';
+    const net=dm?dm.in-dm.out:0;
     if(isToday){bg='#378ADD';txt='#fff';}
-    else if(dm){const net=dm.in-dm.out;if(Math.abs(net)>=0.5){const c=cellColor(net,budget);bg=c.bg;txt=c.txt;netTxt=`<span class="${prefix}cn" style="color:${txt};opacity:.9">${net<0?'-':'+'}${Math.round(Math.abs(net))}</span>`;}}
+    else if(Math.abs(net)>=0.5){const c=cellColor(net,budget);bg=c.bg;txt=c.txt;}
+    if(Math.abs(net)>=0.5)netTxt=`<span class="${prefix}cn" style="color:${txt};opacity:.9">${net<0?'-':'+'}${Math.round(Math.abs(net))}</span>`;
     const selStyle=isSel&&!isToday?'outline:2px solid #378ADD;outline-offset:-1px;':'';
-    html+=`<div class="${prefix}cc" style="background:${bg};${selStyle}" onclick="${clickFn}(${jsAttr(ds)})"><span class="${prefix}cd" style="color:${txt}">${d}</span>${netTxt}</div>`;
+    html+=`<div class="${prefix}cc" style="background:${bg};${selStyle}" onclick="event.stopPropagation();${clickFn}(${jsAttr(ds)})"><span class="${prefix}cd" style="color:${txt}">${d}</span>${netTxt}</div>`;
   }
   return html;
 }
@@ -2105,7 +2107,7 @@ function switchMonth(dir){
   if(detailView)renderDetail();
   else showApp();
 }
-function selDay(ds){selDate=ds;showApp()}
+function selDay(ds){selDate=ds;detailSel=ds;openDetail('cal')}
 function openDetail(view){
   if(view==='report'){window._reportMode='overview';window._reportYear=new Date().getFullYear();}
   detailView=view;
