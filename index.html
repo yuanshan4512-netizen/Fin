@@ -826,13 +826,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
             <span class="settings-row-icon" aria-hidden="true">📋</span><span class="settings-row-copy"><span class="settings-row-title">账单设置</span><span class="settings-row-note">生活费、零花钱与提醒</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
           </button>
         </div>
-        <div class="settings-section-title">数据管理</div>
+        <div class="settings-section-title">数据与备份</div>
         <div class="settings-group">
-          <button type="button" class="settings-row" onclick="S_open('all-data')">
-            <span class="settings-row-icon" aria-hidden="true">🗂️</span><span class="settings-row-copy"><span class="settings-row-title">全部数据</span><span class="settings-row-note">完整账本的导入、导出与云备份</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
-          </button>
-          <button type="button" class="settings-row" onclick="S_open('finance-data')">
-            <span class="settings-row-icon" aria-hidden="true">📈</span><span class="settings-row-copy"><span class="settings-row-title">财务数据</span><span class="settings-row-note">财务总览的导入、导出与云备份</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
+          <button type="button" class="settings-row" onclick="S_open('data')">
+            <span class="settings-row-icon" aria-hidden="true">🗂️</span><span class="settings-row-copy"><span class="settings-row-title">数据管理</span><span class="settings-row-note">完整账本的导入、导出与云备份</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
           </button>
         </div>
       </div>
@@ -939,10 +936,8 @@ function S_open(section){
     }else if(section==='monthly'){
       if(!_tabInited.monthly){M_loadData();_tabInited.monthly=true;}
       M_modal='settings';M_renderSettingsModal();
-    }else if(section==='all-data'){
+    }else if(section==='data'||section==='all-data'||section==='finance-data'){
       modal='data';renderDataModal();
-    }else if(section==='finance-data'){
-      F_modal='data-f';F_renderDataModal();
     }
   }catch(e){S_close();showToast('暂时无法打开，请刷新后重试');console.warn('settings:',e);}
 }
@@ -1607,7 +1602,7 @@ function exportData(){
     a.download=`财务管家_全部_${new Date().getMonth()+1}月${new Date().getDate()}日${new Date().getFullYear()}.json`;
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     const s=ld();s.lastBackupAt=new Date().toISOString();sv(s);
-    showToast('全部数据备份已下载');
+    showToast('完整备份已下载');
   }catch(e){showToast('备份失败，请检查本地数据或浏览器存储权限');}
 }
 function triggerImport(){document.getElementById('backup-file')?.click()}
@@ -2620,15 +2615,15 @@ function openAdd(){selDate=currentEntryDate();modal='add';mType='expense';mCat='
 function openEdit(ts){mTs=ts;modal='edit';const r=RC.find(r=>r.ts===ts);if(!r)return;mType=r.type;mCat=r.cat;detailView?renderDetail():showApp()}
 function openReimbAdd(){modal='reimb-add';mTs=null;tmpR={hasInvoice:false,invoiceStatus:'未开',reimbursed:false,deadline:'',cat:'其他'};detailView?renderDetail():showApp()}
 function openReimbEdit(ts){mTs=ts;modal='reimb-edit';const r=RM.find(r=>r.ts===ts);if(!r)return;tmpR={hasInvoice:r.hasInvoice||false,invoiceStatus:r.invoiceStatus||'未开',reimbursed:r.reimbursed||false,deadline:r.deadline||'',cat:r.cat||'其他'};detailView?renderDetail():showApp()}
-function openDataCenter(){modal='data';detailView?renderDetail():showApp()}
+function openDataCenter(){S_open('data')}
 function openSettings(){modal='settings-panel';detailView?renderDetail():showApp()}
 function renderDataModal(){
   const ov=mkOverlay();
-  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">数据备份与恢复</div>
+  ov.innerHTML=`<div class="modal-sheet"><div class="mhandle"></div><div class="mtitle">数据管理</div>
     <div class="data-note">导出包含记账、报销、本月账单和财务总览。完整备份恢复全部模块；旧版或部分备份只恢复包含的数据。</div>
     <div class="data-actions">
       <button class="data-btn" onclick="triggerImport()">📥 导入备份</button>
-      <button class="data-btn primary" onclick="exportData()">📤 导出全部备份</button>
+      <button class="data-btn primary" onclick="exportData()">📤 导出完整备份</button>
       <button class="data-btn" style="grid-column:1/-1" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
     </div>
     <input id="backup-file" type="file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
@@ -4729,7 +4724,7 @@ function F_submitEditSellRecord(stId,recIdx){
   F_saveData({capture:true});F_modal='stock-detail';F_renderMain();showToast_f('✓ 卖出记录已更新');
 }
 function F_deleteSellRecord(stId,recIdx){return F_setFinanceHidden('sell',stId,recIdx,true,null,'stock-detail');}
-function F_openData(){F_modal='data-f';F_renderMain();}
+function F_openData(){openDataCenter();}
 function showToast_f(msg){
   const el=document.createElement('div');
   el.style.cssText='position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;z-index:999;pointer-events:none;white-space:nowrap;';
@@ -4891,7 +4886,7 @@ function CB_uploadBackup(options={}){
       const message=CB_errorMessage(code);
       if(code!=='CANCELLED')try{CB_updateState(c,revision,{lastError:message});}catch(e){}
       CB_paintStatus(message);
-      if(code!=='CANCELLED')CB_showToast('云备份失败，请到设置 → 全部数据 → GitHub 云备份查看');
+      if(code!=='CANCELLED')CB_showToast('云备份失败，请到设置 → 数据管理 → GitHub 云备份查看');
       return{ok:false,code,error:message};
     }
   };
