@@ -709,6 +709,22 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
 #panel-diary .shell{max-width:none!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;position:relative!important;overflow:hidden!important;}
 #panel-monthly .shell{max-width:none;width:100%;min-height:0;height:100%;overflow-y:auto;margin:0;position:relative;}
 #panel-finance .shell{max-width:none;width:100%;min-height:0;height:100%;overflow-y:auto;margin:0;position:relative;}
+#panel-settings{background:#f5f6fa;}
+#panel-settings .modal-overlay{position:absolute;}
+#panel-settings .modal-sheet,#panel-settings .f-sheet{position:relative;}
+.settings-body{flex:1;min-height:0;overflow-y:auto;padding:20px 16px 24px;}
+.settings-section-title{font-size:12px;font-weight:600;color:#888;margin:0 4px 9px;}
+.settings-group{background:#fff;border:.5px solid #e8e8e8;border-radius:14px;overflow:hidden;margin-bottom:22px;}
+.settings-row{display:flex;align-items:center;gap:12px;width:100%;padding:16px 14px;background:#fff;border:0;text-align:left;font:inherit;cursor:pointer;color:#1a1a1a;}
+.settings-row+.settings-row{border-top:.5px solid #f0f0f0;}
+.settings-row:active{background:#f7f9fc;}
+.settings-row-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:10px;background:#edf5ff;font-size:19px;}
+.settings-row-copy{flex:1;min-width:0;}
+.settings-row-title{display:block;font-size:14px;font-weight:600;line-height:1.5;}
+.settings-row-note{display:block;margin-top:3px;font-size:11px;line-height:1.6;color:#999;}
+.settings-row-arrow{color:#bbb;font-size:22px;font-weight:300;}
+.settings-sheet-close{position:absolute;right:14px;top:17px;width:30px;height:30px;border:0;border-radius:50%;background:#f4f5f7;color:#888;font-size:21px;line-height:1;cursor:pointer;}
+#panel-settings .mtitle,#panel-settings .f-sheet-title{padding-right:34px;}
 
 /* Each diary row shares a height; the summary row stays compact. */
 .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:auto;align-items:stretch}
@@ -780,7 +796,6 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
       <span class="topbar-title">本月账单</span>
       <span class="topbar-month" id="M_month_label"></span>
     </div>
-    <button class="settbtn" style="color:#378ADD;border-color:#c8dff5;background:#f0f7ff;" onclick="M_openSettings()">设置</button>
   </div>
   <div class="scroll-body"><div id="M_main"></div></div>
 </div>
@@ -794,11 +809,32 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
       
       <span class="topbar-title" style="color:#1a1a1a">财务总览</span>
     </div>
-    <div class="topbar-right">
-      <button class="settbtn" onclick="F_openData()">数据</button>
-    </div>
   </div>
   <div class="scroll-body"><div id="F_main"></div></div>
+      </div>
+    </div>
+    <!-- 统一设置与数据管理 -->
+    <div class="tab-panel" id="panel-settings">
+      <div class="appbar"><div class="apptitle">设置</div></div>
+      <div class="settings-body">
+        <div class="settings-section-title">记账与账单</div>
+        <div class="settings-group">
+          <button type="button" class="settings-row" onclick="S_open('diary')">
+            <span class="settings-row-icon" aria-hidden="true">📒</span><span class="settings-row-copy"><span class="settings-row-title">记账设置</span><span class="settings-row-note">预算、零花钱与报销显示</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="settings-row" onclick="S_open('monthly')">
+            <span class="settings-row-icon" aria-hidden="true">📋</span><span class="settings-row-copy"><span class="settings-row-title">账单设置</span><span class="settings-row-note">生活费、零花钱与提醒</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+        <div class="settings-section-title">数据管理</div>
+        <div class="settings-group">
+          <button type="button" class="settings-row" onclick="S_open('all-data')">
+            <span class="settings-row-icon" aria-hidden="true">🗂️</span><span class="settings-row-copy"><span class="settings-row-title">全部数据</span><span class="settings-row-note">完整账本的导入、导出与云备份</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="settings-row" onclick="S_open('finance-data')">
+            <span class="settings-row-icon" aria-hidden="true">📈</span><span class="settings-row-copy"><span class="settings-row-title">财务数据</span><span class="settings-row-note">财务总览的导入、导出与云备份</span></span><span class="settings-row-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -812,6 +848,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC'
     </button>
     <button class="tab-btn" id="tab-finance" onclick="switchTab('finance')">
       <span class="tab-icon">📈</span><span class="tab-label">财务</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')">
+      <span class="tab-icon">⚙️</span><span class="tab-label">设置</span>
     </button>
   </div>
 </div>
@@ -864,18 +903,48 @@ function openRingCategory(cat,mode){window._pieMode=mode;openDetail('pie');openS
 let _currentTab='diary';
 let _tabInited={'diary':false,'monthly':false,'finance':false};
 function switchTab(tab){
+  if(tab==='settings'||_currentTab==='settings')S_close();
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
   _currentTab=tab;
   if(tab==='diary'){
-    try{if(typeof showApp==='function')showApp();}catch(e){console.warn('diary:',e)}
+    try{if(ST)showApp();else showQuiz();}catch(e){console.warn('diary:',e)}
   }else if(tab==='monthly'){
     try{if(!_tabInited.monthly){M_loadData();_tabInited.monthly=true;}M_renderMain();}catch(e){console.warn('monthly:',e)}
   }else if(tab==='finance'){
     try{if(!_tabInited.finance){F_loadData();_tabInited.finance=true;}F_autoInvest();F_renderMain();}catch(e){console.warn('finance:',e)}
   }
+}
+
+// Settings reuse the original forms and import scopes without entering finance
+// or running its automatic investment processing.
+function S_close(){
+  modal=null;M_modal=null;F_modal=null;
+  document.querySelectorAll('.tab-panel .modal-overlay').forEach(el=>el.remove());
+}
+function S_mountSheet(overlay,source){
+  const inSettings=_currentTab==='settings';
+  if(inSettings)overlay.querySelector('.modal-sheet,.f-sheet')?.insertAdjacentHTML('afterbegin','<button type="button" class="settings-sheet-close" aria-label="关闭" onclick="S_close()">×</button>');
+  document.getElementById(inSettings?'panel-settings':'panel-'+source).appendChild(overlay);
+}
+function S_open(section){
+  if(_currentTab!=='settings')switchTab('settings');
+  S_close();
+  try{
+    if(section==='diary'){
+      if(!ST){switchTab('diary');showToast('请先完成记账初始化，再调整设置');return;}
+      modal='settings-panel';renderSettingsPanel();
+    }else if(section==='monthly'){
+      if(!_tabInited.monthly){M_loadData();_tabInited.monthly=true;}
+      M_modal='settings';M_renderSettingsModal();
+    }else if(section==='all-data'){
+      modal='data';renderDataModal();
+    }else if(section==='finance-data'){
+      F_modal='data-f';F_renderDataModal();
+    }
+  }catch(e){S_close();showToast('暂时无法打开，请刷新后重试');console.warn('settings:',e);}
 }
 
 // ─── 记账日记 JS ───
@@ -1125,7 +1194,7 @@ function showSummary(){
   document.getElementById('quiz-screen').innerHTML=`<div class="quiz-wrap">
     <div style="font-size:38px;text-align:center;margin-bottom:8px">🎉</div>
     <div class="qtitle" style="text-align:center;margin-bottom:4px">设置好啦！</div>
-    <div class="qsub" style="text-align:center;margin-bottom:14px">零花钱、报销显示等更多设置<br>可以在右上角「设置」里修改</div>
+    <div class="qsub" style="text-align:center;margin-bottom:14px">零花钱、报销显示等更多设置<br>可以在底部「设置」→「记账设置」里修改</div>
     <div class="sumcard">${rows}</div>
     <button class="finbtn" onclick="finishQ()">开始记账 →</button>
   </div>`;
@@ -1543,6 +1612,7 @@ function exportData(){
 }
 function triggerImport(){document.getElementById('backup-file')?.click()}
 function refreshAfterImport(){
+  if(_currentTab==='settings')S_close();
   modal=null;F_modal=null;M_modal=null;
   const state=ld();
   if(state.setupDone){ST=state.settings;RC=state.records||[];RM=state.reimbs||[];}
@@ -1677,7 +1747,7 @@ function budgetState(asOf=todayStr()){
 
 function currentEntryDate(){return detailView==='cal'?detailSel:selDate}
 function normalizeTime(v){const m=String(v||'').match(/([01]?\d|2[0-3])[:：点](\d{1,2})?/);return m?pad2(m[1])+':'+pad2(m[2]||0):nowStr()}
-function showToast(msg){const shell=document.getElementById('panel-diary');if(!shell)return;const old=shell.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;shell.appendChild(t);setTimeout(()=>t.remove(),1600)}
+function showToast(msg){const shell=document.getElementById(_currentTab==='settings'?'panel-settings':'panel-diary');if(!shell)return;const old=shell.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;shell.appendChild(t);setTimeout(()=>t.remove(),1600)}
 
 // ─── 月统计辅助 ───
 function getMonthStats(mk,asOf='9999-12-31'){
@@ -2045,7 +2115,7 @@ function renderApp(){
   const compareText=wc.diff===0?'与上周持平':wc.diff>0?`↑ 比上周多 ${fmtN(Math.abs(wc.diff))}`:`↓ 比上周少 ${fmtN(Math.abs(wc.diff))}`;
 
   document.getElementById('app-screen').innerHTML=`
-    <div class="appbar"><a href="../" style="font-size:20px;text-decoration:none;color:#888;margin-right:8px">←</a><div class="apptitle">记账日记</div><div class="app-actions"><button class="settbtn" onclick="openDetail('report')">统计</button><button class="settbtn" onclick="openDataCenter()">数据</button><button class="settbtn" onclick="openSettings()">设置</button></div></div>
+    <div class="appbar"><a href="../" style="font-size:20px;text-decoration:none;color:#888;margin-right:8px">←</a><div class="apptitle">记账日记</div><div class="app-actions"><button class="settbtn" onclick="openDetail('report')">统计</button></div></div>
     <div class="scroll-body">
       <div class="cards-grid">
         <div class="card" onclick="openDetail('cal')">
@@ -2444,7 +2514,7 @@ function renderSettingsPanel(){
   const p=periodBounds(todayStr());
   ov.innerHTML=`<div class="modal-sheet">
     <div class="mhandle"></div>
-    <div class="mtitle">设置</div>
+    <div class="mtitle">记账设置</div>
     <div class="msec-title" style="font-size:12px;font-weight:600;color:#aaa;margin-bottom:8px">预算设置</div>
     <div style="background:#f0f7ff;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#1565C0;line-height:1.7">
       修改后从<b>下个周期</b>（${p.end} 之后）生效<br>历史周期数据不受影响
@@ -2486,7 +2556,7 @@ function renderSettingsPanel(){
     </div>
     <button class="msub" onclick="saveOtherSettings()">保存其他设置</button>
   </div>`;
-  document.getElementById('panel-diary').appendChild(ov);
+  S_mountSheet(ov,'diary');
 }
 function saveSettingsPanel(){
   // 下个周期生效
@@ -2497,7 +2567,7 @@ function saveSettingsPanel(){
   // 找下个周期开始日
   const nextStart=new Date(p.end+'T00:00:00');nextStart.setDate(nextStart.getDate()+1);
   applyBudgetChange(daily,extra,dateStr(nextStart));
-  modal=null;showToast('已保存，下个周期生效');detailView?renderDetail():showApp();
+  modal=null;showToast('已保存，下个周期生效');if(_currentTab==='settings'){S_close();return;}detailView?renderDetail():showApp();
 }
 function saveSettingsPanelNow(){
   // 立即生效（当前周期）
@@ -2506,7 +2576,7 @@ function saveSettingsPanelNow(){
   const extra=Number(document.getElementById('s-extra')?.value);
   if(!Number.isFinite(daily)||daily<=0||!Number.isFinite(extra)||extra<0){showToast('请输入有效日预算和非负零花钱');return;}
   applyBudgetChange(daily,extra,p.start);
-  modal=null;showToast('已立即生效');detailView?renderDetail():showApp();
+  modal=null;showToast('已立即生效');if(_currentTab==='settings'){S_close();return;}detailView?renderDetail():showApp();
 }
 function saveOtherSettings(){
   const day=Number(document.getElementById('s-settle')?.value);
@@ -2517,7 +2587,7 @@ function saveOtherSettings(){
   ST.show_reimb=document.getElementById('s-reimb')?.value||'no';
   ST.decimals=document.getElementById('s-dec')?.value||'2';
   const s=ld();s.settings=ST;sv(s);
-  modal=null;showToast('设置已保存');detailView?renderDetail():showApp();
+  modal=null;showToast('设置已保存');if(_currentTab==='settings'){S_close();return;}detailView?renderDetail():showApp();
 }
 
 function renderExtraEditModal(){
@@ -2543,7 +2613,7 @@ function saveExtraEdit(){
   modal=null;showToast('零花钱已更新');detailView?renderDetail():showApp();
 }
 
-function mkOverlay(){const ov=document.createElement('div');ov.className='modal-overlay';ov.addEventListener('click',e=>{if(e.target===ov){modal=null;detailView?renderDetail():showApp()}});return ov;}
+function mkOverlay(){const ov=document.createElement('div');ov.className='modal-overlay';ov.addEventListener('click',e=>{if(e.target===ov){if(_currentTab==='settings'){S_close();return;}modal=null;detailView?renderDetail():showApp()}});return ov;}
 function mTypeBtns(){return`<button class="mtbtn${mType==='expense'?' so':''}" onclick="setMType('expense')">− 支出</button><button class="mtbtn${mType==='income'?' si':''}" onclick="setMType('income')">+ 收入</button>`}
 function mCatsHtml(){const cats=mType==='income'?ICATS:ECATS;return cats.map(c=>`<div class="mcat${mCat===c.k?' sel':''}" onclick="setMCat(${jsAttr(c.k)})">${c.i} ${c.k}</div>`).join('')}
 function openAdd(){selDate=currentEntryDate();modal='add';mType='expense';mCat='餐饮';mTs=null;detailView?renderDetail():showApp()}
@@ -2563,7 +2633,7 @@ function renderDataModal(){
     </div>
     <input id="backup-file" type="file" accept="application/json,.json" style="display:none" onchange="importDataFile(this)">
   </div>`;
-  document.getElementById('panel-diary').appendChild(ov);
+  S_mountSheet(ov,'diary');
 }
 function renderAddModal(){
   const ov=mkOverlay();
@@ -2853,7 +2923,7 @@ function M_checkModal(){
 }
 function M_mkOverlay(){
   const ov=document.createElement('div');ov.className='modal-overlay';
-  ov.addEventListener('click',e=>{if(e.target===ov){M_modal=null;M_editTarget=null;M_renderMain()}});
+  ov.addEventListener('click',e=>{if(e.target===ov){if(_currentTab==='settings'){S_close();return;}M_modal=null;M_editTarget=null;M_renderMain()}});
   return ov;
 }
 function M_openBillEdit(id){M_modal='bill-edit';M_editTarget=id;M_renderMain()}
@@ -2975,7 +3045,7 @@ function M_renderSettingsModal(){
   const ov=M_mkOverlay();
   ov.innerHTML=`<div class="modal-sheet">
     <div class="mhandle"></div>
-    <div class="mtitle">设置</div>
+    <div class="mtitle">账单设置</div>
     <div class="msec-title">生活费</div>
     <div class="mfields">
       <div class="mfield"><span class="mflbl">日单价</span><input id="s-daily" type="number" inputmode="decimal" min="0" step="1" value="${escHtml(M_CFG.dailyLife||50)}"><span style="font-size:12px;color:#aaa;margin-left:4px">元/天（自动×当月天数）</span></div>
@@ -2990,7 +3060,7 @@ function M_renderSettingsModal(){
     </div>
     <button class="msub" onclick="M_saveSettings()">保存</button>
   </div>`;
-  document.getElementById('panel-monthly').appendChild(ov);
+  S_mountSheet(ov,'monthly');
 }
 function M_saveSettings(){
   const daily=parseFloat(document.getElementById('s-daily')?.value);
@@ -2999,7 +3069,7 @@ function M_saveSettings(){
   const pIdx=M_CFG.budgets.findIndex(b=>b.id==='pocket');
   if(pIdx>=0&&pocket>=0)M_CFG.budgets[pIdx].amount=pocket;
   M_CFG.alertDays=parseInt(document.getElementById('s-alert')?.value)||3;
-  M_saveData();M_modal=null;M_renderMain();
+  M_saveData();M_modal=null;if(_currentTab==='settings'){S_close();showToast('账单设置已保存');return;}M_renderMain();
 }
 
 
@@ -3732,7 +3802,7 @@ function F_checkModal(){
 function mkOv_f(){
   const ov=document.createElement('div');ov.className='modal-overlay';
   ov.style.cssText='position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;flex-direction:column;justify-content:flex-end;z-index:100;';
-  ov.addEventListener('click',e=>{if(e.target===ov){F_modal=null;F_editId=null;F_editSub=null;F_renderMain();}});
+  ov.addEventListener('click',e=>{if(e.target===ov){if(_currentTab==='settings'){S_close();return;}F_modal=null;F_editId=null;F_editSub=null;F_renderMain();}});
   return ov;
 }
 
@@ -4083,7 +4153,7 @@ function F_renderDataModal(){
     <button class="f-btn-secondary" onclick="CB_openSettings()">☁️ GitHub 云备份</button>
     <input type="file" id="imp-file" accept="application/json,.json" style="display:none" onchange="F_importData(event)">
   </div>`;
-  document.getElementById('panel-finance').appendChild(ov);
+  S_mountSheet(ov,'finance');
 }
 function F_exportData(){
   try{
@@ -4101,7 +4171,7 @@ function F_importData(e){
   reader.onload=ev=>{
     try{applyImportedState(JSON.parse(ev.target.result),'finance');}
     catch(err){alert(err.message||'导入未完成，请检查存储空间并核对本机记录，必要时可导入备份恢复。');return;}
-    try{F_loadData();F_modal=null;F_renderMain();alert('✓ 财务总览已恢复');}
+    try{F_loadData();F_modal=null;if(_currentTab==='settings')S_close();else F_renderMain();alert('✓ 财务总览已恢复');}
     catch(err){alert('财务数据已恢复，页面显示异常，请重新加载页面。');}
   };
   reader.onerror=()=>alert('读取文件失败，原数据未改动');
@@ -4821,7 +4891,7 @@ function CB_uploadBackup(options={}){
       const message=CB_errorMessage(code);
       if(code!=='CANCELLED')try{CB_updateState(c,revision,{lastError:message});}catch(e){}
       CB_paintStatus(message);
-      if(code!=='CANCELLED')CB_showToast('云备份失败，请到数据 → GitHub 云备份查看');
+      if(code!=='CANCELLED')CB_showToast('云备份失败，请到设置 → 全部数据 → GitHub 云备份查看');
       return{ok:false,code,error:message};
     }
   };
